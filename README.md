@@ -1,201 +1,33 @@
-python 2-train_evaluation.py ^
---csv_path ./per_frame_help_dataset_delta0.2.csv ^
---result_dir "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_clean" ^
---gt_dir ./datasets/YCBInEOAT/bleach_hard_00_03_chaitanya/annotated_poses ^
---point_path ./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/points.xyz ^
---train_seqs bleach0 mustard0 ^
---test_base_seq bleach_hard_00_03_chaitanya ^
---data_dir ./datasets/YCBInEOAT_Corrupted ^
---p_help_threshold 0.30 ^
---alpha 0.5 ^
---delta 0.2
+Step1 Generating corruption datasets:
+'''
+python 0-corruption.py --dataset_base ./datasets/YCBInEOAT --out_dir ./datasets/YCBInEOAT_Corrupted --sequences mustard0 bleach_hard_00_03_chaitanya bleach0 --occlusion_rate 0.4 0.6 --dropout_rate 0.6
+'''
+
+Step2: Run SE(3)TrackNet predition.py to generates predictions in ./results/bleach0/, using the datasets you want to predict:
+'''
+python predict.py ^ --mode ycbineoat --YCBInEOAT_dir datasets\YCBInEOAT\bleach_hard_00_03_chaitanya --train_data_path datasets\YCBInEOAT_data\bleach_cleanser\train_data_blender_DR --ckpt_dir YCBInEOAT_weights\bleach_cleanser\model_best_val.pth.tar --mean_std_path YCBInEOAT_weights\bleach_cleanser --class_id 12 --model_path datasets\YCB_Video_Models\CADmodels\021_bleach_cleanser\textured.obj --outdir results/bleach_hard_00_03_chaitanya_black10
+'''
+
+Step 3: Evaluating ADD / ADD-S AUC metrics on prediction 
+'''
+python eval_ycbineoat.py --YCBInEOAT_dir ./datasets/YCBInEOAT --class_id 12 --ycb_dir ./datasets/YCB_Video_Models/ --res_dir ./results/
+'''
+
+Step 4: Modifying the config file: ''manifest_config.json''
+
+Step 5: Generate reference_manifest.csv as data mapping:
+'''
+python 1-build_dataset_manifest_all.py ^
+--mode build-reference ^
+--dataset_root ./datasets/YCBInEOAT_Corrupted ^
+--gt_root ./datasets/YCBInEOAT ^
+--result_root ./results_collection ^
+--config ./manifest_config.json ^
+--output ./reference_manifest.csv
+'''
+
+Step6:  One-Step running
+'''
+bash run.sh
+'''
 
-
-
-# iros20-6d-pose-tracking
-
-This is the official implementation of our paper "se(3)-TrackNet: Data-driven 6D Pose Tracking by Calibrating Image Residuals in Synthetic Domains" accepted in International Conference on Intelligent Robots and Systems (IROS) 2020.
-[[PDF]](https://arxiv.org/abs/2007.13866)
-
-**Abstract:** Tracking the 6D pose of objects in video sequences is important for  robot manipulation. This  task, however, introduces multiple challenges: (i) robot manipulation involves significant occlusions; (ii) data and annotations are troublesome and difficult to collect for 6D poses, which complicates machine learning solutions, and (iii) incremental error drift often accumulates in long term tracking to necessitate re-initialization of the object's pose. This work proposes a data-driven optimization approach for long-term, 6D pose tracking. It aims to identify the optimal relative pose given the current RGB-D observation and a synthetic image conditioned on the previous best estimate and the object's model. The key contribution in this context is a novel neural network architecture, which appropriately disentangles the feature encoding to help reduce domain shift, and an effective 3D orientation representation via Lie Algebra. Consequently, even when the network is trained only with synthetic data can work effectively over real images. Comprehensive experiments over benchmarks - existing ones as well as a new dataset with significant occlusions related to object manipulation - show that the proposed approach achieves consistently robust estimates and outperforms alternatives, even though they have been trained with real images. The approach is also the most computationally efficient among the alternatives and achieves a tracking frequency of 90.9Hz.
-
-
-**Applications:** model-based RL, manipulation, AR/VR, human-robot-interaction, automatic 6D pose labeling.
-
-
-**This repo can be used when you have the CAD model of the target object. When such model is not available, checkout our another repo [BundleTrack](https://github.com/wenbowen123/BundleTrack), which can be instantly used for 6D pose tracking of novel unknown objects without needing CAD models**
-
-
-# Bibtex
-```bibtex
-@article{wen2020se,
-   title={se(3)-TrackNet: Data-driven 6D Pose Tracking by Calibrating Image Residuals in Synthetic Domains},
-   url={http://dx.doi.org/10.1109/IROS45743.2020.9341314},
-   DOI={10.1109/iros45743.2020.9341314},
-   journal={2020 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
-   publisher={IEEE},
-   author={Wen, Bowen and Mitash, Chaitanya and Ren, Baozhang and Bekris, Kostas E.},
-   year={2020},
-   month={Oct} }
-```
-
-
-# (New) Application to visual feedback control
-
-Some example experiments using se(3)-TrackNet in our recent work "Vision-driven Compliant Manipulation for Reliable, High-Precision Assembly Tasks", RSS 2021.
-
-<img src="./media/ycb_packing.gif" width="600">
-
-<img src="./media/cup_stacking_and_charger.gif" width="600">
-
-<img src="./media/industrial_insertion.gif" width="600">
-
-
-
-# Supplementary Video:
-Click to watch
-
-[<img src="./media/youtube_thumbnail.jpg" width="480">](https://www.youtube.com/watch?v=dhqM0hZmGR4)
-
-
-#  Results on YCB
-
-<img src="./media/occlusion.gif" width="480">
-
-<img src="./media/curves.jpg" width="480">
-
-<img src="./media/ycb_results.jpg">
-
-
-
-
-# About YCBInEOAT Dataset
-
-<img src="./media/eoat1.jpg" width="1200">
-
-<img src="./media/eoat2.jpg" width="1200">
-
-
-Due to the lack of suitable dataset about RGBD-based 6D pose tracking in robotic manipulation, a novel dataset is developed in this work. It has these key attributes:
-
-* Real manipulation tasks
-
-* 3 kinds of end-effectors
-
-* 5 YCB objects
-
-* 9 videos for evaluation, 7449 RGBD in total
-
-* Ground-truth poses annotated for each frame
-
-* Forward-kinematics recorded
-
-* Camera extrinsic parameters calibrated
-
-Link to download this dataset is provided below under 'Data Preparation'.
-Example manipulation sequence:
-
-<img src="./media/manipulation1.gif" width="480">
-
-
-Current benchmark:
-
-<img src="./media/ycbineoat_benchmark.jpg" width="480">
-
-More details are in the paper and supplementary video.
-
-# Quick setup
-
-- First [install docker](https://docs.docker.com/get-docker/) if you haven't.
-
-- Then there are two options to obtain our docker image.
-
-  - Option 1: pull the pre-built image.
-    ```
-    docker pull wenbowen123/se3_tracknet:latest
-    ```
-
-  - Option 2: build from source
-    ```
-    cd docker
-    docker build -t se3_tracknet .
-    ```
-
-- Launch docker container as below and now it's ready to run
-   ```
-   cd docker
-   bash run_container.sh
-   ```
-
-# Data Download
-- [YCB_Video object models with ply files](https://archive.cs.rutgers.edu/pracsys/se3_tracknet/YCB_models_with_ply.zip)
-- [data_organized](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCB_Video_data_organized/) (15G). It is the reorganized YCB_Video data for convenience. Then extract it under your YCB_Video dataset directory, e.g. YCB_Video_Dataset/data_organized/0048/
-- [YCBInEOAT dataset](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCBInEOAT/) (22G)
-- Our [pretrained weights on YCB_Video](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCB_weights.zip) and [pretrained weights on YCBInEOAT](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCBInEOAT_weights.zip)
-- Our generated [synthetic YCB_Video training data](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCB_traindata/) (~15G for each object) and  [synthetic YCBInEOAT trainnig data](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCBInEOAT_traindata/) (~15G for each object)
-
-
-<img src="./media/syndata_gen.gif" width="480" style="position:relative;left:5%">
-
-- [se(3)-TrackNet's output pose estimations of YCB_Video](https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/Ours_YCB_results.tar.gz) and [se(3)-TrackNet's output pose estimations of YCBInEOAT](https://archive.cs.rutgers.edu/pracsys/se3_tracknet/YCBInEOAT_results/)
-
-
-# Test on YCB-Video data
-The following example runs on the sequence of object `bleach_cleanser`, where `class_id` is the bleach cleanser's ID (counting from 1) given by the YCB-Video dataset. You have to modify the paths for your own.
-```
-python3 predict.py --mode ycbv --ycb_dir /home/bowen/debug/ --seq_id 51 --train_data_path /home/bowen/debug/YCBV_data/bleach_cleanser/train_data_blender_DR --ckpt_dir /home/bowen/debug/YCBV_weights/bleach_cleanser/model_best_val.pth.tar --mean_std_path /home/bowen/debug/YCBV_weights/bleach_cleanser --class_id 12 --model_path /home/bowen/debug/YCB_models_with_ply/CADmodels/021_bleach_cleanser/textured.ply --outdir /tmp/se3_tracknet_output
-```
-
-
-# Test on YCBInEOAT data
-The following example runs on the sequence of object `bleach_cleanser`, where `class_id` is the bleach cleanser's ID (counting from 1) given by the YCB-Video dataset. You have to modify the paths for your own. Note that the model_path is different from what's used for YCB-Video data (different training weights and synthetic training data for generalizing beyond tabletop).
-```
-python3 predict.py --mode ycbineoat --YCBInEOAT_dir /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCBInEOAT/bleach0 --train_data_path /home/bowen/debug/YCBInEOAT_data/bleach_cleanser/train_data_blender_DR --ckpt_dir /home/bowen/debug/YCBInEOAT_weights/bleach_cleanser/model_best_val.pth.tar --mean_std_path /home/bowen/debug/YCBInEOAT_weights/bleach_cleanser --class_id 12 --model_path /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video/models/021_bleach_cleanser/textured_simple.obj --outdir /tmp/se3_tracknet_output
-```
-
-# Benchmarking stats
-Please refer to `eval_ycb.py` and `eval_ycbineoat.py`
-
-
-# Training
-1. Edit the config.yml. Make sure the paths are correct. Other settings need not be changed in most cases.
-1. Then  `python train.py`
-
-
-# Generate your own data
-Here we take `object_models/bunny` as an exmaple, you need to prepare your own CAD models like it for new objects.
-
-- [Download the blender file](https://archive.cs.rutgers.edu/pracsys/se3_tracknet/1.blend) and put it inside this repository folder
-
-- Edit `dataset_info.yml`. The params are self-explained. In particular, add the object model, e.g. `/home/se3_tracknet/object_models/bunny/1.ply` in our example.
-
--  Start generation, it should save to `/home/se3_tracknet/generated_data/`
-   ```
-   python blender_main.py
-   ```
-
-- Generate paired data as neighboring images, it should save to `/home/se3_tracknet/generated_data_pair/`
-   ```
-   python produce_train_pair_data.py
-   ```
-
-   Example pair:
-   <p float="left">
-      <img src="./media/0000000rgbA.png" width="200" />
-      <img src="./media/0000000rgbB.png" width="200" />
-   </p>
-
-
-- Now refer to the `Training` section.
-
-
-
-# Test in the wild with ROS
-```
-python predict_ros.py
-```
-
-For more information
-```
-python predict_ros.py --help
-```
