@@ -1,0 +1,6 @@
+experiment_utc=2026-08-22T16:16:55Z
+git_available=true
+git_commit=b260619aabc8935b43ade251664b38e379a668ca
+git_dirty=false
+git_branch=master
+git_describe=b260619

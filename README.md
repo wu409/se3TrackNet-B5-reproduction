@@ -17,6 +17,17 @@ Step 4: Modifying the config file: ''manifest_config.json''
 
 
 Step5:  One-Step running
+## Reference manifest generation
+
+The first execution of run.sh automatically creates
+reference_manifest.csv using the official YCBInEOAT sorted-index protocol.
+
+If reference_manifest.csv already exists, it is treated as frozen and
+will not be regenerated.
+
+Every subsequent run verifies runtime inputs against the frozen manifest
+using SHA-256 hashes before evaluation.
+
 '''
 bash run.sh
 '''

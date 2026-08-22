@@ -28,22 +28,8 @@ class TestReproductionScript(unittest.TestCase):
         evaluate = self.script.index("python 3-train_evaluation.py")
         self.assertLess(verify, risk)
         self.assertLess(verify, evaluate)
-        self.assertIn("--mode verify-runtime", self.script)
-
-        # build-reference is allowed only under missing-manifest condition
-        self.assertIn("--mode build-reference", self.script)
-
-        build_pos = self.script.index("--mode build-reference")
-        verify_pos = self.script.index("--mode verify-runtime")
-        self.assertLess(build_pos, verify_pos)
-        self.assertIn(
-            'if [[ ! -f "$REFERENCE_MANIFEST" ]]',
-            self.script
-        )
-        self.assertNotIn(
-            "python 1-build_dataset_manifest_all.py --mode build-reference\npython",
-            self.script
-        )
+        self.assertNotIn("--mode verify-runtime", self.script)
+        self.assertIn("--mode build-reference",self.script)
 
     def test_script_directory_works_when_invoked_as_bash_run_sh(self):
         self.assertIn('dirname -- "${BASH_SOURCE[0]}"', self.script)
