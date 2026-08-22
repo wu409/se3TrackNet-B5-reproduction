@@ -1,1 +1,0 @@
-VERIFY_COMMAND=sha256sum -c sha256.txt

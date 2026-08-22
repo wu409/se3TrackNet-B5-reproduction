@@ -15,18 +15,8 @@ python eval_ycbineoat.py --YCBInEOAT_dir ./datasets/YCBInEOAT --class_id 12 --yc
 
 Step 4: Modifying the config file: ''manifest_config.json''
 
-Step 5: Generate reference_manifest.csv as data mapping:
-'''
-python 1-build_dataset_manifest_all.py ^
---mode build-reference ^
---dataset_root ./datasets/YCBInEOAT_Corrupted ^
---gt_root ./datasets/YCBInEOAT ^
---result_root ./results_collection ^
---config ./manifest_config.json ^
---output ./reference_manifest.csv
-'''
 
-Step6:  One-Step running
+Step5:  One-Step running
 '''
 bash run.sh
 '''

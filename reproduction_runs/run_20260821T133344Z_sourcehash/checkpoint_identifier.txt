@@ -1,4 +1,0 @@
-weights_root=/c/Users/86138/Desktop/wyg_code/object_tracking_trial/se-TrackNet/YCBInEOAT_weights
-mustard0=mustard_bottle/model_best_val.pth.tar
-bleach0=bleach_cleanser/model_best_val.pth.tar
-bleach_hard_00_03_chaitanya=bleach_cleanser/model_best_val.pth.tar

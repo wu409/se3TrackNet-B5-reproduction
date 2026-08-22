@@ -25,6 +25,7 @@ SE3TRACKNET_WEIGHTS_ROOT=${SE3TRACKNET_WEIGHTS_ROOT:-"$SCRIPT_DIR/YCBInEOAT_weig
 CONDA_SH=${CONDA_SH:-/c/anaconda/etc/profile.d/conda.sh}
 CONDA_ENV=${CONDA_ENV:-yolov5}
 
+
 fail() {
     echo "[ERROR] $*" >&2
     exit 1
@@ -81,8 +82,27 @@ else
 fi
 
 [[ -n "$REFERENCE_MANIFEST" ]] || \
-    fail "Set REFERENCE_MANIFEST to the frozen manifest built once from a trusted copy."
-require_file "$REFERENCE_MANIFEST" "Frozen reference manifest"
+    fail "Set REFERENCE_MANIFEST."
+
+# Build frozen reference manifest once if it does not exist
+if [[ ! -f "$REFERENCE_MANIFEST" ]]; then
+    echo "Reference manifest not found. Building frozen reference manifest..."
+
+    python 1-build_dataset_manifest_all.py \
+        --mode build-reference \
+        --dataset_root "$DATASET_ROOT" \
+        --gt_root "$GT_ROOT" \
+        --result_root "$RESULT_ROOT" \
+        --output "$REFERENCE_MANIFEST"
+
+    echo "Reference manifest generated:"
+    echo "$REFERENCE_MANIFEST"
+else
+    echo "Using existing frozen reference manifest:"
+    echo "$REFERENCE_MANIFEST"
+fi
+
+
 [[ -n "$SE3TRACKNET_WEIGHTS_ROOT" ]] || \
     fail "Set SE3TRACKNET_WEIGHTS_ROOT to the YCBInEOAT_weights directory."
 require_dir "$SE3TRACKNET_WEIGHTS_ROOT" "SE3TrackNet YCBInEOAT weights root"
@@ -108,6 +128,10 @@ conda activate "$CONDA_ENV"
 RUN_TIME=$(date -u +"%Y%m%dT%H%M%SZ")
 RUN_DIR="./reproduction_runs/run_${RUN_TIME}_${VERSION_TAG}"
 mkdir -p "$RUN_DIR"
+
+git rev-parse HEAD > "$RUN_DIR/git_commit.txt"
+git status --short > "$RUN_DIR/git_status.txt"
+
 LOG_FILE="$RUN_DIR/full_run.log"
 
 # Keep the original terminal descriptors so logging can be closed before hashing.
