@@ -21,6 +21,7 @@ RESULT_ROOT=${RESULT_ROOT:-./results_collection}
 CAD_MODEL_ROOT=${CAD_MODEL_ROOT:-./datasets/YCB_Video_Models/CADmodels}
 REFERENCE_MANIFEST=${REFERENCE_MANIFEST:-"$SCRIPT_DIR/reference_manifest.csv"}
 SE3TRACKNET_WEIGHTS_ROOT=${SE3TRACKNET_WEIGHTS_ROOT:-"$SCRIPT_DIR/YCBInEOAT_weights"}
+MANIFEST_CONFIG=${MANIFEST_CONFIG:-./manifest_config.json}
 
 CONDA_SH=${CONDA_SH:-/c/anaconda/etc/profile.d/conda.sh}
 CONDA_ENV=${CONDA_ENV:-yolov5}
@@ -93,6 +94,7 @@ if [[ ! -f "$REFERENCE_MANIFEST" ]]; then
         --dataset_root "$DATASET_ROOT" \
         --gt_root "$GT_ROOT" \
         --result_root "$RESULT_ROOT" \
+        --config "$MANIFEST_CONFIG" \
         --output "$REFERENCE_MANIFEST"
 
     echo "Reference manifest generated:"
