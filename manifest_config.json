@@ -1,0 +1,22 @@
+{
+    "base_sequences": [
+        "mustard0",
+        "bleach_hard_00_03_chaitanya",
+        "bleach0"
+    ],
+    "common_conditions": [
+        "_occ40",
+        "_black10",
+        "_clean",
+        "_drop60",
+        "_occ60"
+    ],
+    "extra_conditions": {
+        "bleach_hard_00_03_chaitanya": [
+            "_black10_2",
+            "_black10_3",
+            "_black10_4",
+            "_black10_5"
+        ]
+    }
+}

@@ -1,0 +1,12 @@
+__pycache__/
+*.blend*
+core
+generated_data/
+generated_data_pair/
+datasets/
+0-reliability_feature_computing/
+docker/
+results/
+results_collection/
+.vscode/
+*.csv

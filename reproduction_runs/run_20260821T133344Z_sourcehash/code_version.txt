@@ -1,0 +1,7 @@
+experiment_utc=2026-08-21T13:33:44Z
+git_available=false
+git_commit=not_available
+git_dirty=not_applicable
+git_branch=not_available
+git_describe=not_available
+version_evidence=source_file_sha256_and_source_bundle_sha256
