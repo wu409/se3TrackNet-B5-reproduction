@@ -23,7 +23,7 @@ REFERENCE_MANIFEST=${REFERENCE_MANIFEST:-"$SCRIPT_DIR/reference_manifest.csv"}
 SE3TRACKNET_WEIGHTS_ROOT=${SE3TRACKNET_WEIGHTS_ROOT:-"$SCRIPT_DIR/YCBInEOAT_weights"}
 MANIFEST_CONFIG=${MANIFEST_CONFIG:-./manifest_config.json}
 
-CONDA_SH=${CONDA_SH:-/c/anaconda/etc/profile.d/conda.sh}
+CONDA_SH=${CONDA_SH:-/home/wyg/anaconda3/etc/profile.d/conda.sh}
 CONDA_ENV=${CONDA_ENV:-yolov5}
 
 
