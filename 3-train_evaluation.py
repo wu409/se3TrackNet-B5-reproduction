@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 import open3d as o3d
 import cv2
@@ -41,6 +42,54 @@ def compute_ece(probs, labels, n_bins=10):
         if np.sum(in_bin) > 0:
             ece += np.abs(np.mean(labels[in_bin]) - np.mean(probs[in_bin])) * (np.sum(in_bin) / len(probs))
     return ece
+
+
+def select_risk_threshold(y_true, probs):
+    """
+    Learn an operating threshold from non-test labels/probabilities.
+
+    Criterion:
+        maximize balanced accuracy = 0.5 * (TPR + TNR)
+
+    The policy later treats:
+        p_bad <= threshold  -> acceptable
+        p_bad >  threshold  -> risky
+    """
+    y_true = np.asarray(y_true, dtype=np.int64).reshape(-1)
+    probs = np.asarray(probs, dtype=np.float64).reshape(-1)
+
+    if len(y_true) != len(probs):
+        raise ValueError(
+            f"Threshold selection length mismatch: "
+            f"labels={len(y_true)}, probs={len(probs)}"
+        )
+
+    if len(np.unique(y_true)) < 2:
+        raise ValueError(
+            "Threshold selection requires both risk classes."
+        )
+
+    best_threshold = 0.5
+    best_score = -1.0
+
+    for threshold in np.linspace(0.05, 0.95, 91):
+        pred_bad = (probs > threshold).astype(np.int64)
+
+        tp = np.sum((pred_bad == 1) & (y_true == 1))
+        tn = np.sum((pred_bad == 0) & (y_true == 0))
+        fp = np.sum((pred_bad == 1) & (y_true == 0))
+        fn = np.sum((pred_bad == 0) & (y_true == 1))
+
+        tpr = tp / max(tp + fn, 1)
+        tnr = tn / max(tn + fp, 1)
+        balanced_accuracy = 0.5 * (tpr + tnr)
+
+        if balanced_accuracy > best_score:
+            best_score = float(balanced_accuracy)
+            best_threshold = float(threshold)
+
+    return best_threshold, best_score
+
 
 def compute_episode_level_ci(scores, n_bootstraps=2000, confidence_level=0.95):
     """按 Episode 计算 95% 置信区间 """
@@ -104,8 +153,9 @@ def load_episode_manifest(manifest_path, sequence, data_dir, gt_dir, result_dir)
     """
     df_manifest = pd.read_csv(manifest_path)
     required = {
-        "sequence", "sequence_index", "frame_id", "depth_path", "gt_path", "pred_path",
-        "depth_sha256", "gt_sha256", "pred_sha256",
+        "sequence", "sequence_index", "frame_id",
+        "rgb_path", "depth_path", "gt_path", "pred_path",
+        "rgb_sha256", "depth_sha256", "gt_sha256", "pred_sha256",
         "association_method", "association_reference", "association_description",
     }
     missing = required - set(df_manifest.columns)
@@ -135,16 +185,28 @@ def load_episode_manifest(manifest_path, sequence, data_dir, gt_dir, result_dir)
     episode["seq_idx"] = episode["sequence_index"]
     episode["frame_idx"] = episode["frame_id"]
 
-    episode["depth_path"] = episode["depth_path"].map(lambda x: os.path.join(data_dir, x))
-    episode["gt_path"] = episode["gt_path"].map(lambda x: os.path.join(gt_dir, os.path.basename(x)))
-    episode["pred_path"] = episode["pred_path"].map(lambda x: os.path.join(result_dir, os.path.basename(x)))
+    # RGB / depth 都严格使用 frozen reference manifest 当前行记录的路径。
+    episode["rgb_path"] = episode["rgb_path"].map(
+        lambda x: x if os.path.isabs(str(x))
+        else os.path.normpath(os.path.join(data_dir, str(x)))
+    )
+    episode["depth_path"] = episode["depth_path"].map(
+        lambda x: x if os.path.isabs(str(x))
+        else os.path.normpath(os.path.join(data_dir, str(x)))
+    )
+    episode["gt_path"] = episode["gt_path"].map(
+        lambda x: os.path.join(gt_dir, os.path.basename(str(x)))
+    )
+    episode["pred_path"] = episode["pred_path"].map(
+        lambda x: os.path.join(result_dir, os.path.basename(str(x)))
+    )
 
-    for col in ["depth_path", "gt_path", "pred_path"]:
+    for col in ["rgb_path", "depth_path", "gt_path", "pred_path"]:
         missing_paths = [p for p in episode[col].tolist() if not os.path.exists(p)]
         if missing_paths:
             raise FileNotFoundError(f"[{sequence}] {col} 中存在不存在的文件，例如: {missing_paths[0]}")
     for row in episode.itertuples(index=False):
-        for artifact_type in ["depth", "gt", "pred"]:
+        for artifact_type in ["rgb", "depth", "gt", "pred"]:
             path = getattr(row, f"{artifact_type}_path")
             expected = str(getattr(row, f"{artifact_type}_sha256")).lower()
             actual = compute_full_sha256(path)
@@ -155,6 +217,35 @@ def load_episode_manifest(manifest_path, sequence, data_dir, gt_dir, result_dir)
                 )
     print(f"[{sequence}] manifest paths and SHA-256 values verified: {len(episode)} frames")
     return episode
+
+
+def load_foundationpose_recovery_rgb(rgb_file):
+    """
+    Load the exact RGB file associated with the current frame by the
+    frozen reference manifest.
+
+    No basename matching and no directory guessing are performed.
+    """
+    rgb_file = os.path.abspath(str(rgb_file))
+
+    if not os.path.isfile(rgb_file):
+        raise FileNotFoundError(
+            "[FoundationPose recovery] reference_manifest.csv 中当前帧对应的 "
+            f"RGB 文件不存在:\n{rgb_file}"
+        )
+
+    rgb_bgr = cv2.imread(rgb_file, cv2.IMREAD_COLOR)
+    if rgb_bgr is None:
+        raise RuntimeError(
+            f"[FoundationPose recovery] 无法读取 manifest RGB: {rgb_file}"
+        )
+
+    rgb_real = cv2.cvtColor(
+        rgb_bgr,
+        cv2.COLOR_BGR2RGB,
+    )
+    return rgb_real, rgb_file
+
 
 def main(args):
     np.random.seed(args.seed)
@@ -207,12 +298,54 @@ def main(args):
     if len(test_df) == 0:
         print("错误: 测试集为空，请检查 CSV 文件中的序列名称！")
 
-    feature_cols = ['x1_depth_residual', 'x2_inlier_ratio','x3_innovation_mag','x4_support_ratio']
+    # ============================================================
+    # Decoupled risk predictors
+    #
+    # Observation-risk and prior-risk MUST use their own pose-conditioned
+    # feature sets. The only shared inputs are temporal innovation features.
+    # This matches 2-risk_label_decoupled.py.
+    # ============================================================
+    feature_cols_obs = [
+        'x1_obs_depth_residual',
+        'x2_obs_inlier_error',
+        'x4_obs_support_ratio',
+        'x5_obs_geometry_inconsistency',
+        'x3_trans_innovation',
+        'x3_rot_innovation',
+    ]
 
-    X_train = train_df[feature_cols].values
-    X_cal = cal_df[feature_cols].values
-    X_test = test_df[feature_cols].values
-    X_ALL_test = test_ALL_df[feature_cols].values
+    feature_cols_prior = [
+        'x1_prior_depth_residual',
+        'x2_prior_inlier_error',
+        'x5_prior_geometry_inconsistency',
+        'x3_trans_innovation',
+        'x3_rot_innovation',
+    ]
+
+    required_feature_columns = set(
+        feature_cols_obs + feature_cols_prior
+    )
+    missing_feature_columns = (
+        required_feature_columns - set(df.columns)
+    )
+    if missing_feature_columns:
+        raise ValueError(
+            "Label CSV 缺少 decoupled predictor 特征列: "
+            f"{sorted(missing_feature_columns)}\n"
+            "请先使用 2-risk_label_decoupled.py 重新生成 label CSV。"
+        )
+
+    # ---------------- Observation-risk feature matrices ----------------
+    X_obs_train = train_df[feature_cols_obs].values
+    X_obs_cal = cal_df[feature_cols_obs].values
+    X_obs_test = test_df[feature_cols_obs].values
+    X_obs_ALL_test = test_ALL_df[feature_cols_obs].values
+
+    # ---------------- Prior-risk feature matrices ----------------
+    X_prior_train = train_df[feature_cols_prior].values
+    X_prior_cal = cal_df[feature_cols_prior].values
+    X_prior_test = test_df[feature_cols_prior].values
+    X_prior_ALL_test = test_ALL_df[feature_cols_prior].values
 
     y_obs_train = train_df['obs_risk_label'].values
     y_obs_cal = cal_df['obs_risk_label'].values
@@ -224,55 +357,362 @@ def main(args):
     y_prior_test = test_df['prior_risk_label'].values
     y_prior_ALL_test = test_ALL_df['prior_risk_label'].values
 
-    scaler_x = MinMaxScaler()
-    X_train_scaled = scaler_x.fit_transform(X_train)
-    X_cal_scaled = scaler_x.transform(X_cal)
-    X_test_scaled = scaler_x.transform(X_test)
-    X_test_ALL_scaled = scaler_x.transform(X_ALL_test)
+    # IMPORTANT:
+    # Separate scalers. Observation and prior feature spaces are different.
+    scaler_obs = MinMaxScaler()
+    X_obs_train_scaled = scaler_obs.fit_transform(
+        X_obs_train
+    )
+    X_obs_cal_scaled = scaler_obs.transform(
+        X_obs_cal
+    )
+    X_obs_test_scaled = scaler_obs.transform(
+        X_obs_test
+    )
+    X_obs_test_ALL_scaled = scaler_obs.transform(
+        X_obs_ALL_test
+    )
 
-    clf_obs = LogisticRegression(max_iter=1000)
-    clf_obs.fit(X_train_scaled, y_obs_train)
+    scaler_prior = MinMaxScaler()
+    X_prior_train_scaled = scaler_prior.fit_transform(
+        X_prior_train
+    )
+    X_prior_cal_scaled = scaler_prior.transform(
+        X_prior_cal
+    )
+    X_prior_test_scaled = scaler_prior.transform(
+        X_prior_test
+    )
+    X_prior_test_ALL_scaled = scaler_prior.transform(
+        X_prior_ALL_test
+    )
 
-    clf_prior = LogisticRegression(max_iter=1000)
-    clf_prior.fit(X_train_scaled,y_prior_train)
+    # Separate learned predictors.
+    clf_obs = LogisticRegression(
+        max_iter=1000
+    )
+    clf_obs.fit(
+        X_obs_train_scaled,
+        y_obs_train,
+    )
 
-    # 4. 温度缩放标定 (Temperature Scaling，保证概率不盲目自信)
-    cal_logits_obs = clf_obs.decision_function(X_cal_scaled)
-    test_logits_obs = clf_obs.decision_function(X_test_scaled)
-    test_ALL_logits_obs = clf_obs.decision_function(X_test_ALL_scaled)
+    clf_prior = LogisticRegression(
+        max_iter=1000
+    )
+    clf_prior.fit(
+        X_prior_train_scaled,
+        y_prior_train,
+    )
 
-    cal_logits_prior = clf_prior.decision_function(X_cal_scaled)
-    test_logits_prior = clf_prior.decision_function(X_test_scaled)
-    test_ALL_logits_prior = clf_prior.decision_function(X_test_ALL_scaled)
 
+    # ============================================================
+    # Temperature scaling
+    # Each predictor is calibrated in its own feature space.
+    # ============================================================
+    cal_logits_obs = clf_obs.decision_function(
+        X_obs_cal_scaled
+    )
+    test_logits_obs = clf_obs.decision_function(
+        X_obs_test_scaled
+    )
+    test_ALL_logits_obs = clf_obs.decision_function(
+        X_obs_test_ALL_scaled
+    )
+
+    cal_logits_prior = clf_prior.decision_function(
+        X_prior_cal_scaled
+    )
+    test_logits_prior = clf_prior.decision_function(
+        X_prior_test_scaled
+    )
+    test_ALL_logits_prior = clf_prior.decision_function(
+        X_prior_test_ALL_scaled
+    )
 
     def eval_loss_obs(t):
         scaled = cal_logits_obs / t[0]
-        probs = 1.0 / (1.0 + np.exp(-scaled))
-        probs = np.clip(probs, 1e-7, 1 - 1e-7)
-        return -np.mean(y_obs_cal * np.log(probs) + (1 - y_obs_cal) * np.log(1 - probs))
-    
+        probs = 1.0 / (
+            1.0 + np.exp(-scaled)
+        )
+        probs = np.clip(
+            probs,
+            1e-7,
+            1 - 1e-7,
+        )
+        return -np.mean(
+            y_obs_cal * np.log(probs)
+            + (1 - y_obs_cal)
+            * np.log(1 - probs)
+        )
+
     def eval_loss_prior(t):
-            scaled = cal_logits_prior / t[0]
-            probs = 1.0 / (1.0 + np.exp(-scaled))
-            probs = np.clip(probs, 1e-7, 1 - 1e-7)
-            return -np.mean(y_prior_cal * np.log(probs) + (1 - y_prior_cal) * np.log(1 - probs))
+        scaled = cal_logits_prior / t[0]
+        probs = 1.0 / (
+            1.0 + np.exp(-scaled)
+        )
+        probs = np.clip(
+            probs,
+            1e-7,
+            1 - 1e-7,
+        )
+        return -np.mean(
+            y_prior_cal * np.log(probs)
+            + (1 - y_prior_cal)
+            * np.log(1 - probs)
+        )
 
-    res_obs = minimize(eval_loss_obs, [1.0], bounds=[(0.01, 10.0)])
-    temp_factor_obs = res_obs.x[0]
+    res_obs = minimize(
+        eval_loss_obs,
+        [1.0],
+        bounds=[(0.01, 10.0)],
+    )
+    temp_factor_obs = float(
+        res_obs.x[0]
+    )
 
-    res_prior = minimize(eval_loss_prior, [1.0], bounds=[(0.01, 10.0)])
-    temp_factor_prior = res_prior.x[0]
+    res_prior = minimize(
+        eval_loss_prior,
+        [1.0],
+        bounds=[(0.01, 10.0)],
+    )
+    temp_factor_prior = float(
+        res_prior.x[0]
+    )
 
-    p_obs_bad = 1.0 / (1.0 + np.exp(-(test_logits_obs / temp_factor_obs)))
-    p_obs_bad_ALL = 1.0 / (1.0 + np.exp(-(test_ALL_logits_obs / temp_factor_obs)))
+    # Learn/freeze separate operating thresholds only from calibration.
+    cal_probs_obs = 1.0 / (
+        1.0 + np.exp(
+            -(cal_logits_obs / temp_factor_obs)
+        )
+    )
+    cal_probs_prior = 1.0 / (
+        1.0 + np.exp(
+            -(cal_logits_prior / temp_factor_prior)
+        )
+    )
 
-    p_prior_bad = 1.0 / (1.0 + np.exp(-(test_logits_prior / temp_factor_prior)))
-    p_prior_bad_ALL = 1.0 / (1.0 + np.exp(-(test_ALL_logits_prior / temp_factor_prior)))
+    threshold_context = {
+        "csv_sha256":
+            compute_full_sha256(args.csv_path),
+        "train_seqs":
+            list(args.train_seqs),
+        "train_cal_split":
+            "per_sequence_first70_train_last30_cal",
+        "risk_label_threshold_cm":
+            float(args.risk_threshold),
+    }
 
-    p_obs_bad_dict = dict(zip(test_df.index.tolist(),p_obs_bad.tolist()))
-    p_prior_bad_dict = dict(zip(test_df.index.tolist(),p_prior_bad.tolist()))
-    support_dict = test_df['x4_support_ratio'].to_dict()
+    obs_threshold_path = os.path.abspath(
+        "p_obs_threshold.json"
+    )
+    prior_threshold_path = os.path.abspath(
+        "p_prior_threshold.json"
+    )
+
+    def load_threshold_if_compatible(
+        path,
+        threshold_key,
+        feature_columns,
+    ):
+        if not os.path.isfile(path):
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            if cfg.get("context") != threshold_context:
+                return None
+            if cfg.get("feature_columns") != list(feature_columns):
+                return None
+            value = float(cfg[threshold_key])
+            if not (0.0 < value < 1.0):
+                return None
+            return cfg
+        except Exception:
+            return None
+
+    obs_threshold_cfg = load_threshold_if_compatible(
+        obs_threshold_path,
+        "p_obs_threshold",
+        feature_cols_obs,
+    )
+    prior_threshold_cfg = load_threshold_if_compatible(
+        prior_threshold_path,
+        "p_prior_threshold",
+        feature_cols_prior,
+    )
+
+    if (
+        obs_threshold_cfg is not None
+        and prior_threshold_cfg is not None
+    ):
+        p_obs_threshold = float(
+            obs_threshold_cfg["p_obs_threshold"]
+        )
+        p_prior_threshold = float(
+            prior_threshold_cfg["p_prior_threshold"]
+        )
+        obs_threshold_score = float(
+            obs_threshold_cfg["balanced_accuracy"]
+        )
+        prior_threshold_score = float(
+            prior_threshold_cfg["balanced_accuracy"]
+        )
+        print("\n[Frozen thresholds] loaded from JSON:")
+        print(
+            f"  p_obs_threshold   = "
+            f"{p_obs_threshold:.3f}"
+        )
+        print(
+            f"  p_prior_threshold = "
+            f"{p_prior_threshold:.3f}"
+        )
+    else:
+        p_obs_threshold, obs_threshold_score = (
+            select_risk_threshold(
+                y_obs_cal,
+                cal_probs_obs,
+            )
+        )
+        p_prior_threshold, prior_threshold_score = (
+            select_risk_threshold(
+                y_prior_cal,
+                cal_probs_prior,
+            )
+        )
+
+        obs_threshold_cfg = {
+            "p_obs_threshold": p_obs_threshold,
+            "balanced_accuracy": obs_threshold_score,
+            "selection_protocol":
+                "calibration_balanced_accuracy_after_temperature_scaling",
+            "temperature_factor": temp_factor_obs,
+            "feature_columns": list(feature_cols_obs),
+            "context": threshold_context,
+        }
+        prior_threshold_cfg = {
+            "p_prior_threshold": p_prior_threshold,
+            "balanced_accuracy": prior_threshold_score,
+            "selection_protocol":
+                "calibration_balanced_accuracy_after_temperature_scaling",
+            "temperature_factor": temp_factor_prior,
+            "feature_columns": list(feature_cols_prior),
+            "context": threshold_context,
+        }
+
+        with open(
+            obs_threshold_path,
+            "w",
+            encoding="utf-8",
+        ) as f:
+            json.dump(
+                obs_threshold_cfg,
+                f,
+                indent=4,
+                ensure_ascii=False,
+            )
+        with open(
+            prior_threshold_path,
+            "w",
+            encoding="utf-8",
+        ) as f:
+            json.dump(
+                prior_threshold_cfg,
+                f,
+                indent=4,
+                ensure_ascii=False,
+            )
+
+        print(
+            "\n[Calibration] learned and froze "
+            "separate thresholds:"
+        )
+        print(
+            f"  p_obs_threshold   = "
+            f"{p_obs_threshold:.3f} | "
+            f"balanced_acc={obs_threshold_score:.4f}"
+        )
+        print(
+            f"  p_prior_threshold = "
+            f"{p_prior_threshold:.3f} | "
+            f"balanced_acc={prior_threshold_score:.4f}"
+        )
+        print(f"  saved: {obs_threshold_path}")
+        print(f"  saved: {prior_threshold_path}")
+
+    p_obs_bad = 1.0 / (
+        1.0
+        + np.exp(
+            -(
+                test_logits_obs
+                / temp_factor_obs
+            )
+        )
+    )
+    p_obs_bad_ALL = 1.0 / (
+        1.0
+        + np.exp(
+            -(
+                test_ALL_logits_obs
+                / temp_factor_obs
+            )
+        )
+    )
+
+    p_prior_bad = 1.0 / (
+        1.0
+        + np.exp(
+            -(
+                test_logits_prior
+                / temp_factor_prior
+            )
+        )
+    )
+    p_prior_bad_ALL = 1.0 / (
+        1.0
+        + np.exp(
+            -(
+                test_ALL_logits_prior
+                / temp_factor_prior
+            )
+        )
+    )
+
+    p_obs_bad_dict = dict(
+        zip(
+            test_df.index.tolist(),
+            p_obs_bad.tolist(),
+        )
+    )
+    p_prior_bad_dict = dict(
+        zip(
+            test_df.index.tolist(),
+            p_prior_bad.tolist(),
+        )
+    )
+
+    # B5 blackout/support logic must continue to use the OBSERVATION
+    # support feature, not a prior-conditioned support feature.
+    support_dict = (
+        test_df[
+            'x4_obs_support_ratio'
+        ].to_dict()
+    )
+
+    # Diagnostic only: probability coupling after decoupled training.
+    if (
+        len(p_obs_bad) > 1
+        and np.std(p_obs_bad) > 0
+        and np.std(p_prior_bad) > 0
+    ):
+        single_seq_prob_corr = float(
+            np.corrcoef(
+                p_obs_bad,
+                p_prior_bad,
+            )[0, 1]
+        )
+    else:
+        single_seq_prob_corr = np.nan
+
 
     for fid in list(test_df.index[:10]):
         print(
@@ -335,6 +775,7 @@ def main(args):
         i = row.seq_idx
         frame_id = row.frame_idx
         matched_frames.append(frame_id)
+        rgb_file   = row.rgb_path
         depth_file = row.depth_path
         gt_file    = row.gt_path
         pred_file  = row.pred_path
@@ -387,7 +828,24 @@ def main(args):
         b4_errs.append(U.adi(T_huber,T_gt,open3d_model)* 100)
 
         #  B5: Proposed Three-Mode Policy
+        #
+        #  IMPORTANT:
+        #  RGB is loaded for EVERY frame from the frozen reference manifest.
+        #  b5_policy must cache the immediately pre-blackout RGB + T_final
+        #  so it can construct rgb_template2 at blackout onset.
+        #
+        #  Recovery:
+        #    first RGB + init_mask.png -> rgb_template1
+        #    pre-blackout RGB + T_final + CAD + template1 -> rgb_template2
+        #    recovery RGB + template2 -> padded mask
+        #    current RGB-D + mask -> FoundationPose.register()
         depth_real = depth_raw.astype(np.float32) / 1000.0
+
+        rgb_real, current_rgb_file = load_foundationpose_recovery_rgb(
+            rgb_file=rgb_file,
+        )
+        print("depth:",depth_file)
+        print("rgb:",rgb_file)
         T_final, current_mode, b5_state, recovery_info = b5_transition(
             T_obs=T_obs,
             T_prior=T_prior_current5,
@@ -397,13 +855,110 @@ def main(args):
             depth_real=depth_real,
             model_pts=model_pts,
             K=K,
-            p_risk_threshold=args.p_risk_threshold,
+            p_obs_threshold=p_obs_threshold,
+            p_prior_threshold=p_prior_threshold,
             frame_index=i,
             frame_id=frame_id,
             state=b5_state,
             blackout_min_frames=args.blackout_min_frames,
-            use_prior_predictor=True
+            use_prior_predictor=True,
+
+            rgb_real=rgb_real,
+            base_sequence=args.test_base_seq,
+            ycbineoat_root=args.ycbineoat_root,
+            mesh_file=os.path.abspath(args.foundationpose_mesh_file),
+            foundationpose_python=args.foundationpose_python,
+            foundationpose_dir=args.foundationpose_dir,
+            foundationpose_refiner_weight=args.foundationpose_refiner_weight,
+            foundationpose_refine_iter=args.foundationpose_refine_iter,
         )
+
+        if recovery_info is not None:
+            print("\n========== RECOVERY DEBUG ==========")
+            print(f"Recovery frame         : {frame_id}")
+            print(
+                f"Recovery trigger       : "
+                f"{recovery_info.get('recovery_trigger')}"
+            )
+            print(
+                f"Recovery method        : "
+                f"{recovery_info.get('recovery_method')}"
+            )
+            print(
+                f"Reference frame        : "
+                f"{recovery_info.get('reference_frame_id')}"
+            )
+            print(
+                f"init_mask              : "
+                f"{recovery_info.get('init_mask_path')}"
+            )
+
+            if recovery_info.get("T_recovery") is not None:
+                fp_error_cm = U.adi(
+                    recovery_info["T_recovery"],
+                    T_gt,
+                    open3d_model,
+                ) * 100
+                print(
+                    f"FP recovery error      : "
+                    f"{fp_error_cm:.4f} cm"
+                )
+            else:
+                print("FP recovery error      : N/A")
+
+            se3_error_cm = U.adi(
+                T_prior_current5,
+                T_gt,
+                open3d_model,
+            ) * 100
+            print(
+                f"SE3 prior error        : "
+                f"{se3_error_cm:.4f} cm"
+            )
+
+            print(
+                f"Template2 source       : "
+                f"{recovery_info.get('template2_source')}"
+            )
+            print(
+                f"Template1 match success: "
+                f"{recovery_info.get('template1_guided_match_success')}"
+            )
+            print(
+                f"Template1 match score  : "
+                f"{recovery_info.get('template1_guided_match_score')}"
+            )
+            print(
+                f"Template2 match success: "
+                f"{recovery_info.get('template2_match_success')}"
+            )
+            print(
+                f"Template2 match score  : "
+                f"{recovery_info.get('template2_match_score')}"
+            )
+
+            recovery_mask = recovery_info.get(
+                "recovery_mask"
+            )
+            if recovery_mask is not None:
+                print(
+                    f"Recovery mask pixels   : "
+                    f"{int(np.count_nonzero(recovery_mask))}"
+                )
+            else:
+                print("Recovery mask pixels   : 0")
+
+            print(
+                f"Recovery success       : "
+                f"{recovery_info.get('recovery_success')}"
+            )
+            print(
+                f"Failure reason         : "
+                f"{recovery_info.get('recovery_failure_reason')}"
+            )
+            print("====================================\n")
+
+
 
         T_history5.append(T_final)
         b5_error_current = U.adi(T_final, T_gt, open3d_model) * 100
@@ -607,8 +1162,22 @@ def main(args):
     fail_rates = [np.mean(np.array(b1_errs) > 2.0)*100, np.mean(np.array(b2_errs) > 2.0)*100,np.mean(np.array(b3_errs) > 2.0)*100, np.mean(np.array(b4_errs) > 2.0)*100,np.mean(np.array(b5_errs) > 2.0)*100, np.mean(np.array(b6_errs) > 2.0)*100]
     latency_scores = [avg_recovery_latency1, avg_recovery_latency2, avg_recovery_latency3, avg_recovery_latency4, avg_recovery_latency5, avg_recovery_latency6]
     false_triggers = ["N/A", "N/A", "N/A", "N/A", f"{false_recovery_triggers} times", "0 times"]
-    prob_metrics_obs = {'auroc_obs': auroc_obs,'auprc_obs': auprc_obs,'brier_obs': brier_obs,'ece_obs': ece_obs,'temp_factor_obs': temp_factor_obs} 
-    prob_metrics_prior = {'auroc_prior': auroc_prior,'auprc_prior': auprc_prior,'brier_prior': brier_prior,'ece_prior': ece_prior,'temp_factor_prior': temp_factor_prior} 
+    prob_metrics_obs = {
+        'auroc_obs': auroc_obs,
+        'auprc_obs': auprc_obs,
+        'brier_obs': brier_obs,
+        'ece_obs': ece_obs,
+        'temp_factor_obs': temp_factor_obs,
+        'p_obs_threshold': p_obs_threshold,
+    }
+    prob_metrics_prior = {
+        'auroc_prior': auroc_prior,
+        'auprc_prior': auprc_prior,
+        'brier_prior': brier_prior,
+        'ece_prior': ece_prior,
+        'temp_factor_prior': temp_factor_prior,
+        'p_prior_threshold': p_prior_threshold,
+    }
     
 
     blackout_intervals = []
@@ -633,18 +1202,63 @@ if __name__ == "__main__":
                                                                      "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_5",], 
                                                                      help="要测试的所有序列路径")
     parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/bleach_hard_00_03_chaitanya/annotated_poses", help="GT_Pose Path")
-    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/points.xyz", help="point_path")
+    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/points.xyz", help="point_path")   #021_bleach_cleanser
     parser.add_argument('--train_seqs', nargs='+', default=["bleach0", "mustard0"], help="训练集包含的序列关键字列表")
     parser.add_argument('--test_base_seq', type=str, default="bleach_hard_00_03_chaitanya", help="测试集物体的基础名称")
     parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted", help="受损数据集基础路径")
-    parser.add_argument('--p_risk_threshold', type=float,  default=0.80, help="B5 risk probability threshold")
     parser.add_argument('--alpha', type=float, default=0.5, help="B2-alpha")
     parser.add_argument('--risk_threshold', type=float, default=1.0, help="risk_threshold")
     parser.add_argument('--blackout_min_frames', type=int, default=10, help="触发blackout recovery所需连续blackout帧数")
+    parser.add_argument(
+        '--ycbineoat_root',
+        type=str,
+        default="./datasets/YCBInEOAT",
+        help="官方 YCBInEOAT 根目录，用于读取 <base_sequence>/init_mask.png"
+    )
+
+    # ==================== FoundationPose template-mask recovery ====================
+    parser.add_argument(
+        '--foundationpose_python',
+        type=str,
+        default="/home/wyg/anaconda3/envs/foundationpose/bin/python",
+        help="FoundationPose conda 环境的 Python 绝对路径"
+    )
+    parser.add_argument(
+        '--foundationpose_dir',
+        type=str,
+        default="/home/wyg/FoundationPose",
+        help="FoundationPose repository 根目录"
+    )
+    parser.add_argument(
+        '--foundationpose_mesh_file',
+        type=str,
+        default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj",
+        help="当前目标物体 CAD mesh；bleach/mustard 请分别传各自 textured.obj"
+    )
+    parser.add_argument(
+        '--foundationpose_refiner_weight',
+        type=str,
+        default="/home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth",
+        help="冻结的 FoundationPose PoseRefinePredictor 权重"
+    )
+    parser.add_argument(
+        '--foundationpose_refine_iter',
+        type=int,
+        default=5,
+        help="FoundationPose PoseRefinePredictor refinement iterations"
+    )
     parser.add_argument('--bootstrap_samples', type=int, default=10000, help="paired episode bootstrap次数")
     parser.add_argument('--seed', type=int, default=42, help="随机种子")
     args = parser.parse_args()
     np.random.seed(args.seed)
+
+    print("\n[FoundationPose recovery configuration]")
+    print("  python :", args.foundationpose_python)
+    print("  repo   :", args.foundationpose_dir)
+    print("  mesh   :", os.path.abspath(args.foundationpose_mesh_file))
+    print("  refiner weight:", args.foundationpose_refiner_weight)
+    print("  RGB source: frozen reference_manifest.csv -> rgb_path")
+    print("  refine_iter:", args.foundationpose_refine_iter)
     baseline_names = [
         "B1: Obs-Only se(3)-TrackNet",
         "B2: Fixed-Alpha (0.5) Interpolation",
@@ -820,11 +1434,13 @@ if __name__ == "__main__":
             {"Metric": "3. Brier Score_obs (Probability MSE)",    "Value": f"{last_prob_metrics_obs['brier_obs']:.4f}"},
             {"Metric": "4. ECE_obs (Expected Calibration Error)", "Value": f"{last_prob_metrics_obs['ece_obs']:.4f}"},
             {"Metric": "5. Temp_Factor_obs (Temperature Scalar)", "Value": f"{last_prob_metrics_obs['temp_factor_obs']:.4f}"},
+            {"Metric": "6. p_obs_threshold (Frozen Calibration Threshold)", "Value": f"{last_prob_metrics_obs['p_obs_threshold']:.4f}"},
             {"Metric": "1. AUROC_prior (Risk Discrimination)",       "Value": f"{last_prob_metrics_prior['auroc_prior']:.4f}"},
             {"Metric": "2. AUPRC_prior (Precision-Recall AUC)",     "Value": f"{last_prob_metrics_prior['auprc_prior']:.4f}"},
             {"Metric": "3. Brier Score_prior (Probability MSE)",    "Value": f"{last_prob_metrics_prior['brier_prior']:.4f}"},
             {"Metric": "4. ECE_prior (Expected Calibration Error)", "Value": f"{last_prob_metrics_prior['ece_prior']:.4f}"},
-            {"Metric": "5. Temp_Factor_prior (Temperature Scalar)", "Value": f"{last_prob_metrics_prior['temp_factor_prior']:.4f}"}
+            {"Metric": "5. Temp_Factor_prior (Temperature Scalar)", "Value": f"{last_prob_metrics_prior['temp_factor_prior']:.4f}"},
+            {"Metric": "6. p_prior_threshold (Frozen Calibration Threshold)", "Value": f"{last_prob_metrics_prior['p_prior_threshold']:.4f}"}
         ])
 
         prob_csv_path = f"./checkpoint2_probability_calibration_metrics_threshold{args.risk_threshold}.csv"
