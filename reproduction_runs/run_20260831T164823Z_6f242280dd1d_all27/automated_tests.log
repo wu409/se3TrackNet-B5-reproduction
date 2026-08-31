@@ -1,0 +1,37 @@
+test_exact_blackout_and_recovery_interval (test_b5_policy_state.TestB5PolicyState) ... ok
+test_short_gap_does_not_create_blackout_interval (test_b5_policy_state.TestB5PolicyState) ... ok
+test_both_consumers_import_shared_transition (test_b5_shared_policy.TestSharedB5Policy) ... ok
+test_transition_has_one_definition (test_b5_shared_policy.TestSharedB5Policy) ... ok
+test_changed_content_is_a_hash_mismatch (test_manifest_builder.TestManifestBuilder) ... ok
+test_duplicate_pose_frame_id_is_reported_before_overwrite (test_manifest_builder.TestManifestBuilder) ... ok
+test_glob_enumeration_reordering_does_not_change_mapping (test_manifest_builder.TestManifestBuilder) ... ok
+test_matching_runtime_passes (test_manifest_builder.TestManifestBuilder) ... ok
+test_mismatched_frame_ids_are_reported (test_manifest_builder.TestManifestBuilder) ... ok
+test_missing_file_is_reported (test_manifest_builder.TestManifestBuilder) ... ok
+test_manifest_consumers (unittest.loader._FailedTest) ... ERROR
+test_full_log_is_closed_before_portable_hash_manifest (test_reproduction_script.TestReproductionScript) ... ok
+test_git_is_strict_when_available_and_source_hashes_are_fallback (test_reproduction_script.TestReproductionScript) ... ok
+test_required_evidence_is_recorded (test_reproduction_script.TestReproductionScript) ... ok
+test_requires_frozen_manifest_and_object_weight_root (test_reproduction_script.TestReproductionScript) ... ok
+test_script_directory_works_when_invoked_as_bash_run_sh (test_reproduction_script.TestReproductionScript) ... ok
+test_verification_precedes_consumers_and_reference_is_not_rebuilt (test_reproduction_script.TestReproductionScript) ... ok
+
+======================================================================
+ERROR: test_manifest_consumers (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_manifest_consumers
+Traceback (most recent call last):
+  File "/home/wyg/anaconda3/envs/yolov5/lib/python3.8/unittest/loader.py", line 436, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/home/wyg/anaconda3/envs/yolov5/lib/python3.8/unittest/loader.py", line 377, in _get_module_from_name
+    __import__(name)
+  File "/home/wyg/se3TrackNet-B5-reproduction/tests/test_manifest_consumers.py", line 65
+    root = Path(tmp)
+                   ^
+TabError: inconsistent use of tabs and spaces in indentation
+
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.192s
+
+FAILED (errors=1)

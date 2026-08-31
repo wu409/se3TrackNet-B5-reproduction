@@ -44,157 +44,157 @@ class TestManifestConsumers(unittest.TestCase):
             (root / "pred" / "frame.bin").write_bytes(b"changed")
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
                 ns["verify_manifest_artifacts"](manifest, args)
-
+        
     def test_evaluation_consumer_checks_paths_and_sha256(self):
 
-	    ns = load_selected_functions(
-		"3-train_evaluation.py",
-		{
-		    "compute_full_sha256",
-		    "load_episode_manifest",
-		},
-		{
-		    "os": os,
-		    "hashlib": hashlib,
-		    "pd": pd,
-		},
-	    )
+        ns = load_selected_functions(
+            "3-train_evaluation.py",
+            {
+                "compute_full_sha256",
+                "load_episode_manifest",
+            },
+            {
+                "os": os,
+                "hashlib": hashlib,
+                "pd": pd,
+            },
+        )
 
-	    with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
 
-		root = Path(tmp)
+            root = Path(tmp)
 
-		data = root / "data"
-		gt = root / "gt"
-		pred = root / "pred"
+            data = root / "data"
+            gt = root / "gt"
+            pred = root / "pred"
 
-		# evaluation 现在同时要求 RGB + Depth
-		(data / "s" / "rgb").mkdir(
-		    parents=True
-		)
+            # evaluation 现在同时要求 RGB + Depth
+            (data / "s" / "rgb").mkdir(
+                parents=True
+            )
 
-		(data / "s" / "depth").mkdir(
-		    parents=True
-		)
+            (data / "s" / "depth").mkdir(
+                parents=True
+            )
 
-		gt.mkdir()
-		pred.mkdir()
+            gt.mkdir()
+            pred.mkdir()
 
-		files = {
-		    "rgb":
-		        data / "s" / "rgb"
-		        / "000001.png",
+            files = {
+                "rgb":
+                    data / "s" / "rgb"
+                    / "000001.png",
 
-		    "depth":
-		        data / "s" / "depth"
-		        / "000001.png",
+                "depth":
+                    data / "s" / "depth"
+                    / "000001.png",
 
-		    "gt":
-		        gt / "pose_000001.txt",
+                "gt":
+                    gt / "pose_000001.txt",
 
-		    "pred":
-		        pred / "pose_000001.txt",
-		}
+                "pred":
+                    pred / "pose_000001.txt",
+            }
 
-		for name, path in files.items():
-		    path.write_bytes(
-		        name.encode()
-		    )
+            for name, path in files.items():
+                path.write_bytes(
+                    name.encode()
+                )
 
-		manifest = (
-		    root
-		    / "reference_manifest.csv"
-		)
+            manifest = (
+                root
+                / "reference_manifest.csv"
+            )
 
-		pd.DataFrame([
-		    {
-		        "sequence":
-		            "s",
+            pd.DataFrame([
+                {
+                    "sequence":
+                        "s",
 
-		        "sequence_index":
-		            0,
+                    "sequence_index":
+                        0,
 
-		        "frame_id":
-		            1,
+                    "frame_id":
+                        1,
 
-		        "rgb_path":
-		            "s/rgb/000001.png",
+                    "rgb_path":
+                        "s/rgb/000001.png",
 
-		        "depth_path":
-		            "s/depth/000001.png",
+                    "depth_path":
+                        "s/depth/000001.png",
 
-		        "gt_path":
-		            "base/annotated_poses/"
-		            "pose_000001.txt",
+                    "gt_path":
+                        "base/annotated_poses/"
+                        "pose_000001.txt",
 
-		        "pred_path":
-		            "base/s/"
-		            "pose_000001.txt",
+                    "pred_path":
+                        "base/s/"
+                        "pose_000001.txt",
 
-		        "rgb_sha256":
-		            hashlib.sha256(
-		                b"rgb"
-		            ).hexdigest(),
+                    "rgb_sha256":
+                        hashlib.sha256(
+                            b"rgb"
+                        ).hexdigest(),
 
-		        "depth_sha256":
-		            hashlib.sha256(
-		                b"depth"
-		            ).hexdigest(),
+                    "depth_sha256":
+                        hashlib.sha256(
+                            b"depth"
+                        ).hexdigest(),
 
-		        "gt_sha256":
-		            hashlib.sha256(
-		                b"gt"
-		            ).hexdigest(),
+                    "gt_sha256":
+                        hashlib.sha256(
+                            b"gt"
+                        ).hexdigest(),
 
-		        "pred_sha256":
-		            hashlib.sha256(
-		                b"pred"
-		            ).hexdigest(),
+                    "pred_sha256":
+                        hashlib.sha256(
+                            b"pred"
+                        ).hexdigest(),
 
-		        "association_method":
-		            "official_ycbineoat_reference_sorted_index",
+                    "association_method":
+                        "official_ycbineoat_reference_sorted_index",
 
-		        "association_reference":
-		            "reference-loader",
+                    "association_reference":
+                        "reference-loader",
 
-		        "association_description":
-		            "frozen limitation",
-		    }
-		]).to_csv(
-		    manifest,
-		    index=False,
-		)
+                    "association_description":
+                        "frozen limitation",
+                }
+            ]).to_csv(
+                manifest,
+                index=False,
+            )
 
-		episode = ns[
-		    "load_episode_manifest"
-		](
-		    str(manifest),
-		    "s",
-		    str(data),
-		    str(gt),
-		    str(pred),
-		)
+            episode = ns[
+                "load_episode_manifest"
+            ](
+                str(manifest),
+                "s",
+                str(data),
+                str(gt),
+                str(pred),
+            )
 
-		self.assertEqual(
-		    [1],
-		    episode["frame_id"].tolist(),
-		)
+            self.assertEqual(
+                [1],
+                episode["frame_id"].tolist(),
+            )
 
-		# 检查 consumer 确实会拒绝文件缺失
-		files["gt"].unlink()
+            # 检查 consumer 确实会拒绝文件缺失
+            files["gt"].unlink()
 
-		with self.assertRaises(
-		    FileNotFoundError
-		):
-		    ns[
-		        "load_episode_manifest"
-		    ](
-		        str(manifest),
-		        "s",
-		        str(data),
-		        str(gt),
-		        str(pred),
-		    )
+            with self.assertRaises(
+                FileNotFoundError
+            ):
+                ns[
+                    "load_episode_manifest"
+                ](
+                    str(manifest),
+                    "s",
+                    str(data),
+                    str(gt),
+                    str(pred),
+                )
 
     def test_consumers_default_to_frozen_reference(self):
         for filename in ("2-risk_label.py", "3-train_evaluation.py"):
