@@ -1,8 +1,0 @@
-experiment_utc=2026-08-31T16:49:24Z
-git_available=true
-git_commit=6f242280dd1d25161355d40af50557ec43437bfe
-experiment_matrix=3_base_sequences_x_9_conditions
-reference_manifest=/home/wyg/se3TrackNet-B5-reproduction/reference_manifest_all27.csv
-git_dirty=false
-git_branch=master
-git_describe=6f24228

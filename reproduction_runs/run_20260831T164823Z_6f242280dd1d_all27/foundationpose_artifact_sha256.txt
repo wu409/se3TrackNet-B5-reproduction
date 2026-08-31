@@ -1,6 +1,0 @@
-774700586ddc435d408fc01c9809c43e151232936369dfbea0f0f964ba471d60  /home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth
-81924d384bf5c26c646ee4783104982ae3d1e049c181c36641b6a7aeae494c26  /home/wyg/FoundationPose/weights/2024-01-11-20-02-45/model_best.pth
-a6f920a2bee9299ef9666166788cd67ffbd219571a301bfa2023cfcf6189586a  ./datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.obj
-74bb3da1387501cc874bfa093dafb609d1bf5a927bd0d89bc7c204cc76d4b6f9  ./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj
-68ae379296dce4757041a7ae1883ed076ffd132ba3374173abd8fbbd04d97542  /home/wyg/FoundationPose/learning/training/predict_pose_refine.py
-95aaec13bbcf51c9bb6eaa7f3b8ee4a2fac1d37c5c61fcb7064cc3243980a615  /home/wyg/FoundationPose/learning/training/predict_score.py
