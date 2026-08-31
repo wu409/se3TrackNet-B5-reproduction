@@ -392,7 +392,7 @@ cp \
     b5_policy.py \
     run.sh \
     "$RUN_DIR/source/"
-cp "$MANIFEST_CONFIG_EFFECTIVE" "$RUN_DIR/source/manifest_config_all27.json"
+cp "$MANIFEST_CONFIG" "$RUN_DIR/source/manifest_config.json"
 
 for optional_file in \
     REPRODUCTION_README.md \
