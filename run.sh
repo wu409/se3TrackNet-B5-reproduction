@@ -394,18 +394,6 @@ cp \
     "$RUN_DIR/source/"
 cp "$MANIFEST_CONFIG" "$RUN_DIR/source/manifest_config.json"
 
-for optional_file in \
-    REPRODUCTION_README.md \
-    manifest_config.example.json \
-    .gitattributes \
-    .gitignore.example; do
-    if [[ -f "$optional_file" ]]; then
-        cp "$optional_file" "$RUN_DIR/source/"
-    else
-        echo "[INFO] Optional bundle file not present; skipped: $optional_file"
-    fi
-done
-
 cp \
     tests/test_manifest_builder.py \
     tests/test_manifest_consumers.py \
