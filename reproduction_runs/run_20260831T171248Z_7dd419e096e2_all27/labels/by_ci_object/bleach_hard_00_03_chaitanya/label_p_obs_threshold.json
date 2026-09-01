@@ -1,0 +1,16 @@
+{
+    "p_obs_threshold": 0.12,
+    "balanced_accuracy": 0.8064314014895966,
+    "warm_start_p_obs_threshold": 0.19999999999999996,
+    "warm_start_balanced_accuracy": 0.7950112208312428,
+    "selection_protocol": "label_bootstrap_balanced_accuracy",
+    "feature_columns": [
+        "x1_obs_depth_residual",
+        "x2_obs_inlier_error",
+        "x4_obs_support_ratio",
+        "x5_obs_geometry_inconsistency",
+        "x3_trans_innovation",
+        "x3_rot_innovation"
+    ],
+    "risk_label_threshold_cm": 1.0
+}
