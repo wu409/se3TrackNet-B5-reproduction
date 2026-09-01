@@ -19,8 +19,6 @@ DATASET_ROOT=${DATASET_ROOT:-./datasets/YCBInEOAT_Corrupted}
 GT_ROOT=${GT_ROOT:-./datasets/YCBInEOAT}
 RESULT_ROOT=${RESULT_ROOT:-./results_collection}
 CAD_MODEL_ROOT=${CAD_MODEL_ROOT:-./datasets/YCB_Video_Models/CADmodels}
-MANIFEST_CONFIG=${MANIFEST_CONFIG:-"$SCRIPT_DIR/manifest_config.json"}
-
 
 # This manifest is dedicated to the complete 3 x 9 experiment matrix.
 REFERENCE_MANIFEST=${REFERENCE_MANIFEST:-"$SCRIPT_DIR/reference_manifest_all27.csv"}
@@ -113,7 +111,6 @@ require_dir() {
     [[ -d "$1" ]] || fail "$2 does not exist: $1"
 }
 
-require_file "$MANIFEST_CONFIG" "Manifest configuration"
 copy_if_exists() {
     local src=$1
     local dst_dir=$2
@@ -276,7 +273,28 @@ echo "=========================================="
 # ============================================================
 # 4. Generate the exact 3 x 9 manifest configuration
 # ============================================================
-
+MANIFEST_CONFIG_EFFECTIVE="$RUN_DIR/manifest_config_all27.json"
+cat > "$MANIFEST_CONFIG_EFFECTIVE" <<'JSON'
+{
+  "base_sequences": [
+    "mustard0",
+    "bleach0",
+    "bleach_hard_00_03_chaitanya"
+  ],
+  "common_conditions": [
+    "_clean",
+    "_occ40",
+    "_occ60",
+    "_drop60",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5"
+  ],
+  "extra_conditions": {}
+}
+JSON
 
 validate_reference_manifest_matrix() {
     python - "$REFERENCE_MANIFEST" <<'PY'
@@ -335,7 +353,7 @@ if [[ ! -f "$REFERENCE_MANIFEST" ]]; then
         --dataset_root "$DATASET_ROOT" \
         --gt_root "$GT_ROOT" \
         --result_root "$RESULT_ROOT" \
-        --config "$MANIFEST_CONFIG" \
+        --config "$MANIFEST_CONFIG_EFFECTIVE" \
         --output "$REFERENCE_MANIFEST"
 else
     echo "Using existing frozen reference manifest:"
@@ -392,7 +410,19 @@ cp \
     b5_policy.py \
     run.sh \
     "$RUN_DIR/source/"
-cp "$MANIFEST_CONFIG" "$RUN_DIR/source/manifest_config.json"
+cp "$MANIFEST_CONFIG_EFFECTIVE" "$RUN_DIR/source/manifest_config_all27.json"
+
+for optional_file in \
+    REPRODUCTION_README.md \
+    manifest_config.example.json \
+    .gitattributes \
+    .gitignore.example; do
+    if [[ -f "$optional_file" ]]; then
+        cp "$optional_file" "$RUN_DIR/source/"
+    else
+        echo "[INFO] Optional bundle file not present; skipped: $optional_file"
+    fi
+done
 
 cp \
     tests/test_manifest_builder.py \
