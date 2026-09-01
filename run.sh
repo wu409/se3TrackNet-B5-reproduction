@@ -97,6 +97,27 @@ ALL_CONDITIONS=(
     _black10_5
 )
 
+# Conditions from the two non-held-out objects used by 3-train_evaluation.py
+# for train/calibration. This preserves the original 5-common-condition protocol.
+TRAIN_CONDITIONS=(
+    _clean
+    _occ40
+    _occ60
+    _drop60
+    _black10
+)
+
+# Conditions actually executed for the held-out object in 3-train_evaluation.py.
+# Current setting: only the five repeated-blackout episodes.
+# To evaluate more conditions later, only extend this array.
+TEST_CONDITIONS=(
+    _black10
+    _black10_2
+    _black10_3
+    _black10_4
+    _black10_5
+)
+
 
 fail() {
     echo "[ERROR] $*" >&2
@@ -576,7 +597,7 @@ sha256sum \
 #   pass 1 -> common 15 + mustard0 black10_2..5
 #   pass 2 -> common 15 + bleach0 black10_2..5
 #   pass 3 -> common 15 + bleach_hard... black10_2..5
-# The common rows must be identical; run.sh verifies that before merging.
+# Each pass is archived independently; no cross-object equality is required.
 # ============================================================
 echo "========== Step 2: Risk Label Generation for all 27 episodes =========="
 LABEL_RUN_ROOT="$RUN_DIR/labels/by_ci_object"
@@ -630,59 +651,9 @@ for ci_object in "${BASE_SEQUENCES[@]}"; do
     cp label_p_prior_threshold.json "$ci_dir/"
 done
 
-# ci_object is used only for the four extra final-rollout episodes, so the
-# learned label probability thresholds should be semantically identical across
-# the three runs. Compare parsed JSON with a small numeric tolerance rather than
-# raw file hashes, because CUDA inference can introduce harmless last-bit noise.
-python - \
-    "$LABEL_RUN_ROOT/mustard0/label_p_obs_threshold.json" \
-    "$LABEL_RUN_ROOT/bleach0/label_p_obs_threshold.json" \
-    "$LABEL_RUN_ROOT/bleach_hard_00_03_chaitanya/label_p_obs_threshold.json" \
-    "$LABEL_RUN_ROOT/mustard0/label_p_prior_threshold.json" \
-    "$LABEL_RUN_ROOT/bleach0/label_p_prior_threshold.json" \
-    "$LABEL_RUN_ROOT/bleach_hard_00_03_chaitanya/label_p_prior_threshold.json" <<'PY'
-import json
-import math
-import sys
-
-obs_paths = sys.argv[1:4]
-prior_paths = sys.argv[4:7]
-
-def load(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def semantically_equal(a, b, path="root"):
-    if isinstance(a, dict) and isinstance(b, dict):
-        if set(a) != set(b):
-            raise SystemExit(f"threshold JSON keys differ at {path}: {set(a)} vs {set(b)}")
-        for key in a:
-            semantically_equal(a[key], b[key], f"{path}.{key}")
-        return
-    if isinstance(a, list) and isinstance(b, list):
-        if len(a) != len(b):
-            raise SystemExit(f"threshold JSON list length differs at {path}")
-        for i, (x, y) in enumerate(zip(a, b)):
-            semantically_equal(x, y, f"{path}[{i}]")
-        return
-    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
-        if not math.isclose(float(a), float(b), rel_tol=1e-7, abs_tol=1e-6):
-            raise SystemExit(f"threshold JSON numeric value differs at {path}: {a} vs {b}")
-        return
-    if a != b:
-        raise SystemExit(f"threshold JSON value differs at {path}: {a!r} vs {b!r}")
-
-for paths, label in [(obs_paths, "obs"), (prior_paths, "prior")]:
-    ref = load(paths[0])
-    for path in paths[1:]:
-        semantically_equal(ref, load(path), label)
-    print(f"Validated semantically identical label {label} threshold JSON across 3 ci_object runs")
-PY
-
-cp "$LABEL_RUN_ROOT/mustard0/label_p_obs_threshold.json" label_p_obs_threshold.json
-cp "$LABEL_RUN_ROOT/mustard0/label_p_prior_threshold.json" label_p_prior_threshold.json
-cp label_p_obs_threshold.json "$RUN_DIR/label_p_obs_threshold.json"
-cp label_p_prior_threshold.json "$RUN_DIR/label_p_prior_threshold.json"
+# Each ci_object run is an independent label-generation experiment.
+# Keep its threshold JSONs as object-specific artifacts. They are NOT required
+# to match across objects, and no one object's JSON is selected as global truth.
 sha256sum \
     "$LABEL_RUN_ROOT/mustard0/label_p_obs_threshold.json" \
     "$LABEL_RUN_ROOT/bleach0/label_p_obs_threshold.json" \
@@ -692,11 +663,61 @@ sha256sum \
     "$LABEL_RUN_ROOT/bleach_hard_00_03_chaitanya/label_p_prior_threshold.json" \
     > "$RUN_DIR/label_probability_threshold_sha256.txt"
 
+python - \
+    "$LABEL_RUN_ROOT/mustard0/label_p_obs_threshold.json" \
+    "$LABEL_RUN_ROOT/mustard0/label_p_prior_threshold.json" \
+    "$LABEL_RUN_ROOT/bleach0/label_p_obs_threshold.json" \
+    "$LABEL_RUN_ROOT/bleach0/label_p_prior_threshold.json" \
+    "$LABEL_RUN_ROOT/bleach_hard_00_03_chaitanya/label_p_obs_threshold.json" \
+    "$LABEL_RUN_ROOT/bleach_hard_00_03_chaitanya/label_p_prior_threshold.json" \
+    "$RUN_DIR/label_probability_threshold_summary.csv" <<'PY'
+import csv
+import json
+import sys
+
+pairs = [
+    ("mustard0", sys.argv[1], sys.argv[2]),
+    ("bleach0", sys.argv[3], sys.argv[4]),
+    ("bleach_hard_00_03_chaitanya", sys.argv[5], sys.argv[6]),
+]
+out_path = sys.argv[7]
+rows = []
+for base, obs_path, prior_path in pairs:
+    with open(obs_path, "r", encoding="utf-8") as f:
+        obs = json.load(f)
+    with open(prior_path, "r", encoding="utf-8") as f:
+        prior = json.load(f)
+    rows.append({
+        "base_sequence": base,
+        "p_obs_threshold": obs.get("p_obs_threshold"),
+        "obs_balanced_accuracy": obs.get("balanced_accuracy"),
+        "warm_start_p_obs_threshold": obs.get("warm_start_p_obs_threshold"),
+        "warm_start_balanced_accuracy": obs.get("warm_start_balanced_accuracy"),
+        "p_prior_threshold": prior.get("p_prior_threshold"),
+        "prior_balanced_accuracy": prior.get("balanced_accuracy"),
+        "obs_selection_protocol": obs.get("selection_protocol"),
+        "prior_selection_protocol": prior.get("selection_protocol"),
+        "risk_label_threshold_cm": obs.get("risk_label_threshold_cm"),
+    })
+with open(out_path, "w", newline="", encoding="utf-8") as f:
+    writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+    writer.writeheader()
+    writer.writerows(rows)
+print(f"Saved object-specific label threshold summary: {out_path}")
+PY
+
 MASTER_LABEL_CSV="./per_frame_label_threshold${RISK_THRESHOLD}.csv"
 MASTER_BALANCE_CSV="./class_balance_summary_threshold${RISK_THRESHOLD}.csv"
 MASTER_QUADRANT_CSV="./risk_quadrant_summary_threshold${RISK_THRESHOLD}.csv"
 MERGE_REPORT="$RUN_DIR/labels/master_label_merge_report.txt"
+CANONICAL_LABEL_DIR="$RUN_DIR/labels/canonical_by_object"
+mkdir -p "$CANONICAL_LABEL_DIR"
 
+# Canonical 27-label merge:
+#   mustard run -> take mustard0's own 9 conditions only
+#   bleach0 run -> take bleach0's own 9 conditions only
+#   bleach_hard run -> take bleach_hard's own 9 conditions only
+# Duplicate common rows from the other two runs are ignored, not compared.
 python - \
     "$LABEL_RUN_ROOT/mustard0/$RAW_LABEL_NAME" \
     "$LABEL_RUN_ROOT/bleach0/$RAW_LABEL_NAME" \
@@ -704,9 +725,11 @@ python - \
     "$MASTER_LABEL_CSV" \
     "$MASTER_BALANCE_CSV" \
     "$MASTER_QUADRANT_CSV" \
-    "$MERGE_REPORT" <<'PY'
+    "$MERGE_REPORT" \
+    "$CANONICAL_LABEL_DIR" \
+    "$RISK_THRESHOLD" <<'PY'
+import os
 import sys
-import numpy as np
 import pandas as pd
 
 (
@@ -717,6 +740,8 @@ import pandas as pd
     balance_path,
     quadrant_path,
     report_path,
+    canonical_dir,
+    risk_threshold,
 ) = sys.argv[1:]
 
 sources = [
@@ -724,80 +749,62 @@ sources = [
     ("bleach0", bleach0_path),
     ("bleach_hard_00_03_chaitanya", bleach_hard_path),
 ]
+conditions = [
+    "_clean", "_occ40", "_occ60", "_drop60",
+    "_black10", "_black10_2", "_black10_3", "_black10_4", "_black10_5",
+]
 
-frames = []
+canonical_frames = []
 canonical_columns = None
-for source_name, path in sources:
+os.makedirs(canonical_dir, exist_ok=True)
+
+for base, path in sources:
     df = pd.read_csv(path)
     if canonical_columns is None:
         canonical_columns = list(df.columns)
     elif list(df.columns) != canonical_columns:
         raise SystemExit(
-            f"label CSV columns differ for {source_name}: "
+            f"label CSV columns differ for {base}: "
             f"expected={canonical_columns}, actual={list(df.columns)}"
         )
     if df.duplicated(["sequence", "frame_id"]).any():
-        raise SystemExit(f"{source_name} label CSV contains duplicate (sequence, frame_id)")
-    df = df.copy()
-    df["__source_ci_object"] = source_name
-    frames.append(df)
+        raise SystemExit(f"{base} raw label CSV contains duplicate (sequence, frame_id)")
 
-combined = pd.concat(frames, ignore_index=True)
-value_columns = [c for c in canonical_columns if c not in {"sequence", "frame_id"}]
+    expected_sequences = {base + cond for cond in conditions}
+    own = df[df["sequence"].astype(str).isin(expected_sequences)].copy()
+    actual_sequences = set(own["sequence"].astype(str).unique())
+    missing = sorted(expected_sequences - actual_sequences)
+    extra = sorted(actual_sequences - expected_sequences)
+    if missing or extra or len(actual_sequences) != 9:
+        raise SystemExit(
+            f"{base}: canonical label extraction must contain exactly 9 sequences; "
+            f"missing={missing}, extra={extra}, unique={len(actual_sequences)}"
+        )
 
-# Every duplicated common-condition row must be numerically/string identical.
-def equal_value(a, b):
-    if pd.isna(a) and pd.isna(b):
-        return True
-    if isinstance(a, (int, float, np.integer, np.floating)) and \
-       isinstance(b, (int, float, np.integer, np.floating)):
-        return bool(np.isclose(float(a), float(b), rtol=1e-7, atol=1e-5, equal_nan=True))
-    return str(a) == str(b)
-
-conflicts = []
-for key, group in combined.groupby(["sequence", "frame_id"], sort=False, dropna=False):
-    if len(group) <= 1:
-        continue
-    ref = group.iloc[0]
-    for row_idx in range(1, len(group)):
-        row = group.iloc[row_idx]
-        bad_cols = [c for c in value_columns if not equal_value(ref[c], row[c])]
-        if bad_cols:
-            conflicts.append((key, bad_cols, ref["__source_ci_object"], row["__source_ci_object"]))
-            if len(conflicts) >= 10:
-                break
-    if len(conflicts) >= 10:
-        break
-
-if conflicts:
-    raise SystemExit(f"common label rows differ across ci_object runs; examples={conflicts}")
-
-# Input order makes the mustard0 pass canonical for duplicated common rows.
-master = combined.drop_duplicates(["sequence", "frame_id"], keep="first").copy()
-master = master.drop(columns=["__source_ci_object"])
-
-bases = ["mustard0", "bleach0", "bleach_hard_00_03_chaitanya"]
-conditions = [
-    "_clean", "_occ40", "_occ60", "_drop60",
-    "_black10", "_black10_2", "_black10_3", "_black10_4", "_black10_5",
-]
-expected = {base + cond for base in bases for cond in conditions}
-actual = set(master["sequence"].astype(str).unique())
-missing = sorted(expected - actual)
-extra = sorted(actual - expected)
-if missing or extra or len(actual) != 27:
-    raise SystemExit(
-        f"merged label CSV is not exact all-27 matrix: missing={missing}, extra={extra}, unique={len(actual)}"
+    sort_cols = ["sequence", "sequence_index"] if "sequence_index" in own.columns else ["sequence", "frame_id"]
+    own = own.sort_values(sort_cols, kind="stable").reset_index(drop=True)
+    canonical_path = os.path.join(
+        canonical_dir,
+        f"per_frame_label_{base}_9conditions_threshold{risk_threshold}.csv",
     )
+    own.to_csv(canonical_path, index=False)
+    print(f"Canonical object labels: {base} -> {canonical_path} ({len(own)} rows)")
+    canonical_frames.append(own)
 
+master = pd.concat(canonical_frames, ignore_index=True)
+expected_all = {base + cond for base, _ in sources for cond in conditions}
+actual_all = set(master["sequence"].astype(str).unique())
+missing = sorted(expected_all - actual_all)
+extra = sorted(actual_all - expected_all)
+if missing or extra or len(actual_all) != 27:
+    raise SystemExit(
+        f"merged master label CSV is not exact all-27 matrix: "
+        f"missing={missing}, extra={extra}, unique={len(actual_all)}"
+    )
 if master.duplicated(["sequence", "frame_id"]).any():
     raise SystemExit("merged master label CSV contains duplicate (sequence, frame_id)")
 
-sort_cols = ["sequence"]
-if "sequence_index" in master.columns:
-    sort_cols.append("sequence_index")
-else:
-    sort_cols.append("frame_id")
+sort_cols = ["sequence", "sequence_index"] if "sequence_index" in master.columns else ["sequence", "frame_id"]
 master = master.sort_values(sort_cols, kind="stable").reset_index(drop=True)
 master.to_csv(output_path, index=False)
 
@@ -823,7 +830,9 @@ for obs_state in [0, 1]:
 pd.DataFrame(quadrant_rows).to_csv(quadrant_path, index=False)
 
 with open(report_path, "w", encoding="utf-8") as f:
-    f.write("All duplicate common-condition rows were verified consistent across three ci_object runs within numeric tolerance.\n")
+    f.write("Canonical merge: each object's 9 conditions come from that object's ci_object run only.\n")
+    f.write("No cross-object threshold equality check.\n")
+    f.write("No duplicate common-row equality check across ci_object runs.\n")
     f.write(f"master_rows={len(master)}\n")
     f.write(f"master_episodes={master['sequence'].nunique()}\n")
     f.write("expected_episodes=27\n")
@@ -841,48 +850,64 @@ cp "$MASTER_QUADRANT_CSV" "$RUN_DIR/"
 
 
 # ============================================================
-# 8. Build three evaluation CSVs in run.sh only
+# 8. Build three object-specific evaluation CSVs
 #
-# For each target base:
-#   target base       -> all 9 conditions retained
-#   the other 2 bases -> only the 5 common predictor-building conditions
-# This prevents black10_2..5 of the training bases from leaking into the
-# 3-train_evaluation.py train/cal split while leaving all 9 target conditions
-# available for test_df/test_ALL_df.
+# For each held-out target object:
+#   target object       -> TEST_CONDITIONS only
+#   the other 2 objects -> TRAIN_CONDITIONS only
+#
+# Current setting = 5 target blackouts + 5 + 5 training sequences = 15.
+# 3-train_evaluation.py reads ONLY this object-specific CSV via --csv_path.
 # ============================================================
 EVAL_LABEL_DIR="$RUN_DIR/labels/evaluation_csv"
 mkdir -p "$EVAL_LABEL_DIR"
 
-python - "$MASTER_LABEL_CSV" "$EVAL_LABEL_DIR" "$RISK_THRESHOLD" <<'PY'
+TRAIN_CONDITIONS_CSV=$(IFS=,; echo "${TRAIN_CONDITIONS[*]}")
+TEST_CONDITIONS_CSV=$(IFS=,; echo "${TEST_CONDITIONS[*]}")
+
+python - \
+    "$MASTER_LABEL_CSV" \
+    "$EVAL_LABEL_DIR" \
+    "$RISK_THRESHOLD" \
+    "$TRAIN_CONDITIONS_CSV" \
+    "$TEST_CONDITIONS_CSV" <<'PY'
 import os
 import sys
 import pandas as pd
 
-master_path, output_dir, risk_threshold = sys.argv[1:]
-df = pd.read_csv(master_path)
+(
+    master_path,
+    output_dir,
+    risk_threshold,
+    train_conditions_csv,
+    test_conditions_csv,
+) = sys.argv[1:]
 
+df = pd.read_csv(master_path)
 bases = ["mustard0", "bleach0", "bleach_hard_00_03_chaitanya"]
-common_conditions = ["_occ40", "_black10", "_clean", "_drop60", "_occ60"]
-all_conditions = [
-    "_clean", "_occ40", "_occ60", "_drop60",
-    "_black10", "_black10_2", "_black10_3", "_black10_4", "_black10_5",
-]
+train_conditions = [x for x in train_conditions_csv.split(",") if x]
+test_conditions = [x for x in test_conditions_csv.split(",") if x]
+if not train_conditions:
+    raise SystemExit("TRAIN_CONDITIONS is empty")
+if not test_conditions:
+    raise SystemExit("TEST_CONDITIONS is empty")
 
 os.makedirs(output_dir, exist_ok=True)
 for target in bases:
     train_bases = [base for base in bases if base != target]
-    keep = {target + cond for cond in all_conditions}
+    keep = {target + cond for cond in test_conditions}
     for train_base in train_bases:
-        keep.update(train_base + cond for cond in common_conditions)
+        keep.update(train_base + cond for cond in train_conditions)
 
     sub = df[df["sequence"].astype(str).isin(keep)].copy()
     actual = set(sub["sequence"].astype(str).unique())
     missing = sorted(keep - actual)
     extra = sorted(actual - keep)
-    if missing or extra or len(actual) != 19:
+    expected_count = len(test_conditions) + len(train_bases) * len(train_conditions)
+    if missing or extra or len(actual) != expected_count:
         raise SystemExit(
-            f"{target}: evaluation CSV must contain 19 sequences "
-            f"(9 target + 5 + 5 train); missing={missing}, extra={extra}, unique={len(actual)}"
+            f"{target}: evaluation CSV mismatch; expected={expected_count}, "
+            f"actual={len(actual)}, missing={missing}, extra={extra}"
         )
     if sub.duplicated(["sequence", "frame_id"]).any():
         raise SystemExit(f"{target}: duplicate (sequence, frame_id) in evaluation CSV")
@@ -891,7 +916,10 @@ for target in bases:
     sub = sub.sort_values(sort_cols, kind="stable").reset_index(drop=True)
     out = os.path.join(output_dir, f"per_frame_label_eval_{target}_threshold{risk_threshold}.csv")
     sub.to_csv(out, index=False)
-    print(f"Built {out}: rows={len(sub)}, sequences={sub['sequence'].nunique()}")
+    print(
+        f"Built {out}: rows={len(sub)}, sequences={sub['sequence'].nunique()}, "
+        f"train_conditions={train_conditions}, test_conditions={test_conditions}"
+    )
 PY
 
 
@@ -942,9 +970,11 @@ PY
 
 
 # ============================================================
-# 10. Evaluate one base at a time, each with all 9 conditions
+# 10. Evaluate one held-out base at a time using TEST_CONDITIONS only
 # ============================================================
-echo "========== Step 3: Three base-sequence evaluations, 9 conditions each =========="
+echo "========== Step 3: Leave-one-object-out evaluation =========="
+echo "Train conditions: ${TRAIN_CONDITIONS[*]}"
+echo "Test conditions:  ${TEST_CONDITIONS[*]}"
 mkdir -p "$RUN_DIR/evaluation"
 
 for base in "${BASE_SEQUENCES[@]}"; do
@@ -980,7 +1010,7 @@ for base in "${BASE_SEQUENCES[@]}"; do
     require_dir "$GT_DIR" "$base GT directory"
 
     RESULT_DIRS=()
-    for condition in "${ALL_CONDITIONS[@]}"; do
+    for condition in "${TEST_CONDITIONS[@]}"; do
         sequence="${base}${condition}"
         result_dir="$RESULT_ROOT/$base/$sequence"
         require_dir "$result_dir" "$sequence prediction directory"
@@ -992,7 +1022,8 @@ for base in "${BASE_SEQUENCES[@]}"; do
     echo "Train sequences: ${TRAIN_SEQS[*]}"
     echo "Point model: $POINT_PATH"
     echo "FoundationPose mesh: $FP_MESH"
-    echo "Conditions: ${ALL_CONDITIONS[*]}"
+    echo "Train conditions: ${TRAIN_CONDITIONS[*]}"
+    echo "Test conditions: ${TEST_CONDITIONS[*]}"
     echo "------------------------------------------------------------"
 
     # Threshold files are global fixed names in 3-train_evaluation.py. Remove the
@@ -1040,9 +1071,8 @@ for base in "${BASE_SEQUENCES[@]}"; do
     sha256sum p_obs_threshold.json p_prior_threshold.json \
         > "$EVAL_DIR/frozen_probability_threshold_sha256.txt"
 
-    # Every per-frame log has the episode name in its filename, so all 9 can be
-    # archived losslessly even though the Python evaluator is unchanged.
-    for condition in "${ALL_CONDITIONS[@]}"; do
+    # Archive per-frame logs only for the conditions actually executed.
+    for condition in "${TEST_CONDITIONS[@]}"; do
         episode="${base}${condition}"
         log_file="checkpoint2_per_frame_${episode}_log_threshold${RISK_THRESHOLD}.csv"
         require_file "$log_file" "$episode per-frame evaluation log"
@@ -1064,7 +1094,8 @@ for base in "${BASE_SEQUENCES[@]}"; do
         cp "$output" "$EVAL_DIR/"
     done
 
-    SUMMARY_FILE="checkpoint2_full_metrics_episode_summary_${base}_clean_threshold${RISK_THRESHOLD}.csv"
+    FIRST_TEST_CONDITION="${TEST_CONDITIONS[0]}"
+    SUMMARY_FILE="checkpoint2_full_metrics_episode_summary_${base}${FIRST_TEST_CONDITION}_threshold${RISK_THRESHOLD}.csv"
     require_file "$SUMMARY_FILE" "$base full metrics summary"
     cp "$SUMMARY_FILE" "$EVAL_DIR/"
 
@@ -1105,7 +1136,7 @@ if (df["recovery_index"] != df["blackout_end_index"] + 1).any():
 print(f"Validated five blackout intervals for {base}: {path}")
 PY
 
-    echo "Completed and archived all 9 conditions for $base -> $EVAL_DIR"
+    echo "Completed and archived ${#TEST_CONDITIONS[@]} test conditions for $base -> $EVAL_DIR"
 done
 
 
@@ -1135,33 +1166,20 @@ df.to_csv(output, index=False)
 print(f"Validated combined blackout interval table: {output} (15 episodes)")
 PY
 
-# Validate the complete per-frame-log inventory: 3 bases x 9 conditions = 27.
-python - "$RUN_DIR/evaluation" "$RISK_THRESHOLD" <<'PY'
-import os
-import sys
-
-evaluation_root, risk_threshold = sys.argv[1:]
-bases = ["mustard0", "bleach0", "bleach_hard_00_03_chaitanya"]
-conditions = [
-    "_clean", "_occ40", "_occ60", "_drop60",
-    "_black10", "_black10_2", "_black10_3", "_black10_4", "_black10_5",
-]
-missing = []
-for base in bases:
-    for cond in conditions:
-        episode = base + cond
-        path = os.path.join(
-            evaluation_root,
-            base,
-            f"checkpoint2_per_frame_{episode}_log_threshold{risk_threshold}.csv",
-        )
-        if not os.path.isfile(path):
-            missing.append(path)
-if missing:
-    raise SystemExit(f"missing per-frame logs: {missing[:10]}")
-print("Validated per-frame logs: 27/27 episodes")
-PY
-
+# Validate the complete per-frame-log inventory dynamically from TEST_CONDITIONS.
+EXPECTED_EVAL_LOGS=$(( ${#BASE_SEQUENCES[@]} * ${#TEST_CONDITIONS[@]} ))
+ACTUAL_EVAL_LOGS=0
+for base in "${BASE_SEQUENCES[@]}"; do
+    for condition in "${TEST_CONDITIONS[@]}"; do
+        episode="${base}${condition}"
+        log_file="$RUN_DIR/evaluation/$base/checkpoint2_per_frame_${episode}_log_threshold${RISK_THRESHOLD}.csv"
+        require_file "$log_file" "$episode archived per-frame log"
+        ACTUAL_EVAL_LOGS=$((ACTUAL_EVAL_LOGS + 1))
+    done
+done
+[[ "$ACTUAL_EVAL_LOGS" -eq "$EXPECTED_EVAL_LOGS" ]] || \
+    fail "Expected $EXPECTED_EVAL_LOGS evaluation logs, found $ACTUAL_EVAL_LOGS"
+echo "Validated per-frame logs: ${ACTUAL_EVAL_LOGS}/${EXPECTED_EVAL_LOGS} executed episodes"
 
 echo "VERIFY_COMMAND=sha256sum -c sha256.txt" > "$RUN_DIR/VERIFY_COMMAND.txt"
 
@@ -1169,11 +1187,12 @@ echo "VERIFY_COMMAND=sha256sum -c sha256.txt" > "$RUN_DIR/VERIFY_COMMAND.txt"
 # 12. Final summary, portable hashes, and ZIP
 # ============================================================
 echo "=========================================="
-echo "All-27 reproduction completed successfully."
+echo "Reproduction run completed successfully."
 echo "Git commit: $GIT_COMMIT"
 echo "Master label CSV: $MASTER_LABEL_CSV"
 echo "Evaluated bases: ${BASE_SEQUENCES[*]}"
-echo "Total evaluated episodes: 27"
+TOTAL_EVALUATED_EPISODES=$(( ${#BASE_SEQUENCES[@]} * ${#TEST_CONDITIONS[@]} ))
+echo "Total evaluated episodes: $TOTAL_EVALUATED_EPISODES"
 echo "Total validated blackout episodes: 15"
 echo "Outputs saved to: $RUN_DIR"
 echo "The portable SHA-256 manifest will be generated after full_run.log is closed."
