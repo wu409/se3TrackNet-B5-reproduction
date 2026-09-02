@@ -1436,7 +1436,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="生成 YCBInEOAT observation/prior risk labels")
-    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv",
+    parser.add_argument('--manifest_path', type=str, default="./reference_manifest.csv",
                         help="冻结的 reference manifest；本程序不会重建或覆盖它")
     parser.add_argument('--ycb_dir', type=str, default="./datasets/YCBInEOAT", help="GT根目录")
     parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted", help="RGB/Depth根目录")

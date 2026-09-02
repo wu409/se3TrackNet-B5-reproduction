@@ -1,0 +1,4 @@
+weights_root=/home/wyg/se3TrackNet-B5-reproduction/YCBInEOAT_weights
+mustard0=mustard_bottle/model_best_val.pth.tar
+bleach0=bleach_cleanser/model_best_val.pth.tar
+bleach_hard_00_03_chaitanya=bleach_cleanser/model_best_val.pth.tar
