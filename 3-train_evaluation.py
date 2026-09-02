@@ -844,8 +844,7 @@ def main(args):
         rgb_real, current_rgb_file = load_foundationpose_recovery_rgb(
             rgb_file=rgb_file,
         )
-        print("depth:",depth_file)
-        print("rgb:",rgb_file)
+
         T_final, current_mode, b5_state, recovery_info = b5_transition(
             T_obs=T_obs,
             T_prior=T_prior_current5,
@@ -1193,18 +1192,18 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv_path', type=str, default="./per_frame_label_threshold1.0.csv", help="csv数据集路径")
-    parser.add_argument('--manifest_path', type=str, default="./reference_manifest.csv",
+    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv",
                         help="冻结的 reference manifest（只读，不在 evaluation 中重建）")
-    parser.add_argument('--result_dir', nargs='+',type=str, default=["./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10",
-                                                                     "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_2",
-                                                                     "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_3",
-                                                                     "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_4",
-                                                                     "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_5",], 
+    parser.add_argument('--result_dir', nargs='+',type=str, default=["./results_collection/mustard0/mustard0_black10",
+                                                                     "./results_collection/mustard0/mustard0_black10_2",
+                                                                     "./results_collection/mustard0/mustard0_black10_3",
+                                                                     "./results_collection/mustard0/mustard0_black10_4",
+                                                                     "./results_collection/mustard0/mustard0_black10_5",], 
                                                                      help="要测试的所有序列路径")
-    parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/bleach_hard_00_03_chaitanya/annotated_poses", help="GT_Pose Path")
-    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/points.xyz", help="point_path")   #021_bleach_cleanser
-    parser.add_argument('--train_seqs', nargs='+', default=["bleach0", "mustard0"], help="训练集包含的序列关键字列表")
-    parser.add_argument('--test_base_seq', type=str, default="bleach_hard_00_03_chaitanya", help="测试集物体的基础名称")
+    parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/mustard0/annotated_poses", help="GT_Pose Path")
+    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/points.xyz", help="point_path")   #021_bleach_cleanser  006_mustard_bottle
+    parser.add_argument('--train_seqs', nargs='+', default=["bleach0", "bleach_hard_00_03_chaitanya"], help="训练集包含的序列关键字列表")
+    parser.add_argument('--test_base_seq', type=str, default="mustard0", help="测试集物体的基础名称")
     parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted", help="受损数据集基础路径")
     parser.add_argument('--alpha', type=float, default=0.5, help="B2-alpha")
     parser.add_argument('--risk_threshold', type=float, default=1.0, help="risk_threshold")
@@ -1232,7 +1231,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--foundationpose_mesh_file',
         type=str,
-        default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj",
+        default="./datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.obj",
         help="当前目标物体 CAD mesh；bleach/mustard 请分别传各自 textured.obj"
     )
     parser.add_argument(

@@ -1,4 +1,5 @@
 import os
+import hashlib
 import subprocess
 import tempfile
 from pathlib import Path
@@ -245,6 +246,21 @@ TEMPLATE2_CROP_MARGIN_PX = 8
 REFERENCE_ROI_PADDING_FACTOR = 0.75
 REFERENCE_ROI_MIN_PADDING_PX = 32
 FOUNDATIONPOSE_MASK_PADDING_PX = 8
+
+# Final CAD-mask recovery validation.
+# The independent FoundationPose candidate is checked by projecting the CAD
+# model with T_recovery and comparing the projected silhouette with the
+# template-derived recovery mask.
+RECOVERY_CAD_MASK_IOU_WEIGHT = 0.30
+RECOVERY_CAD_MASK_COVERAGE_WEIGHT = 0.70
+RECOVERY_CAD_MASK_LOW_THRESHOLD = 0.40
+RECOVERY_CAD_MASK_HIGH_THRESHOLD = 0.70
+RECOVERY_CAD_MIN_PROJECTED_PIXELS = 20
+
+# FoundationPose official demos commonly use 5 registration refinement
+# iterations. The B5 recovery default is increased to 10 to give the
+# independent re-registration a little more convergence budget.
+DEFAULT_FOUNDATIONPOSE_REFINE_ITER = 10
 
 
 def build_rgb_template1(
@@ -1297,6 +1313,349 @@ def match_rgb_template2_and_pad(
     )
 
 
+
+def _project_cad_silhouette_mask(
+    T_pose,
+    model_pts_3d,
+    K,
+    image_shape,
+):
+    """
+    Project CAD points with T_pose and rasterize a compact 2-D silhouette.
+
+    A convex hull is used instead of sparse projected points so the overlap
+    metric measures object-region consistency rather than point density.
+    """
+    h, w = image_shape[:2]
+
+    T = np.asarray(
+        T_pose,
+        dtype=np.float64,
+    ).reshape(4, 4)
+    pts = np.asarray(
+        model_pts_3d,
+        dtype=np.float64,
+    ).reshape(-1, 3)
+    K_arr = np.asarray(
+        K,
+        dtype=np.float64,
+    ).reshape(3, 3)
+
+    if pts.shape[0] < 3:
+        return None
+
+    pts_cam = (
+        T[:3, :3] @ pts.T
+    ).T + T[:3, 3]
+
+    z = pts_cam[:, 2]
+    valid = (
+        np.isfinite(pts_cam).all(axis=1)
+        & np.isfinite(z)
+        & (z > 1e-6)
+    )
+
+    if np.count_nonzero(valid) < 3:
+        return None
+
+    pts_cam = pts_cam[valid]
+    z = pts_cam[:, 2]
+
+    u = (
+        K_arr[0, 0] * pts_cam[:, 0] / z
+        + K_arr[0, 2]
+    )
+    v = (
+        K_arr[1, 1] * pts_cam[:, 1] / z
+        + K_arr[1, 2]
+    )
+
+    inside = (
+        np.isfinite(u)
+        & np.isfinite(v)
+        & (u >= 0)
+        & (u < w)
+        & (v >= 0)
+        & (v < h)
+    )
+
+    if np.count_nonzero(inside) < 3:
+        return None
+
+    uv = np.stack(
+        [u[inside], v[inside]],
+        axis=1,
+    )
+    uv = np.round(uv).astype(np.int32)
+
+    hull = cv2.convexHull(uv)
+    if hull is None or len(hull) < 3:
+        return None
+
+    cad_mask = np.zeros(
+        (h, w),
+        dtype=np.uint8,
+    )
+    cv2.fillConvexPoly(
+        cad_mask,
+        hull,
+        1,
+    )
+
+    if (
+        np.count_nonzero(cad_mask)
+        < RECOVERY_CAD_MIN_PROJECTED_PIXELS
+    ):
+        return None
+
+    return cad_mask.astype(bool)
+
+
+def evaluate_recovery_cad_mask_consistency(
+    T_recovery,
+    model_pts_3d,
+    K,
+    recovery_mask,
+):
+    """
+    Score the independent recovery candidate using only CAD-mask reprojection
+    consistency. No GT, T_obs, T_prior, or recursive history is used here.
+
+    score = 0.30 * IoU + 0.70 * CAD coverage
+
+    CAD coverage is weighted more heavily because recovery_mask is deliberately
+    padded before FoundationPose registration, which can depress plain IoU even
+    when the CAD projection is correctly contained by the mask.
+    """
+    result = {
+        "recovery_cad_mask_iou": 0.0,
+        "recovery_cad_coverage": 0.0,
+        "recovery_quality_score": 0.0,
+        "recovery_cad_projected_pixels": 0,
+        "recovery_mask_pixels": 0,
+        "recovery_cad_mask_valid": False,
+    }
+
+    if T_recovery is None or recovery_mask is None:
+        return result
+
+    rec_mask = (
+        np.asarray(recovery_mask) > 0
+    )
+    result["recovery_mask_pixels"] = int(
+        np.count_nonzero(rec_mask)
+    )
+
+    if result["recovery_mask_pixels"] < 20:
+        return result
+
+    cad_mask = _project_cad_silhouette_mask(
+        T_pose=T_recovery,
+        model_pts_3d=model_pts_3d,
+        K=K,
+        image_shape=rec_mask.shape,
+    )
+
+    if cad_mask is None:
+        return result
+
+    cad_pixels = int(
+        np.count_nonzero(cad_mask)
+    )
+    result["recovery_cad_projected_pixels"] = cad_pixels
+
+    intersection = int(
+        np.count_nonzero(
+            cad_mask & rec_mask
+        )
+    )
+    union = int(
+        np.count_nonzero(
+            cad_mask | rec_mask
+        )
+    )
+
+    iou = (
+        intersection / float(union)
+        if union > 0
+        else 0.0
+    )
+    coverage = (
+        intersection / float(cad_pixels)
+        if cad_pixels > 0
+        else 0.0
+    )
+
+    score = (
+        RECOVERY_CAD_MASK_IOU_WEIGHT * iou
+        + RECOVERY_CAD_MASK_COVERAGE_WEIGHT
+        * coverage
+    )
+    score = float(
+        np.clip(score, 0.0, 1.0)
+    )
+
+    result.update({
+        "recovery_cad_mask_iou": float(iou),
+        "recovery_cad_coverage": float(coverage),
+        "recovery_quality_score": score,
+        "recovery_cad_mask_valid": True,
+    })
+    return result
+
+
+def _save_recovery_debug_artifacts(
+    current_rgb_real,
+    current_depth_real,
+    recovery_mask,
+    frame_id,
+    recovery_trigger,
+    base_sequence=None,
+    output_root="./recovery_debug",
+):
+    """
+    Save exactly three recovery diagnostics:
+      1) recovery_mask.png
+      2) recovery_mask_overlay.png
+      3) recovery_depth_masked.png
+
+    A short content hash prevents different blackout episodes with the same
+    frame_id from overwriting each other while keeping reruns deterministic.
+    """
+    if (
+        current_rgb_real is None
+        or current_depth_real is None
+        or recovery_mask is None
+    ):
+        return None
+
+    rgb = np.asarray(
+        current_rgb_real,
+        dtype=np.uint8,
+    )
+    depth = np.asarray(
+        current_depth_real,
+        dtype=np.float32,
+    )
+    mask = (
+        np.asarray(recovery_mask) > 0
+    )
+
+    if (
+        rgb.ndim != 3
+        or rgb.shape[2] != 3
+        or depth.shape[:2] != rgb.shape[:2]
+        or mask.shape[:2] != rgb.shape[:2]
+    ):
+        return None
+
+    digest = hashlib.sha256()
+    digest.update(
+        np.ascontiguousarray(rgb).tobytes()
+    )
+    digest.update(
+        np.ascontiguousarray(mask.astype(np.uint8)).tobytes()
+    )
+    short_hash = digest.hexdigest()[:10]
+
+    safe_base = (
+        str(base_sequence)
+        if base_sequence is not None
+        else "unknown_sequence"
+    )
+    safe_trigger = str(recovery_trigger).replace(
+        os.sep,
+        "_",
+    )
+
+    event_dir = os.path.abspath(
+        os.path.join(
+            output_root,
+            safe_base,
+            (
+                f"frame_{int(frame_id):06d}_"
+                f"{safe_trigger}_{short_hash}"
+            ),
+        )
+    )
+    os.makedirs(
+        event_dir,
+        exist_ok=True,
+    )
+
+    mask_u8 = mask.astype(np.uint8) * 255
+    cv2.imwrite(
+        os.path.join(
+            event_dir,
+            "recovery_mask.png",
+        ),
+        mask_u8,
+    )
+
+    rgb_bgr = cv2.cvtColor(
+        rgb,
+        cv2.COLOR_RGB2BGR,
+    )
+    overlay = rgb_bgr.copy()
+    overlay_mask = overlay[mask]
+    if overlay_mask.size > 0:
+        red = np.zeros_like(overlay_mask)
+        red[:, 2] = 255
+        overlay[mask] = (
+            0.55 * overlay_mask.astype(np.float32)
+            + 0.45 * red.astype(np.float32)
+        ).astype(np.uint8)
+
+    cv2.imwrite(
+        os.path.join(
+            event_dir,
+            "recovery_mask_overlay.png",
+        ),
+        overlay,
+    )
+
+    depth_vis = np.zeros(
+        depth.shape[:2],
+        dtype=np.uint8,
+    )
+    valid_depth = (
+        mask
+        & np.isfinite(depth)
+        & (depth > DEPTH_BLACKOUT_VALID_MIN_M)
+        & (depth < DEPTH_BLACKOUT_VALID_MAX_M)
+    )
+
+    if np.count_nonzero(valid_depth) > 0:
+        values = depth[valid_depth]
+        z_lo = float(np.percentile(values, 2.0))
+        z_hi = float(np.percentile(values, 98.0))
+        if z_hi <= z_lo + 1e-6:
+            depth_vis[valid_depth] = 255
+        else:
+            normalized = (
+                (depth[valid_depth] - z_lo)
+                / (z_hi - z_lo)
+            )
+            normalized = np.clip(
+                normalized,
+                0.0,
+                1.0,
+            )
+            depth_vis[valid_depth] = (
+                1.0 + 254.0 * normalized
+            ).astype(np.uint8)
+
+    cv2.imwrite(
+        os.path.join(
+            event_dir,
+            "recovery_depth_masked.png",
+        ),
+        depth_vis,
+    )
+
+    return event_dir
+
+
 _FOUNDATIONPOSE_REGISTER_RUNNER = r"""
 import argparse
 import gc
@@ -1317,7 +1676,7 @@ parser.add_argument("--K_txt", required=True)
 parser.add_argument("--mesh_file", required=True)
 parser.add_argument("--output_pose", required=True)
 parser.add_argument("--refiner_weight", required=True)
-parser.add_argument("--iteration", type=int, default=5)
+parser.add_argument("--iteration", type=int, default=10)
 args = parser.parse_args()
 
 fp_dir = os.path.abspath(args.foundationpose_dir)
@@ -1433,7 +1792,7 @@ def foundationpose_register_from_mask(
     foundationpose_python=None,
     foundationpose_dir=None,
     foundationpose_refiner_weight=None,
-    refine_iter=5,
+    refine_iter=DEFAULT_FOUNDATIONPOSE_REFINE_ITER,
     timeout_sec=600,
 ):
     """
@@ -1764,7 +2123,7 @@ def actual_recovery_action(
     foundationpose_python=None,
     foundationpose_dir=None,
     foundationpose_refiner_weight=None,
-    refine_iter=5,
+    refine_iter=DEFAULT_FOUNDATIONPOSE_REFINE_ITER,
 ):
     """
     Recovery chain:
@@ -1960,6 +2319,8 @@ def _execute_independent_recovery(
     foundationpose_dir,
     foundationpose_refiner_weight,
     foundationpose_refine_iter,
+    base_sequence=None,
+    recovery_debug_root="./recovery_debug",
 ):
     """
     blackout_exit:
@@ -2024,6 +2385,46 @@ def _execute_independent_recovery(
         refine_iter=foundationpose_refine_iter,
     )
 
+    # Evaluate the raw independent candidate using CAD-mask reprojection
+    # consistency only. This validation does not use T_obs, T_prior, or GT.
+    if (
+        recovery_ok
+        and T_recovery is not None
+        and diagnostics.get("recovery_mask") is not None
+    ):
+        quality_diag = evaluate_recovery_cad_mask_consistency(
+            T_recovery=T_recovery,
+            model_pts_3d=model_pts,
+            K=K,
+            recovery_mask=diagnostics.get("recovery_mask"),
+        )
+        diagnostics.update(quality_diag)
+    else:
+        diagnostics.update({
+            "recovery_cad_mask_iou": 0.0,
+            "recovery_cad_coverage": 0.0,
+            "recovery_quality_score": 0.0,
+            "recovery_cad_projected_pixels": 0,
+            "recovery_mask_pixels": int(
+                np.count_nonzero(
+                    diagnostics.get("recovery_mask")
+                )
+            ) if diagnostics.get("recovery_mask") is not None else 0,
+            "recovery_cad_mask_valid": False,
+        })
+
+    if diagnostics.get("recovery_mask") is not None:
+        debug_dir = _save_recovery_debug_artifacts(
+            current_rgb_real=rgb_real,
+            current_depth_real=depth_real,
+            recovery_mask=diagnostics.get("recovery_mask"),
+            frame_id=frame_id,
+            recovery_trigger=recovery_trigger,
+            base_sequence=base_sequence,
+            output_root=recovery_debug_root,
+        )
+        diagnostics["recovery_debug_dir"] = debug_dir
+
     blackout_interval = None
     if (
         recovery_trigger == "blackout_exit"
@@ -2084,6 +2485,13 @@ def _execute_independent_recovery(
         "foundationpose_mask_padding_px",
         "foundationpose_error",
         "foundationpose_stdout",
+        "recovery_cad_mask_iou",
+        "recovery_cad_coverage",
+        "recovery_quality_score",
+        "recovery_cad_projected_pixels",
+        "recovery_mask_pixels",
+        "recovery_cad_mask_valid",
+        "recovery_debug_dir",
         "recovery_failure_reason",
     ]
 
@@ -2126,7 +2534,8 @@ def b5_transition(
     foundationpose_python=None,
     foundationpose_dir=None,
     foundationpose_refiner_weight=None,
-    foundationpose_refine_iter=5,
+    foundationpose_refine_iter=DEFAULT_FOUNDATIONPOSE_REFINE_ITER,
+    recovery_debug_root="./recovery_debug",
     depth_blackout_valid_ratio_threshold=(
         DEPTH_BLACKOUT_VALID_RATIO_THRESHOLD
     ),
@@ -2156,6 +2565,8 @@ def b5_transition(
 
       2) first valid-depth frame after >= blackout_min_frames blackout frames
             -> Template2 matching -> padded mask -> FoundationPose.register()
+            -> CAD-mask reprojection validation
+            -> accept / SE(3)-fuse with prior / reject to prior
 
       3) low observation risk
             -> MODE_1_ACCEPT
@@ -2440,15 +2851,117 @@ def b5_transition(
             foundationpose_refine_iter=(
                 foundationpose_refine_iter
             ),
+            base_sequence=base_sequence,
+            recovery_debug_root=recovery_debug_root,
         )
 
+        # Final CAD-mask recovery gate.
+        #
+        # High consistency:
+        #     accept independent FoundationPose recovery directly.
+        # Medium consistency:
+        #     interpolate from T_prior toward T_recovery on SE(3), with an
+        #     alpha that increases smoothly from 0 to 1 across the uncertainty
+        #     band.
+        # Low/invalid consistency:
+        #     reject the recovery candidate and retain T_prior.
         if (
             recovery_ok
             and T_recovery is not None
         ):
-            T_final = T_recovery
+            quality_score = float(
+                np.clip(
+                    recovery_info.get(
+                        "recovery_quality_score",
+                        0.0,
+                    ),
+                    0.0,
+                    1.0,
+                )
+            )
+
+            if (
+                quality_score
+                >= RECOVERY_CAD_MASK_HIGH_THRESHOLD
+            ):
+                T_final = T_recovery
+                recovery_alpha = 1.0
+                recovery_decision = (
+                    "accept_recovery"
+                )
+
+            elif (
+                quality_score
+                >= RECOVERY_CAD_MASK_LOW_THRESHOLD
+            ):
+                recovery_alpha = float(
+                    np.clip(
+                        (
+                            quality_score
+                            - RECOVERY_CAD_MASK_LOW_THRESHOLD
+                        )
+                        / max(
+                            RECOVERY_CAD_MASK_HIGH_THRESHOLD
+                            - RECOVERY_CAD_MASK_LOW_THRESHOLD,
+                            1e-12,
+                        ),
+                        0.0,
+                        1.0,
+                    )
+                )
+
+                T_delta_recovery = (
+                    np.linalg.inv(T_prior)
+                    @ T_recovery
+                )
+                T_final = (
+                    T_prior
+                    @ se3_exp_map(
+                        recovery_alpha
+                        * se3_log_map(
+                            T_delta_recovery
+                        )
+                    )
+                )
+                recovery_decision = (
+                    "fuse_recovery_prior"
+                )
+
+            else:
+                T_final = T_prior
+                recovery_alpha = 0.0
+                recovery_decision = (
+                    "reject_recovery_use_prior"
+                )
         else:
+            quality_score = 0.0
             T_final = T_prior
+            recovery_alpha = 0.0
+            recovery_decision = (
+                "recovery_generation_failed_use_prior"
+            )
+
+        if recovery_info is not None:
+            recovery_info[
+                "recovery_quality_score"
+            ] = float(quality_score)
+            recovery_info[
+                "recovery_fusion_alpha"
+            ] = float(recovery_alpha)
+            recovery_info[
+                "recovery_decision"
+            ] = recovery_decision
+            recovery_info[
+                "recovery_used"
+            ] = bool(
+                recovery_alpha > 0.0
+            )
+            recovery_info[
+                "recovery_direct_accept"
+            ] = bool(
+                recovery_decision
+                == "accept_recovery"
+            )
 
         current_mode = (
             "MODE_3_RECOVERY_EXECUTE"
