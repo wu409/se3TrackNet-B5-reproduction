@@ -103,7 +103,7 @@ class TestManifestConsumers(unittest.TestCase):
 
             manifest = (
                 root
-                / "reference_manifest.csv"
+                / "reference_manifest_all27.csv"
             )
 
             pd.DataFrame([
@@ -199,7 +199,7 @@ class TestManifestConsumers(unittest.TestCase):
     def test_consumers_default_to_frozen_reference(self):
         for filename in ("2-risk_label.py", "3-train_evaluation.py"):
             text = (ROOT / filename).read_text(encoding="utf-8")
-            self.assertIn("./reference_manifest.csv", text)
+            self.assertIn("./reference_manifest_all27.csv", text)
             self.assertNotIn("build_all_manifest(", text)
 
 
