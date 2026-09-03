@@ -1,0 +1,6 @@
+Canonical merge: each object's 9 conditions come from that object's ci_object run only.
+No cross-object threshold equality check.
+No duplicate common-row equality check across ci_object runs.
+master_rows=16569
+master_episodes=27
+expected_episodes=27
