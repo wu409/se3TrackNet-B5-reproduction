@@ -1,0 +1,8 @@
+sam2_python=/root/autodl-tmp/conda-envs/sam2/bin/python
+sam2_dir=/root/autodl-tmp/sam2
+sam2_config=configs/sam2.1/sam2.1_hiera_l.yaml
+sam2_checkpoint=/root/autodl-tmp/sam2/checkpoints/sam2.1_hiera_large.pt
+sam2_cache_root=/root/autodl-tmp/se3TrackNet-B5-reproduction/sam2_recovery_cache
+sam2_git_commit=3489bda56707d84bd261741e776f9354ae1fe8c9
+sam2_git_status_begin
+sam2_git_status_end

@@ -1,0 +1,11 @@
+foundationpose_python=/root/autodl-tmp/conda-envs/foundationpose/bin/python
+foundationpose_env_prefix=/root/autodl-tmp/conda-envs/foundationpose
+foundationpose_dir=/root/autodl-tmp/FoundationPose
+foundationpose_refiner_weight=/root/autodl-tmp/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth
+foundationpose_scorer_weight=/root/autodl-tmp/FoundationPose/weights/2024-01-11-20-02-45/model_best.pth
+foundationpose_refine_iter=5
+foundationpose_mustard_mesh=./datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.obj
+foundationpose_bleach_mesh=./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj
+foundationpose_git_commit=a1b694b83e633c2cb6115b9063d940a687759392
+foundationpose_git_status_begin
+foundationpose_git_status_end

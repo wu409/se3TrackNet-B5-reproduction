@@ -1,0 +1,34 @@
+{
+  "version": "shared_pose_quality_v1",
+  "held_out_base": "mustard0",
+  "train_bases": [
+    "bleach_hard_00_03_chaitanya",
+    "bleach0"
+  ],
+  "feature_columns": [
+    "x1_norm",
+    "x2_inlier_error",
+    "x4_support_ratio",
+    "x5_geometry_inconsistency"
+  ],
+  "target": "normalized_ADD-S_error_E_over_D_obj",
+  "risk_definition": "E_cm > 1",
+  "risk_threshold_cm": 1.0,
+  "p_risk_threshold": 0.3499999999999999,
+  "prior_advantage_margin_cm": 0.1,
+  "train_fraction": 0.7,
+  "on_policy_refine_rounds": 1,
+  "manifest_sha256": "9af935a170f83553604c715915fda1f9d4611c21ead5683da8f0ed71265d2658",
+  "fit_metrics": {
+    "train_samples": 7720,
+    "cal_samples": 3320,
+    "train_mae_cm": 1.230142215587645,
+    "cal_mae_cm": 3.9487092616341553,
+    "cal_risk_auroc": 0.9021512824093469,
+    "p_risk_threshold": 0.3499999999999999,
+    "threshold_balanced_accuracy": 0.8223432481496997
+  },
+  "scaler_sha256": "e08047c9f4e6bc786eb9ede57fd620c1fb97f243c508f34fc13202ed513bc33f",
+  "model_sha256": "8c20b58536231f398f495a50f00ac6cd5bcf45bc73ea1cba65d7ffe28c56e967",
+  "calibrator_sha256": "176b4c30bbee2bc5730d798d140feb9dc6bd7a26699d7e2d4830e3c7963558f9"
+}

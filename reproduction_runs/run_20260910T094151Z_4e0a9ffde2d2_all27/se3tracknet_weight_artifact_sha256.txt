@@ -1,0 +1,6 @@
+fd300bd34bc73c85624f415ec9763e0dabd5ad6bfb175333700b8545573c6355  /root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/bleach_cleanser/mean.npy
+844cf50c6550df4a74a3358ff3483da81d499628f0849305013c57ccf21fc720  /root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/bleach_cleanser/model_best_val.pth.tar
+9379a1b11d5039ae10b21f1361b1cb340bdaafc42cd458f4ee2746bb5594b91a  /root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/bleach_cleanser/std.npy
+14a8caa281cba12fc50f5dd49b16cf0db584f111c568985bb1abff46266aba77  /root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/mustard_bottle/mean.npy
+d28e71a2b6954c8179ba4a7141c1d3a45afb25c1b16fee1eff283b0bcf168a49  /root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/mustard_bottle/model_best_val.pth.tar
+8c89a950048cf2a8f55df9d47220fe18e4d57285e2c46b03e0ea27e8e1b9eb6a  /root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/mustard_bottle/std.npy

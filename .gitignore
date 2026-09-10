@@ -16,5 +16,4 @@ label_p_obs_threshold.json
 label_p_prior_threshold.json
 p_obs_threshold.json
 p_prior_threshold.json
-shared_artifacts/
-reproduction_runs/
+
