@@ -26,16 +26,32 @@ REBUILD_REFERENCE_MANIFEST=${REBUILD_REFERENCE_MANIFEST:-0}
 
 SE3TRACKNET_WEIGHTS_ROOT=${SE3TRACKNET_WEIGHTS_ROOT:-"$SCRIPT_DIR/YCBInEOAT_weights"}
 
-CONDA_SH=${CONDA_SH:-/home/wyg/anaconda3/etc/profile.d/conda.sh}
-CONDA_ENV=${CONDA_ENV:-yolov5}
+CONDA_SH=${CONDA_SH:-/root/miniconda3/etc/profile.d/conda.sh}
+CONDA_ENV=${CONDA_ENV:-b5-main}
 
 # FoundationPose remains in a separate conda environment. b5_policy.py launches
 # it through this absolute Python executable.
-FOUNDATIONPOSE_PYTHON=${FOUNDATIONPOSE_PYTHON:-/home/wyg/anaconda3/envs/foundationpose/bin/python}
-FOUNDATIONPOSE_DIR=${FOUNDATIONPOSE_DIR:-/home/wyg/FoundationPose}
+FOUNDATIONPOSE_PYTHON=${FOUNDATIONPOSE_PYTHON:-/root/autodl-tmp/conda-envs/foundationpose/bin/python}
+FOUNDATIONPOSE_DIR=${FOUNDATIONPOSE_DIR:-/root/autodl-tmp/FoundationPose}
 FOUNDATIONPOSE_REFINER_WEIGHT=${FOUNDATIONPOSE_REFINER_WEIGHT:-"$FOUNDATIONPOSE_DIR/weights/2023-10-28-18-33-37/model_best.pth"}
 FOUNDATIONPOSE_SCORER_WEIGHT=${FOUNDATIONPOSE_SCORER_WEIGHT:-"$FOUNDATIONPOSE_DIR/weights/2024-01-11-20-02-45/model_best.pth"}
 FOUNDATIONPOSE_REFINE_ITER=${FOUNDATIONPOSE_REFINE_ITER:-5}
+
+# SAM2 runs in a separate process only when recovery is triggered. It reads the
+# exact manifest RGB artifacts from frame 0 through the recovery frame, writes
+# one mask, exits to release GPU memory, and only then FoundationPose starts.
+SAM2_PYTHON=${SAM2_PYTHON:-/root/autodl-tmp/conda-envs/sam2/bin/python}
+SAM2_DIR=${SAM2_DIR:-/root/autodl-tmp/sam2}
+SAM2_CONFIG=${SAM2_CONFIG:-configs/sam2.1/sam2.1_hiera_l.yaml}
+SAM2_CHECKPOINT=${SAM2_CHECKPOINT:-"$SAM2_DIR/checkpoints/sam2.1_hiera_large.pt"}
+SAM2_CACHE_ROOT=${SAM2_CACHE_ROOT:-"$SCRIPT_DIR/sam2_recovery_cache"}
+
+# Shared B5 pose-quality estimator artifacts.
+# Each leave-one-object-out fold owns an independent estimator/calibrator.
+SHARED_ARTIFACT_ROOT=${SHARED_ARTIFACT_ROOT:-"$SCRIPT_DIR/shared_artifacts"}
+mkdir -p "$SHARED_ARTIFACT_ROOT"
+
+PRIOR_ADVANTAGE_MARGIN_CM=${PRIOR_ADVANTAGE_MARGIN_CM:-0.1}
 
 # Optional explicit overrides. If empty, run.sh resolves the mesh using the same
 # preference as 2-risk_label.py: textured_simple.obj -> textured.obj -> textured.ply.
@@ -43,8 +59,6 @@ FOUNDATIONPOSE_MUSTARD_MESH=${FOUNDATIONPOSE_MUSTARD_MESH:-}
 FOUNDATIONPOSE_BLEACH_MESH=${FOUNDATIONPOSE_BLEACH_MESH:-}
 
 # Low-VRAM settings used by the modified FoundationPose predictor code.
-export FP_REFINE_CHUNK_SIZE=${FP_REFINE_CHUNK_SIZE:-2}
-export FP_SCORE_CHUNK_SIZE=${FP_SCORE_CHUNK_SIZE:-2}
 export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
 
 # Three base sequences. Keep label-generation order equal to the existing
@@ -245,6 +259,9 @@ require_file "$FOUNDATIONPOSE_PYTHON" "FoundationPose environment Python"
 require_dir "$FOUNDATIONPOSE_DIR" "FoundationPose repository"
 require_file "$FOUNDATIONPOSE_REFINER_WEIGHT" "FoundationPose frozen refiner weight"
 require_file "$FOUNDATIONPOSE_SCORER_WEIGHT" "FoundationPose frozen scorer weight"
+require_file "$SAM2_PYTHON" "SAM2 environment Python"
+require_dir "$SAM2_DIR" "SAM2 repository"
+require_file "$SAM2_CHECKPOINT" "SAM2.1 checkpoint"
 require_file "$FOUNDATIONPOSE_DIR/learning/training/predict_pose_refine.py" \
     "FoundationPose refiner predictor source"
 require_file "$FOUNDATIONPOSE_DIR/learning/training/predict_score.py" \
@@ -466,6 +483,8 @@ cp "$RUN_DIR/environment.yml" "$RUN_DIR/source/environment.yml"
 
 "$FOUNDATIONPOSE_PYTHON" --version > "$RUN_DIR/foundationpose_python_version.txt" 2>&1
 "$FOUNDATIONPOSE_PYTHON" -m pip freeze > "$RUN_DIR/foundationpose_pip_freeze.txt"
+"$SAM2_PYTHON" --version > "$RUN_DIR/sam2_python_version.txt" 2>&1
+"$SAM2_PYTHON" -m pip freeze > "$RUN_DIR/sam2_pip_freeze.txt"
 
 FOUNDATIONPOSE_ENV_PREFIX=$(dirname "$(dirname "$FOUNDATIONPOSE_PYTHON")")
 if conda env export -p "$FOUNDATIONPOSE_ENV_PREFIX" --no-builds \
@@ -492,8 +511,6 @@ cp "$FOUNDATIONPOSE_DIR/learning/training/predict_score.py" \
     echo "foundationpose_refine_iter=$FOUNDATIONPOSE_REFINE_ITER"
     echo "foundationpose_mustard_mesh=$FOUNDATIONPOSE_MUSTARD_MESH"
     echo "foundationpose_bleach_mesh=$FOUNDATIONPOSE_BLEACH_MESH"
-    echo "fp_refine_chunk_size=$FP_REFINE_CHUNK_SIZE"
-    echo "fp_score_chunk_size=$FP_SCORE_CHUNK_SIZE"
     if command -v git >/dev/null 2>&1 && \
        git -C "$FOUNDATIONPOSE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         echo "foundationpose_git_commit=$(git -C "$FOUNDATIONPOSE_DIR" rev-parse HEAD)"
@@ -504,6 +521,25 @@ cp "$FOUNDATIONPOSE_DIR/learning/training/predict_score.py" \
         echo "foundationpose_git_commit=not_available"
     fi
 } > "$RUN_DIR/foundationpose_provenance.txt"
+
+{
+    echo "sam2_python=$SAM2_PYTHON"
+    echo "sam2_dir=$SAM2_DIR"
+    echo "sam2_config=$SAM2_CONFIG"
+    echo "sam2_checkpoint=$SAM2_CHECKPOINT"
+    echo "sam2_cache_root=$SAM2_CACHE_ROOT"
+    if command -v git >/dev/null 2>&1 && \
+       git -C "$SAM2_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "sam2_git_commit=$(git -C "$SAM2_DIR" rev-parse HEAD)"
+        echo "sam2_git_status_begin"
+        git -C "$SAM2_DIR" status --porcelain=v1 || true
+        echo "sam2_git_status_end"
+    else
+        echo "sam2_git_commit=not_available"
+    fi
+} > "$RUN_DIR/sam2_provenance.txt"
+
+sha256sum "$SAM2_CHECKPOINT" > "$RUN_DIR/sam2_checkpoint_sha256.txt"
 
 sha256sum \
     "$FOUNDATIONPOSE_REFINER_WEIGHT" \
@@ -619,6 +655,14 @@ for ci_object in "${BASE_SEQUENCES[@]}"; do
         label_p_obs_threshold.json \
         label_p_prior_threshold.json
 
+    # Independent shared estimator for this leave-one-object-out fold.
+    FOLD_SHARED_DIR="$SHARED_ARTIFACT_ROOT/$ci_object"
+    mkdir -p "$FOLD_SHARED_DIR"
+    SHARED_MODEL_PATH="$FOLD_SHARED_DIR/shared_pose_quality_model.joblib"
+    SHARED_SCALER_PATH="$FOLD_SHARED_DIR/shared_pose_quality_scaler.joblib"
+    SHARED_CALIBRATOR_PATH="$FOLD_SHARED_DIR/shared_risk_calibrator.joblib"
+    SHARED_CONFIG_PATH="$FOLD_SHARED_DIR/shared_quality_config.json"
+
     python 2-risk_label.py \
         --manifest_path "$REFERENCE_MANIFEST" \
         --ycb_dir "$GT_ROOT" \
@@ -634,7 +678,17 @@ for ci_object in "${BASE_SEQUENCES[@]}"; do
         --foundationpose_python "$FOUNDATIONPOSE_PYTHON" \
         --foundationpose_dir "$FOUNDATIONPOSE_DIR" \
         --foundationpose_refiner_weight "$FOUNDATIONPOSE_REFINER_WEIGHT" \
-        --foundationpose_refine_iter "$FOUNDATIONPOSE_REFINE_ITER"
+        --foundationpose_refine_iter "$FOUNDATIONPOSE_REFINE_ITER" \
+        --sam2_python "$SAM2_PYTHON" \
+        --sam2_dir "$SAM2_DIR" \
+        --sam2_config "$SAM2_CONFIG" \
+        --sam2_checkpoint "$SAM2_CHECKPOINT" \
+        --sam2_cache_root "$SAM2_CACHE_ROOT" \
+        --prior_advantage_margin_cm "$PRIOR_ADVANTAGE_MARGIN_CM" \
+        --shared_model_out "$SHARED_MODEL_PATH" \
+        --shared_scaler_out "$SHARED_SCALER_PATH" \
+        --shared_calibrator_out "$SHARED_CALIBRATOR_PATH" \
+        --shared_config_out "$SHARED_CONFIG_PATH"
 
     require_file "$RAW_LABEL_NAME" "Per-frame label CSV for ci_object=$ci_object"
     require_file "$RAW_BALANCE_NAME" "Class-balance CSV for ci_object=$ci_object"
@@ -649,6 +703,12 @@ for ci_object in "${BASE_SEQUENCES[@]}"; do
     cp "$RAW_QUADRANT_NAME" "$ci_dir/"
     cp label_p_obs_threshold.json "$ci_dir/"
     cp label_p_prior_threshold.json "$ci_dir/"
+
+    # Archive fold-specific shared estimator artifacts.
+    cp "$SHARED_MODEL_PATH" "$ci_dir/"
+    cp "$SHARED_SCALER_PATH" "$ci_dir/"
+    cp "$SHARED_CALIBRATOR_PATH" "$ci_dir/"
+    cp "$SHARED_CONFIG_PATH" "$ci_dir/"
 done
 
 # Each ci_object run is an independent label-generation experiment.
@@ -1026,6 +1086,18 @@ for base in "${BASE_SEQUENCES[@]}"; do
     echo "Test conditions: ${TEST_CONDITIONS[*]}"
     echo "------------------------------------------------------------"
 
+    # Load the estimator trained for this held-out-object fold.
+    FOLD_SHARED_DIR="$SHARED_ARTIFACT_ROOT/$base"
+    SHARED_MODEL_PATH="$FOLD_SHARED_DIR/shared_pose_quality_model.joblib"
+    SHARED_SCALER_PATH="$FOLD_SHARED_DIR/shared_pose_quality_scaler.joblib"
+    SHARED_CALIBRATOR_PATH="$FOLD_SHARED_DIR/shared_risk_calibrator.joblib"
+    SHARED_CONFIG_PATH="$FOLD_SHARED_DIR/shared_quality_config.json"
+
+    require_file "$SHARED_MODEL_PATH" "$base shared pose-quality model"
+    require_file "$SHARED_SCALER_PATH" "$base shared pose-quality scaler"
+    require_file "$SHARED_CALIBRATOR_PATH" "$base shared risk calibrator"
+    require_file "$SHARED_CONFIG_PATH" "$base shared quality config"
+
     # Threshold files are global fixed names in 3-train_evaluation.py. Remove the
     # previous base's files so this base establishes its own context first.
     rm -f p_obs_threshold.json p_prior_threshold.json
@@ -1059,6 +1131,16 @@ for base in "${BASE_SEQUENCES[@]}"; do
         --foundationpose_mesh_file "$FP_MESH" \
         --foundationpose_refiner_weight "$FOUNDATIONPOSE_REFINER_WEIGHT" \
         --foundationpose_refine_iter "$FOUNDATIONPOSE_REFINE_ITER" \
+        --sam2_python "$SAM2_PYTHON" \
+        --sam2_dir "$SAM2_DIR" \
+        --sam2_config "$SAM2_CONFIG" \
+        --sam2_checkpoint "$SAM2_CHECKPOINT" \
+        --sam2_cache_root "$SAM2_CACHE_ROOT" \
+        --prior_advantage_margin_cm "$PRIOR_ADVANTAGE_MARGIN_CM" \
+        --shared_model_path "$SHARED_MODEL_PATH" \
+        --shared_scaler_path "$SHARED_SCALER_PATH" \
+        --shared_calibrator_path "$SHARED_CALIBRATOR_PATH" \
+        --shared_config_path "$SHARED_CONFIG_PATH" \
         --bootstrap_samples "$BOOTSTRAP_SAMPLES" \
         --seed "$SEED"
 

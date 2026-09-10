@@ -10,8 +10,11 @@ import trimesh
 import pyrender
 import argparse
 import open3d as o3d
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import HuberRegressor
+from sklearn.preprocessing import RobustScaler
+from sklearn.isotonic import IsotonicRegression
+from sklearn.metrics import mean_absolute_error, roc_auc_score
+import joblib
 from b5_policy import se3_log_map, compute_se3_prior, init_b5_state, b5_transition, b5_recovery_needed
 
 
@@ -364,8 +367,163 @@ def extract_pose_conditioned_features(
     }
 
 
+SHARED_FEATURE_COLUMNS = [
+    "x1_norm",
+    "x2_inlier_error",
+    "x4_support_ratio",
+    "x5_geometry_inconsistency",
+]
+
+
+def shared_feature_vector(features, d_obj_cm):
+    """Return the SAME 4-D pose-quality feature vector for obs or prior."""
+    d_obj_cm = float(d_obj_cm)
+    if not np.isfinite(d_obj_cm) or d_obj_cm <= 0:
+        raise ValueError(f"Invalid object diameter: {d_obj_cm}")
+    return np.asarray([
+        float(features["x1"]) / d_obj_cm,
+        float(features["x2"]),
+        float(features["x4"]),
+        float(features["x5"]),
+    ], dtype=np.float64)
+
+
+def predict_shared_quality(
+    features,
+    d_obj_cm,
+    scaler,
+    regressor,
+    risk_calibrator,
+):
+    """Predict normalized error, cm error, and absolute risk for one pose."""
+    x = shared_feature_vector(features, d_obj_cm).reshape(1, -1)
+    x_scaled = scaler.transform(x)
+    e_hat_norm = max(float(regressor.predict(x_scaled)[0]), 0.0)
+    E_hat_cm = float(e_hat_norm * float(d_obj_cm))
+    p_risk = float(np.clip(risk_calibrator.predict([E_hat_cm])[0], 0.0, 1.0))
+    return e_hat_norm, E_hat_cm, p_risk
+
+
+def _assign_temporal_split(df, train_fraction):
+    """Per sequence: first fraction = fit, last fraction = calibration."""
+    out = df.copy()
+    out["split"] = "cal"
+    for seq, sub in out.groupby("sequence", sort=False):
+        unique_idx = np.sort(sub["sequence_index"].astype(int).unique())
+        if len(unique_idx) < 2:
+            raise ValueError(f"Sequence {seq} too short for train/cal split")
+        cut = max(1, min(len(unique_idx) - 1, int(len(unique_idx) * train_fraction)))
+        train_idx = set(unique_idx[:cut].tolist())
+        out.loc[
+            (out["sequence"] == seq)
+            & out["sequence_index"].astype(int).isin(train_idx),
+            "split",
+        ] = "train"
+    return out
+
+
+def _hypothesis_samples_from_rollout(rows_df):
+    """Convert one per-frame row into two same-space hypothesis samples."""
+    samples = []
+    for row in rows_df.itertuples(index=False):
+        common = {
+            "sequence": str(row.sequence),
+            "sequence_index": int(row.sequence_index),
+            "frame_id": int(row.frame_id),
+            "D_obj_cm": float(row.D_obj_cm),
+        }
+        samples.append({
+            **common,
+            "hypothesis": "obs",
+            "x1_norm": float(row.x1_obs_norm),
+            "x2_inlier_error": float(row.x2_obs_inlier_error),
+            "x4_support_ratio": float(row.x4_obs_support_ratio),
+            "x5_geometry_inconsistency": float(row.x5_obs_geometry_inconsistency),
+            "target_e_norm": float(row.e_obs_norm),
+            "target_E_cm": float(row.E_obs_cm),
+        })
+        samples.append({
+            **common,
+            "hypothesis": "prior",
+            "x1_norm": float(row.x1_prior_norm),
+            "x2_inlier_error": float(row.x2_prior_inlier_error),
+            "x4_support_ratio": float(row.x4_prior_support_ratio),
+            "x5_geometry_inconsistency": float(row.x5_prior_geometry_inconsistency),
+            "target_e_norm": float(row.e_prior_norm),
+            "target_E_cm": float(row.E_prior_cm),
+        })
+    return pd.DataFrame(samples)
+
+
+def fit_shared_quality_model(samples_df, risk_threshold_cm, train_fraction=0.7):
+    """
+    Fit ONE shared pose-error regressor and ONE monotonic risk calibrator.
+
+    The regressor target is normalized ADD-S error E/D_obj.  Calibration uses
+    predicted error in cm and the single absolute risk event E > threshold.
+    """
+    if len(samples_df) == 0:
+        raise ValueError("No samples supplied to shared quality fit")
+    samples_df = _assign_temporal_split(samples_df, train_fraction)
+    feature_cols = SHARED_FEATURE_COLUMNS
+    train = samples_df[samples_df["split"] == "train"].copy()
+    cal = samples_df[samples_df["split"] == "cal"].copy()
+    if len(train) == 0 or len(cal) == 0:
+        raise ValueError("Empty train/cal split for shared quality model")
+
+    scaler = RobustScaler()
+    X_train = scaler.fit_transform(train[feature_cols].values.astype(np.float64))
+    y_train = train["target_e_norm"].values.astype(np.float64)
+    regressor = HuberRegressor(
+        epsilon=1.35,
+        alpha=1e-4,
+        max_iter=2000,
+        tol=1e-6,
+    )
+    regressor.fit(X_train, y_train)
+
+    X_cal = scaler.transform(cal[feature_cols].values.astype(np.float64))
+    e_hat_cal = np.maximum(regressor.predict(X_cal), 0.0)
+    E_hat_cal_cm = e_hat_cal * cal["D_obj_cm"].values.astype(np.float64)
+    E_cal_cm = cal["target_E_cm"].values.astype(np.float64)
+    y_cal_risk = (E_cal_cm > float(risk_threshold_cm)).astype(np.int64)
+    if len(np.unique(y_cal_risk)) < 2:
+        raise ValueError(
+            "Calibration split has only one absolute-risk class; cannot calibrate."
+        )
+
+    # Monotonic calibration guarantees: larger predicted error cannot imply
+    # smaller absolute risk probability.
+    risk_calibrator = IsotonicRegression(
+        y_min=0.0,
+        y_max=1.0,
+        increasing=True,
+        out_of_bounds="clip",
+    )
+    risk_calibrator.fit(E_hat_cal_cm, y_cal_risk)
+    p_cal = np.asarray(risk_calibrator.predict(E_hat_cal_cm), dtype=np.float64)
+    p_risk_threshold, balanced_acc = select_risk_threshold(y_cal_risk, p_cal)
+
+    # Compact fit diagnostics.
+    train_hat = np.maximum(regressor.predict(X_train), 0.0)
+    train_hat_cm = train_hat * train["D_obj_cm"].values.astype(np.float64)
+    train_true_cm = train["target_E_cm"].values.astype(np.float64)
+    metrics = {
+        "train_samples": int(len(train)),
+        "cal_samples": int(len(cal)),
+        "train_mae_cm": float(mean_absolute_error(train_true_cm, train_hat_cm)),
+        "cal_mae_cm": float(mean_absolute_error(E_cal_cm, E_hat_cal_cm)),
+        "cal_risk_auroc": float(roc_auc_score(y_cal_risk, p_cal)),
+        "p_risk_threshold": float(p_risk_threshold),
+        "threshold_balanced_accuracy": float(balanced_acc),
+    }
+    return scaler, regressor, risk_calibrator, float(p_risk_threshold), metrics
+
+
 def build_label_row(
     seq,
+    base_sequence,
+    sequence_index,
     frame_id,
     T_obs,
     T_prior,
@@ -375,82 +533,85 @@ def build_label_row(
     open3d_models,
     obs_features,
     prior_features,
-    x3_trans,
-    x3_rot,
-    p_obs_bad,
-    p_prior_bad,
+    obs_prediction,
+    prior_prediction,
     mode,
+    risk_threshold_cm,
+    prior_advantage_margin_cm,
+    policy_model_stage,
 ):
-    """
-    GT is used ONLY to create supervision labels / diagnostics.
-    It never enters any learned feature.
-    """
-    E_update_cm = U.adi(
-        T_obs,
-        T_gt,
-        open3d_models[obj_idx],
-    ) * 100
+    """GT is used only here, after the deployable B5 decision quantities exist."""
+    E_obs_cm = U.adi(T_obs, T_gt, open3d_models[obj_idx]) * 100.0
+    E_prior_cm = U.adi(T_prior, T_gt, open3d_models[obj_idx]) * 100.0
+    d_obj_cm = float(d_objs[obj_idx])
+    e_obs_norm = float(E_obs_cm / d_obj_cm)
+    e_prior_norm = float(E_prior_cm / d_obj_cm)
+    delta_E_gt_cm = float(E_prior_cm - E_obs_cm)
+    margin = float(prior_advantage_margin_cm)
+    if delta_E_gt_cm > margin:
+        pair_state_gt = "PRIOR_WORSE"
+    elif delta_E_gt_cm < -margin:
+        pair_state_gt = "PRIOR_BETTER"
+    else:
+        pair_state_gt = "TIE"
 
-    E_prior_cm = U.adi(
-        T_prior,
-        T_gt,
-        open3d_models[obj_idx],
-    ) * 100
+    e_obs_hat_norm, E_obs_hat_cm, p_obs_risk = obs_prediction
+    e_prior_hat_norm, E_prior_hat_cm, p_prior_risk = prior_prediction
 
-    e_update_norm = E_update_cm / d_objs[obj_idx]
-    e_prior_norm = E_prior_cm / d_objs[obj_idx]
+    obs_abs_risk = int(E_obs_cm > float(risk_threshold_cm))
+    prior_abs_risk = int(E_prior_cm > float(risk_threshold_cm))
 
     return {
         "sequence": seq,
-        "frame_id": frame_id,
+        "base_sequence": base_sequence,
+        "sequence_index": int(sequence_index),
+        "frame_id": int(frame_id),
+        "D_obj_cm": d_obj_cm,
 
-        "E_update_cm": E_update_cm,
-        "E_prior_cm": E_prior_cm,
-        "e_update_norm": e_update_norm,
+        # Continuous supervision: these are the primary labels.
+        "E_obs_cm": float(E_obs_cm),
+        "E_prior_cm": float(E_prior_cm),
+        "e_obs_norm": e_obs_norm,
         "e_prior_norm": e_prior_norm,
 
-        "obs_risk_label":
-            int(E_update_cm > ARGS_RISK_THRESHOLD_CM),
-        "prior_risk_label":
-            int(E_prior_cm > ARGS_RISK_THRESHOLD_CM),
+        # Compatibility aliases used by older merge/report scripts.
+        "E_update_cm": float(E_obs_cm),
+        "e_update_norm": e_obs_norm,
 
-        # ---------------- Observation-specific ----------------
-        "x1_obs_depth_residual":
-            obs_features["x1"],
-        "x2_obs_inlier_error":
-            obs_features["x2"],
-        "x4_obs_support_ratio":
-            obs_features["x4"],
-        "x5_obs_geometry_inconsistency":
-            obs_features["x5"],
+        # Absolute-risk diagnostics only. Same definition/direction for both.
+        "obs_abs_risk_label": obs_abs_risk,
+        "prior_abs_risk_label": prior_abs_risk,
+        "obs_risk_label": obs_abs_risk,
+        "prior_risk_label": prior_abs_risk,
 
-        # ---------------- Prior-specific ----------------
-        "x1_prior_depth_residual":
-            prior_features["x1"],
-        "x2_prior_inlier_error":
-            prior_features["x2"],
-        "x5_prior_geometry_inconsistency":
-            prior_features["x5"],
+        # Pairwise diagnostic; NOT a second learned classifier label.
+        "delta_E_gt_cm": delta_E_gt_cm,
+        "pair_state_gt": pair_state_gt,
+        "prior_advantage_margin_cm": margin,
 
-        # ---------------- Shared temporal innovation ----------------
-        # Translation unit: meter
-        # Rotation unit: radian
-        "x3_trans_innovation":
-            float(x3_trans),
-        "x3_rot_innovation":
-            float(x3_rot),
+        # SAME pose-conditioned feature space for observation and prior.
+        "x1_obs_depth_residual": float(obs_features["x1"]),
+        "x1_obs_norm": float(obs_features["x1"] / d_obj_cm),
+        "x2_obs_inlier_error": float(obs_features["x2"]),
+        "x4_obs_support_ratio": float(obs_features["x4"]),
+        "x5_obs_geometry_inconsistency": float(obs_features["x5"]),
 
-        "p_obs_bad_rollout":
-            p_obs_bad,
-        "p_prior_bad_rollout":
-            (
-                p_prior_bad
-                if p_prior_bad is not None
-                else np.nan
-            ),
+        "x1_prior_depth_residual": float(prior_features["x1"]),
+        "x1_prior_norm": float(prior_features["x1"] / d_obj_cm),
+        "x2_prior_inlier_error": float(prior_features["x2"]),
+        "x4_prior_support_ratio": float(prior_features["x4"]),
+        "x5_prior_geometry_inconsistency": float(prior_features["x5"]),
 
+        # Frozen shared-estimator outputs used by B5 in this exact rollout.
+        "e_obs_hat_norm": float(e_obs_hat_norm),
+        "e_prior_hat_norm": float(e_prior_hat_norm),
+        "E_obs_hat_cm": float(E_obs_hat_cm),
+        "E_prior_hat_cm": float(E_prior_hat_cm),
+        "p_obs_risk_rollout": float(p_obs_risk),
+        "p_prior_risk_rollout": float(p_prior_risk),
+        "delta_E_hat_cm": float(E_prior_hat_cm - E_obs_hat_cm),
         "rollout_mode": mode,
-        "D_obj": d_objs[obj_idx],
+        "policy_model_stage": str(policy_model_stage),
     }
 
 
@@ -632,73 +793,35 @@ def rollout_episode(
     mesh_nodes,
     d_objs,
     open3d_models,
-    clf_obs,
-    scaler_obs,
-    clf_prior=None,
-    scaler_prior=None,
-    use_prior_predictor=False,
-    p_obs_threshold=None,
-    p_prior_threshold=None,
+    scaler,
+    regressor,
+    risk_calibrator,
+    p_risk_threshold,
+    policy_model_stage,
 ):
+    """
+    Closed-loop B5 rollout.  This is the same B5 transition interface used at
+    deployment; GT is consulted only after each transition to write supervision.
+    """
     rows = []
     T_B5_history = []
     b5_state = init_b5_state()
+    init_mask_path = resolve_initial_mask_file_for_episode(episode_df, args)
+    mesh_file = resolve_foundationpose_mesh_file(args, obj_idx)
+    base_sequence = str(episode_df.iloc[0]["base_sequence"])
 
-    # Recovery Template1 source for this episode:
-    # first RGB comes from the frozen manifest; init_mask.png comes from the
-    # original YCBInEOAT base sequence, e.g.
-    # ./datasets/YCBInEOAT/mustard0/init_mask.png
-    initial_rgb_file_template1 = resolve_path(
-        episode_df.iloc[0]["rgb_path"],
-        args.data_dir,
-    )
-    initial_mask_file_template1 = (
-        resolve_initial_mask_file_for_episode(
-            episode_df,
-            args,
-        )
-    )
-    initial_rgb_real_template1 = None
-    initial_mask_template1 = None
-
-    for frame_index, (_, row) in enumerate(
-        episode_df.iterrows()
-    ):
+    for frame_index, (_, row) in enumerate(episode_df.iterrows()):
         frame_id = int(row["frame_id"])
-        T_obs, T_gt, depth_real = load_frame_from_manifest(
-            row,
-            args,
-        )
+        T_obs, T_gt, depth_real = load_frame_from_manifest(row, args)
+        # Keep the exact resolved manifest path as well as the existing RGB
+        # array. SAM2 consumes these same artifacts in the same frame order.
+        rgb_real, rgb_path = load_foundationpose_recovery_rgb(seq, row, args)
 
-        # Load the exact current RGB associated with this frame in the frozen
-        # manifest on EVERY frame. b5_policy caches the last non-blackout
-        # RGB/T_final pair; during blackout that cache remains frozen and is
-        # later used to build rgb_template2.
-        (
-            rgb_real,
-            current_rgb_path,
-        ) = load_foundationpose_recovery_rgb(
-            seq,
-            row,
-            args,
-        )
-
-        # -------------------------------------------------------------
-        # Temporal prior: generated from recursive B5 history.
-        # The first two frames have no two-step history, so T_prior=T_obs.
-        # -------------------------------------------------------------
         if len(T_B5_history) < 2:
             T_prior = T_obs
         else:
-            T_prior = compute_se3_prior(
-                T_B5_history[-1],
-                T_B5_history[-2],
-            )
+            T_prior = compute_se3_prior(T_B5_history[-1], T_B5_history[-2])
 
-        # -------------------------------------------------------------
-        # IMPORTANT: observation and prior pose-conditioned features
-        # are computed INDEPENDENTLY.
-        # -------------------------------------------------------------
         obs_features = extract_pose_conditioned_features(
             T_pose=T_obs,
             depth_real=depth_real,
@@ -709,7 +832,6 @@ def rollout_episode(
             mesh_nodes=mesh_nodes,
             include_support=True,
         )
-
         prior_features = extract_pose_conditioned_features(
             T_pose=T_prior,
             depth_real=depth_real,
@@ -718,232 +840,182 @@ def rollout_episode(
             scenes=scenes,
             renders_obj=renders_obj,
             mesh_nodes=mesh_nodes,
-            include_support=False,
+            include_support=True,
         )
 
-        # -------------------------------------------------------------
-        # Shared temporal innovation:
-        # disagreement between temporal prediction and current observation.
-        # It is NOT treated as a prior-only feature.
-        # -------------------------------------------------------------
-        innovation_vec = se3_log_map(
-            np.linalg.inv(T_prior) @ T_obs
+        obs_prediction = predict_shared_quality(
+            obs_features, d_objs[obj_idx], scaler, regressor, risk_calibrator
         )
-
-        x3_trans = float(
-            np.linalg.norm(
-                innovation_vec[:3]
-            )
+        prior_prediction = predict_shared_quality(
+            prior_features, d_objs[obj_idx], scaler, regressor, risk_calibrator
         )
-
-        x3_rot = float(
-            np.linalg.norm(
-                innovation_vec[3:]
-            )
-        )
-
-        # -------------------------------------------------------------
-        # Observation-risk predictor.
-        #
-        # Warm-start model: 4 dims, no temporal innovation yet.
-        # Final model:      6 dims, includes shared temporal innovation.
-        # -------------------------------------------------------------
-        if clf_obs.n_features_in_ == 4:
-            obs_raw = [[
-                obs_features["x1"],
-                obs_features["x2"],
-                obs_features["x4"],
-                obs_features["x5"],
-            ]]
-
-        elif clf_obs.n_features_in_ == 6:
-            obs_raw = [[
-                obs_features["x1"],
-                obs_features["x2"],
-                obs_features["x4"],
-                obs_features["x5"],
-                x3_trans,
-                x3_rot,
-            ]]
-
-        else:
-            raise ValueError(
-                "Unexpected obs predictor dimension: "
-                f"{clf_obs.n_features_in_}"
-            )
-
-        obs_feat = scaler_obs.transform(
-            obs_raw
-        )
-
-        p_obs_bad = float(
-            clf_obs.predict_proba(
-                obs_feat
-            )[0, 1]
-        )
-
-        # -------------------------------------------------------------
-        # Prior-risk predictor.
-        #
-        # 5 dims:
-        #   x1_prior, x2_prior, x5_prior,
-        #   x3_trans, x3_rot
-        #
-        # No x4_prior. No observation-conditioned x1/x2/x5 leakage.
-        # -------------------------------------------------------------
-        p_prior_bad = None
-
-        if use_prior_predictor:
-            if clf_prior is None or scaler_prior is None:
-                raise ValueError(
-                    "Prior predictor requested but "
-                    "clf_prior/scaler_prior is None."
-                )
-
-            if clf_prior.n_features_in_ != 5:
-                raise ValueError(
-                    "Unexpected prior predictor dimension: "
-                    f"{clf_prior.n_features_in_}"
-                )
-
-            prior_raw = [[
-                prior_features["x1"],
-                prior_features["x2"],
-                prior_features["x5"],
-                x3_trans,
-                x3_rot,
-            ]]
-
-            prior_feat = scaler_prior.transform(
-                prior_raw
-            )
-
-            p_prior_bad = float(
-                clf_prior.predict_proba(
-                    prior_feat
-                )[0, 1]
-            )
-
-        x4_obs = obs_features["x4"]
-
-        # Preview the SAME recovery trigger as deployment evaluation.
-        # Importantly, this does not use x4. A true blackout is detected from
-        # the full depth image, and the 5-frame prior-reliance trigger is also
-        # shared with b5_policy.
-        (
-            will_attempt_recovery,
-            recovery_trigger_preview,
-            _recovery_depth_diag,
-        ) = b5_recovery_needed(
-            depth_real=depth_real,
-            state=b5_state,
-            blackout_min_frames=(
-                args.blackout_min_frames
-            ),
-        )
-
-        if will_attempt_recovery:
-            if (
-                initial_rgb_real_template1 is None
-                or initial_mask_template1 is None
-            ):
-                (
-                    initial_rgb_real_template1,
-                    initial_mask_template1,
-                    _initial_rgb_loaded,
-                    _initial_mask_loaded,
-                ) = load_initial_template_inputs(
-                    initial_rgb_file=(
-                        initial_rgb_file_template1
-                    ),
-                    initial_mask_file=(
-                        initial_mask_file_template1
-                    ),
-                )
-
-                print(
-                    f"[Recovery][Template1] initial RGB : "
-                    f"{_initial_rgb_loaded}"
-                )
-                print(
-                    f"[Recovery][Template1] initial mask: "
-                    f"{_initial_mask_loaded}"
-                )
-
-            print(
-                f"[Template2+FoundationPose label recovery] "
-                f"seq={seq} frame={frame_id} | "
-                f"trigger={recovery_trigger_preview} | "
-                f"rgb={current_rgb_path}"
-            )
+        _, E_obs_hat_cm, p_obs_risk = obs_prediction
+        _, E_prior_hat_cm, p_prior_risk = prior_prediction
 
         T_final_B5, mode, b5_state, _ = b5_transition(
             T_obs=T_obs,
             T_prior=T_prior,
-            p_obs_bad=p_obs_bad,
-            p_prior_bad=p_prior_bad,
-            support=x4_obs,
+            support=obs_features["x4"],
             depth_real=depth_real,
             model_pts=models_pts[obj_idx],
             K=K,
-            p_obs_threshold=p_obs_threshold,
-            p_prior_threshold=p_prior_threshold,
             frame_index=frame_index,
             frame_id=frame_id,
             state=b5_state,
             blackout_min_frames=args.blackout_min_frames,
-            use_prior_predictor=use_prior_predictor,
-
             rgb_real=rgb_real,
-            initial_rgb_real=(
-                initial_rgb_real_template1
-            ),
-            initial_mask=(
-                initial_mask_template1
-            ),
-            mesh_file=resolve_foundationpose_mesh_file(
-                args,
-                obj_idx,
-            ),
-            foundationpose_python=(
-                args.foundationpose_python
-            ),
-            foundationpose_dir=(
-                args.foundationpose_dir
-            ),
-            foundationpose_refiner_weight=(
-                args.foundationpose_refiner_weight
-            ),
-            foundationpose_refine_iter=(
-                args.foundationpose_refine_iter
-            ),
+            init_mask_path=init_mask_path,
+            base_sequence=base_sequence,
+            ycbineoat_root=args.ycb_dir,
+            mesh_file=mesh_file,
+            foundationpose_python=args.foundationpose_python,
+            foundationpose_dir=args.foundationpose_dir,
+            foundationpose_refiner_weight=args.foundationpose_refiner_weight,
+            foundationpose_refine_iter=args.foundationpose_refine_iter,
+            rgb_path=rgb_path,
+            sam2_python=args.sam2_python,
+            sam2_dir=args.sam2_dir,
+            sam2_config=args.sam2_config,
+            sam2_checkpoint=args.sam2_checkpoint,
+            sam2_cache_root=args.sam2_cache_root,
+            E_obs_hat_cm=E_obs_hat_cm,
+            E_prior_hat_cm=E_prior_hat_cm,
+            p_obs_risk=p_obs_risk,
+            p_prior_risk=p_prior_risk,
+            p_risk_threshold=p_risk_threshold,
+            prior_advantage_margin_cm=args.prior_advantage_margin_cm,
         )
+        T_B5_history.append(T_final_B5)
 
-        T_B5_history.append(
-            T_final_B5
-        )
-
-        rows.append(
-            build_label_row(
-                seq=seq,
-                frame_id=frame_id,
-                T_obs=T_obs,
-                T_prior=T_prior,
-                T_gt=T_gt,
-                obj_idx=obj_idx,
-                d_objs=d_objs,
-                open3d_models=open3d_models,
-                obs_features=obs_features,
-                prior_features=prior_features,
-                x3_trans=x3_trans,
-                x3_rot=x3_rot,
-                p_obs_bad=p_obs_bad,
-                p_prior_bad=p_prior_bad,
-                mode=mode,
-            )
-        )
-
+        rows.append(build_label_row(
+            seq=seq,
+            base_sequence=base_sequence,
+            sequence_index=int(row["sequence_index"]),
+            frame_id=frame_id,
+            T_obs=T_obs,
+            T_prior=T_prior,
+            T_gt=T_gt,
+            obj_idx=obj_idx,
+            d_objs=d_objs,
+            open3d_models=open3d_models,
+            obs_features=obs_features,
+            prior_features=prior_features,
+            obs_prediction=obs_prediction,
+            prior_prediction=prior_prediction,
+            mode=mode,
+            risk_threshold_cm=args.risk_threshold,
+            prior_advantage_margin_cm=args.prior_advantage_margin_cm,
+            policy_model_stage=policy_model_stage,
+        ))
     return rows
+
+
+def collect_observation_seed_rows(
+    manifest,
+    train_bases,
+    args,
+    models_pts,
+    scenes,
+    renders_obj,
+    mesh_nodes,
+    d_objs,
+    open3d_models,
+):
+    """Observation-only seed supervision; no recursive prior is needed."""
+    rows = []
+    base_to_idx = {base: i for i, base in enumerate(args.target_seqs)}
+    for base in train_bases:
+        obj_idx = base_to_idx[base]
+        for suffix in args.corruption_lists:
+            seq = base + suffix
+            episode_df = get_episode_df(manifest, seq)
+            for _, row in episode_df.iterrows():
+                T_obs, T_gt, depth_real = load_frame_from_manifest(row, args)
+                feat = extract_pose_conditioned_features(
+                    T_pose=T_obs,
+                    depth_real=depth_real,
+                    obj_idx=obj_idx,
+                    models_pts=models_pts,
+                    scenes=scenes,
+                    renders_obj=renders_obj,
+                    mesh_nodes=mesh_nodes,
+                    include_support=True,
+                )
+                E_obs_cm = U.adi(T_obs, T_gt, open3d_models[obj_idx]) * 100.0
+                d_obj_cm = float(d_objs[obj_idx])
+                x = shared_feature_vector(feat, d_obj_cm)
+                rows.append({
+                    "sequence": seq,
+                    "sequence_index": int(row["sequence_index"]),
+                    "frame_id": int(row["frame_id"]),
+                    "D_obj_cm": d_obj_cm,
+                    "hypothesis": "obs",
+                    "x1_norm": float(x[0]),
+                    "x2_inlier_error": float(x[1]),
+                    "x4_support_ratio": float(x[2]),
+                    "x5_geometry_inconsistency": float(x[3]),
+                    "target_e_norm": float(E_obs_cm / d_obj_cm),
+                    "target_E_cm": float(E_obs_cm),
+                })
+    return pd.DataFrame(rows)
+
+
+def save_shared_artifacts(
+    args,
+    held_out_base,
+    train_bases,
+    scaler,
+    regressor,
+    risk_calibrator,
+    p_risk_threshold,
+    metrics,
+):
+    paths = {
+        "scaler": os.path.abspath(args.shared_scaler_out),
+        "model": os.path.abspath(args.shared_model_out),
+        "calibrator": os.path.abspath(args.shared_calibrator_out),
+        "config": os.path.abspath(args.shared_config_out),
+    }
+    joblib.dump(scaler, paths["scaler"])
+    joblib.dump(regressor, paths["model"])
+    joblib.dump(risk_calibrator, paths["calibrator"])
+    cfg = {
+        "version": "shared_pose_quality_v1",
+        "held_out_base": held_out_base,
+        "train_bases": list(train_bases),
+        "feature_columns": list(SHARED_FEATURE_COLUMNS),
+        "target": "normalized_ADD-S_error_E_over_D_obj",
+        "risk_definition": f"E_cm > {float(args.risk_threshold):.6g}",
+        "risk_threshold_cm": float(args.risk_threshold),
+        "p_risk_threshold": float(p_risk_threshold),
+        "prior_advantage_margin_cm": float(args.prior_advantage_margin_cm),
+        "train_fraction": float(args.train_fraction),
+        "on_policy_refine_rounds": int(args.on_policy_refine_rounds),
+        "manifest_sha256": compute_sha256(args.manifest_path),
+        "fit_metrics": metrics,
+    }
+    with open(paths["config"], "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
+    for key in ("scaler", "model", "calibrator"):
+        cfg[f"{key}_sha256"] = compute_sha256(paths[key])
+    with open(paths["config"], "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+    # Compatibility JSONs: there is now ONE shared threshold, not two learned
+    # thresholds.  These files exist only so older archival scripts do not fail.
+    compat = {
+        "p_risk_threshold": float(p_risk_threshold),
+        "p_obs_threshold": float(p_risk_threshold),
+        "p_prior_threshold": float(p_risk_threshold),
+        "shared_threshold": True,
+        "deprecated_compatibility_artifact": True,
+        "config_path": paths["config"],
+    }
+    with open("label_p_obs_threshold.json", "w", encoding="utf-8") as f:
+        json.dump(compat, f, indent=2, ensure_ascii=False)
+    with open("label_p_prior_threshold.json", "w", encoding="utf-8") as f:
+        json.dump(compat, f, indent=2, ensure_ascii=False)
+    return paths
 
 
 def main(args):
@@ -951,7 +1023,6 @@ def main(args):
     ARGS_RISK_THRESHOLD_CM = args.risk_threshold
 
     manifest = pd.read_csv(args.manifest_path)
-    print(f"Consuming frozen reference manifest: {args.manifest_path}")
     required_cols = {
         "base_sequence", "condition", "sequence", "sequence_index", "frame_id",
         "rgb_path", "depth_path", "gt_path", "pred_path",
@@ -960,16 +1031,12 @@ def main(args):
     }
     missing_cols = required_cols - set(manifest.columns)
     if missing_cols:
-        raise ValueError(f"Manifest缺少字段: {sorted(missing_cols)}")
+        raise ValueError(f"Manifest missing columns: {sorted(missing_cols)}")
     if manifest.duplicated(["sequence", "frame_id"]).any():
-        raise ValueError("Manifest中存在重复(sequence, frame_id)")
-    if manifest.duplicated(["sequence", "sequence_index"]).any():
-        raise ValueError("Manifest中存在重复(sequence, sequence_index)")
-    association_methods = manifest["association_method"].dropna().unique().tolist()
-    if association_methods != ["official_ycbineoat_reference_sorted_index"]:
-        raise ValueError(f"Manifest association_method不受支持: {association_methods}")
+        raise ValueError("Manifest contains duplicate (sequence, frame_id)")
     verify_manifest_artifacts(manifest, args)
 
+    # Object-specific rendering assets.
     renders_obj, d_objs, scenes, mesh_nodes, models_pts, open3d_models = [], [], [], [], [], []
     for model_seq in args.cad_models_seq[:len(args.target_seqs)]:
         points_path = os.path.join(args.mesh_path_root, model_seq, "points.xyz")
@@ -979,508 +1046,204 @@ def main(args):
         scene = pyrender.Scene()
         mesh_node = scene.add(render_mesh)
         mesh_nodes.append(mesh_node)
-        camera = pyrender.IntrinsicsCamera(fx=K[0, 0], fy=K[1, 1], cx=K[0, 2], cy=K[1, 2])
+        camera = pyrender.IntrinsicsCamera(
+            fx=K[0, 0], fy=K[1, 1], cx=K[0, 2], cy=K[1, 2]
+        )
         scene.add(camera, pose=np.eye(4))
         scenes.append(scene)
         renders_obj.append(pyrender.OffscreenRenderer(viewport_width=640, viewport_height=480))
-        with open(points_path, 'r') as f:
-            model_pts = np.array([list(map(float, line.rstrip().split())) for line in f.readlines()])
+        model_pts = np.loadtxt(points_path, dtype=np.float64).reshape(-1, 3)
         models_pts.append(model_pts)
-        open3d_models.append(U.toOpen3dCloud(model_pts, colors=np.zeros(model_pts.shape, dtype=np.float64)))
-        bbox_min, bbox_max = np.min(model_pts, axis=0), np.max(model_pts, axis=0)
-        d = np.linalg.norm(bbox_max - bbox_min) * 100
-        d_objs.append(d)
-        print(f"物体 3D 直径 d_obj = {d:.2f} cm")
+        open3d_models.append(U.toOpen3dCloud(
+            model_pts, colors=np.zeros(model_pts.shape, dtype=np.float64)
+        ))
+        d = np.linalg.norm(np.max(model_pts, axis=0) - np.min(model_pts, axis=0)) * 100.0
+        d_objs.append(float(d))
+        print(f"Object {model_seq}: D_obj={d:.3f} cm")
 
+    held_out_base = args.ci_object
+    if held_out_base not in args.target_seqs:
+        raise ValueError(f"ci_object/held-out base {held_out_base} not in target_seqs")
+    train_bases = [x for x in args.target_seqs if x != held_out_base]
+    print("\n=== Fold-specific shared pose-quality training ===")
+    print("held-out:", held_out_base)
+    print("train bases:", train_bases)
 
-    print(
-        "阶段 1: 训练 observation-risk warm-start predictor "
-        "(obs-specific x1/x2/x4/x5)..."
+    # --------------------------------------------------------------
+    # Stage 0: bootstrap q0 from observation hypotheses ONLY.
+    # This breaks the chicken-and-egg loop without any GT in B5 decisions.
+    # --------------------------------------------------------------
+    seed_df = collect_observation_seed_rows(
+        manifest, train_bases, args,
+        models_pts, scenes, renders_obj, mesh_nodes, d_objs, open3d_models,
     )
+    scaler, regressor, calibrator, p_risk_threshold, metrics = fit_shared_quality_model(
+        seed_df,
+        risk_threshold_cm=args.risk_threshold,
+        train_fraction=args.train_fraction,
+    )
+    print("Stage 0 q0 (obs-only seed):", metrics)
 
-    stage1_X_obs = []
-    stage1_y_obs = []
+    base_to_idx = {base: i for i, base in enumerate(args.target_seqs)}
 
-    for obj_idx, seq_target in enumerate(
-        args.target_seqs
-    ):
-        for dot in args.corruption_lists:
-            seq = seq_target + dot
-            episode_df = get_episode_df(
-                manifest,
-                seq,
-            )
-
-            for _, row in episode_df.iterrows():
-                (
-                    T_obs,
-                    T_gt,
-                    depth_real,
-                ) = load_frame_from_manifest(
-                    row,
-                    args,
+    # --------------------------------------------------------------
+    # On-policy refinement on NON-HELD-OUT objects only.
+    # Every rollout uses the same b5_transition shared-quality policy.
+    # --------------------------------------------------------------
+    for round_idx in range(1, int(args.on_policy_refine_rounds) + 1):
+        train_rollout_rows = []
+        for base in train_bases:
+            obj_idx = base_to_idx[base]
+            for suffix in args.corruption_lists:
+                seq = base + suffix
+                episode_df = get_episode_df(manifest, seq)
+                print(f"[on-policy round {round_idx}] {seq}")
+                train_rollout_rows += rollout_episode(
+                    episode_df, seq, obj_idx, args,
+                    models_pts, scenes, renders_obj, mesh_nodes,
+                    d_objs, open3d_models,
+                    scaler, regressor, calibrator, p_risk_threshold,
+                    policy_model_stage=f"refine_input_q{round_idx-1}",
                 )
-
-                obs_features = (
-                    extract_pose_conditioned_features(
-                        T_pose=T_obs,
-                        depth_real=depth_real,
-                        obj_idx=obj_idx,
-                        models_pts=models_pts,
-                        scenes=scenes,
-                        renders_obj=renders_obj,
-                        mesh_nodes=mesh_nodes,
-                        include_support=True,
-                    )
-                )
-
-                E_update_cm = U.adi(
-                    T_obs,
-                    T_gt,
-                    open3d_models[obj_idx],
-                ) * 100
-
-                obs_risk_label = int(
-                    E_update_cm
-                    > args.risk_threshold
-                )
-
-                stage1_X_obs.append([
-                    obs_features["x1"],
-                    obs_features["x2"],
-                    obs_features["x4"],
-                    obs_features["x5"],
-                ])
-
-                stage1_y_obs.append(
-                    obs_risk_label
-                )
-
-    scaler_obs_warm = MinMaxScaler()
-    X_obs_warm = scaler_obs_warm.fit_transform(
-        np.asarray(
-            stage1_X_obs,
-            dtype=np.float64,
+        train_rollout_df = pd.DataFrame(train_rollout_rows)
+        hypothesis_df = _hypothesis_samples_from_rollout(train_rollout_df)
+        scaler, regressor, calibrator, p_risk_threshold, metrics = fit_shared_quality_model(
+            hypothesis_df,
+            risk_threshold_cm=args.risk_threshold,
+            train_fraction=args.train_fraction,
         )
-    )
+        print(f"Stage {round_idx} q{round_idx} fit:", metrics)
 
-    clf_obs_warm = LogisticRegression(
-        max_iter=1000
-    ).fit(
-        X_obs_warm,
-        np.asarray(stage1_y_obs),
-    )
-
-    # Bootstrap stage has no prior-risk predictor yet.
-    warm_obs_probs = clf_obs_warm.predict_proba(
-        X_obs_warm
-    )[:, 1]
-    warm_p_obs_threshold, warm_obs_balanced_accuracy = (
-        select_risk_threshold(
-            np.asarray(stage1_y_obs),
-            warm_obs_probs,
-        )
-    )
-
-    print(
-        "阶段 1 完成。warm-start obs features = "
-        "[x1_obs, x2_obs, x4_obs, x5_obs]"
-    )
-    print(
-        f"[Warm threshold] p_obs_threshold="
-        f"{warm_p_obs_threshold:.3f} | "
-        f"balanced_accuracy="
-        f"{warm_obs_balanced_accuracy:.4f}"
-    )
-
-
-    print("阶段 2: bootstrap B5 rollout，生成初始prior-risk labels...")
-    bootstrap_rows = []
-    for obj_idx, seq_target in enumerate(args.target_seqs):
-        for dot in args.corruption_lists:
-            seq = seq_target + dot
+    # --------------------------------------------------------------
+    # Freeze q_final, then generate FINAL labels under EXACTLY that frozen
+    # B5 policy.  These rows are diagnostics/supervision; deployment should
+    # load the same saved model/scaler/calibrator/config.
+    # --------------------------------------------------------------
+    final_rows = []
+    for base in args.target_seqs:
+        obj_idx = base_to_idx[base]
+        for suffix in args.corruption_lists:
+            seq = base + suffix
             episode_df = get_episode_df(manifest, seq)
-            bootstrap_rows += rollout_episode(
-                episode_df, seq, obj_idx, args, models_pts, scenes, renders_obj, mesh_nodes,
-                d_objs, open3d_models, clf_obs_warm, scaler_obs_warm,
-                use_prior_predictor=False,
-                p_obs_threshold=warm_p_obs_threshold,
-                p_prior_threshold=None,
+            print(f"[FINAL frozen rollout] {seq}")
+            final_rows += rollout_episode(
+                episode_df, seq, obj_idx, args,
+                models_pts, scenes, renders_obj, mesh_nodes,
+                d_objs, open3d_models,
+                scaler, regressor, calibrator, p_risk_threshold,
+                policy_model_stage="final_frozen_shared_quality",
             )
 
-    bootstrap_df = pd.DataFrame(bootstrap_rows)
-
-    # Final observation-risk model:
-    # observation-conditioned geometry/visibility + shared temporal innovation.
-    feature_cols_obs = [
-        'x1_obs_depth_residual',
-        'x2_obs_inlier_error',
-        'x4_obs_support_ratio',
-        'x5_obs_geometry_inconsistency',
-        'x3_trans_innovation',
-        'x3_rot_innovation',
-    ]
-
-    # Final prior-risk model:
-    # prior-conditioned geometry + shared temporal innovation.
-    # No x4_prior and no observation-conditioned x1/x2/x5 leakage.
-    feature_cols_prior = [
-        'x1_prior_depth_residual',
-        'x2_prior_inlier_error',
-        'x5_prior_geometry_inconsistency',
-        'x3_trans_innovation',
-        'x3_rot_innovation',
-    ]
-
-
-    scaler_obs_full = MinMaxScaler()
-    X_obs_boot = scaler_obs_full.fit_transform(bootstrap_df[feature_cols_obs].values)
-    scaler_prior_full = MinMaxScaler()
-    X_prior_boot = scaler_prior_full.fit_transform(bootstrap_df[feature_cols_prior].values)
-
-    y_obs_boot = bootstrap_df['obs_risk_label'].values
-    y_prior_boot = bootstrap_df['prior_risk_label'].values
-    if len(np.unique(y_obs_boot)) < 2:
-        raise ValueError("bootstrap obs_risk_label只有一个类别，无法训练obs predictor")
-    if len(np.unique(y_prior_boot)) < 2:
-        raise ValueError(
-            "bootstrap prior_risk_label只有一个类别，无法训练prior predictor。"
-            "请检查risk_threshold或训练数据；不能通过周期性重置B5 history改变部署状态分布。"
-        )
-
-    clf_obs_full = LogisticRegression(max_iter=1000).fit(
-        X_obs_boot,
-        y_obs_boot,
-    )
-    clf_prior_boot = LogisticRegression(max_iter=1000).fit(
-        X_prior_boot,
-        y_prior_boot,
-    )
-
-    print(
-        "阶段 2 完成: 已得到用于最终 label rollout 的 "
-        "obs/prior predictor。"
-    )
-
-    print("\n[Standardized LogisticRegression coefficients]")
-    print("Observation-risk:")
-    for name, coef in zip(
-        feature_cols_obs,
-        clf_obs_full.coef_[0],
-    ):
-        print(f"  {name:35s}: {coef:+.6f}")
-
-    print("Prior-risk:")
-    for name, coef in zip(
-        feature_cols_prior,
-        clf_prior_boot.coef_[0],
-    ):
-        print(f"  {name:35s}: {coef:+.6f}")
-
-    # Learn two independent operating thresholds from bootstrap data.
-    bootstrap_p_obs = clf_obs_full.predict_proba(
-        X_obs_boot
-    )[:, 1]
-    bootstrap_p_prior = clf_prior_boot.predict_proba(
-        X_prior_boot
-    )[:, 1]
-
-    p_obs_threshold, obs_threshold_score = (
-        select_risk_threshold(
-            y_obs_boot,
-            bootstrap_p_obs,
-        )
-    )
-    p_prior_threshold, prior_threshold_score = (
-        select_risk_threshold(
-            y_prior_boot,
-            bootstrap_p_prior,
-        )
-    )
-
-    obs_threshold_json = {
-        "p_obs_threshold": p_obs_threshold,
-        "balanced_accuracy": obs_threshold_score,
-        "warm_start_p_obs_threshold": warm_p_obs_threshold,
-        "warm_start_balanced_accuracy":
-            warm_obs_balanced_accuracy,
-        "selection_protocol":
-            "label_bootstrap_balanced_accuracy",
-        "feature_columns": feature_cols_obs,
-        "risk_label_threshold_cm":
-            float(args.risk_threshold),
-    }
-    prior_threshold_json = {
-        "p_prior_threshold": p_prior_threshold,
-        "balanced_accuracy": prior_threshold_score,
-        "selection_protocol":
-            "label_bootstrap_balanced_accuracy",
-        "feature_columns": feature_cols_prior,
-        "risk_label_threshold_cm":
-            float(args.risk_threshold),
-    }
-
-    with open(
-        "label_p_obs_threshold.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump(
-            obs_threshold_json,
-            f,
-            indent=4,
-            ensure_ascii=False,
-        )
-
-    with open(
-        "label_p_prior_threshold.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump(
-            prior_threshold_json,
-            f,
-            indent=4,
-            ensure_ascii=False,
-        )
-
-    print("\n[Frozen label-rollout probability thresholds]")
-    print(
-        f"  p_obs_threshold   = "
-        f"{p_obs_threshold:.3f} "
-        f"(balanced_acc={obs_threshold_score:.4f})"
-    )
-    print(
-        f"  p_prior_threshold = "
-        f"{p_prior_threshold:.3f} "
-        f"(balanced_acc={prior_threshold_score:.4f})"
-    )
-    print("  saved: label_p_obs_threshold.json")
-    print("  saved: label_p_prior_threshold.json")
-
-    print("阶段 3: 使用完整 B5 transition 重新rollout并生成最终labels...")
-    csv_rows = []
-
-    for obj_idx, seq_target in enumerate(args.target_seqs):
-        for dot in args.corruption_lists:
-            seq = seq_target + dot
-            episode_df = get_episode_df(manifest, seq)
-            csv_rows += rollout_episode(
-                episode_df, seq, obj_idx, args, models_pts, scenes, renders_obj, mesh_nodes,
-                d_objs, open3d_models, clf_obs_full, scaler_obs_full,
-                clf_prior=clf_prior_boot, scaler_prior=scaler_prior_full,
-                use_prior_predictor=True,
-                p_obs_threshold=p_obs_threshold,
-                p_prior_threshold=p_prior_threshold,
-            )
-
-
-    ci_obj_idx = args.target_seqs.index(args.ci_object)
-    for episode in args.ci_episode:
-        seq = args.ci_object + episode
+    # Additional CI blackout episodes only for the held-out object, preserving
+    # the existing 19-episode-per-pass workflow.
+    held_idx = base_to_idx[held_out_base]
+    for suffix in args.ci_episode:
+        seq = held_out_base + suffix
         episode_df = get_episode_df(manifest, seq)
-        csv_rows += rollout_episode(
-            episode_df, seq, ci_obj_idx, args, models_pts, scenes, renders_obj, mesh_nodes,
-            d_objs, open3d_models, clf_obs_full, scaler_obs_full,
-            clf_prior=clf_prior_boot, scaler_prior=scaler_prior_full,
-            use_prior_predictor=True,
-            p_obs_threshold=p_obs_threshold,
-            p_prior_threshold=p_prior_threshold,
+        print(f"[FINAL frozen rollout] {seq}")
+        final_rows += rollout_episode(
+            episode_df, seq, held_idx, args,
+            models_pts, scenes, renders_obj, mesh_nodes,
+            d_objs, open3d_models,
+            scaler, regressor, calibrator, p_risk_threshold,
+            policy_model_stage="final_frozen_shared_quality",
         )
 
-    df = pd.DataFrame(csv_rows)
+    df = pd.DataFrame(final_rows)
+    if df.duplicated(["sequence", "frame_id"]).any():
+        raise ValueError("Final label dataframe has duplicate (sequence, frame_id)")
     output_csv = f"./per_frame_label_threshold{args.risk_threshold}.csv"
     df.to_csv(output_csv, index=False)
 
-    balance_df = df.groupby('sequence').agg(
-        Total_Frames=('obs_risk_label', 'count'),
-        Obs_Risk_Positive_Ratio=('obs_risk_label', lambda x: f"{x.mean()*100:.2f}%"),
-        Prior_Risk_Positive_Ratio=('prior_risk_label', lambda x: f"{x.mean()*100:.2f}%")
+    balance_df = df.groupby("sequence").agg(
+        Total_Frames=("obs_risk_label", "count"),
+        Obs_Risk_Positive_Ratio=("obs_risk_label", lambda x: f"{x.mean()*100:.2f}%"),
+        Prior_Risk_Positive_Ratio=("prior_risk_label", lambda x: f"{x.mean()*100:.2f}%"),
     ).reset_index()
-    balance_csv_path = f"./class_balance_summary_threshold{args.risk_threshold}.csv"
-    balance_df.to_csv(balance_csv_path, index=False)
+    balance_path = f"./class_balance_summary_threshold{args.risk_threshold}.csv"
+    balance_df.to_csv(balance_path, index=False)
 
-    # -------------------------------------------------------------
-    # Decoupling diagnostics:
-    # These do NOT affect training/inference; they only report whether
-    # the two risk predictors still collapse into the same state.
-    # -------------------------------------------------------------
-    valid_prob = (
-        np.isfinite(
-            df["p_obs_bad_rollout"].values
-        )
-        & np.isfinite(
-            df["p_prior_bad_rollout"].values
-        )
-    )
-
-    if np.count_nonzero(valid_prob) > 1:
-        prob_corr = float(
-            np.corrcoef(
-                df.loc[
-                    valid_prob,
-                    "p_obs_bad_rollout",
-                ].values,
-                df.loc[
-                    valid_prob,
-                    "p_prior_bad_rollout",
-                ].values,
-            )[0, 1]
-        )
-    else:
-        prob_corr = np.nan
-
-    label_quadrant = pd.crosstab(
-        df["obs_risk_label"],
-        df["prior_risk_label"],
-        rownames=["obs_risk_label"],
-        colnames=["prior_risk_label"],
-        dropna=False,
-    )
-
-    prob_quadrant_df = df.loc[
-        valid_prob,
-        [
-            "p_obs_bad_rollout",
-            "p_prior_bad_rollout",
-        ],
-    ].copy()
-
-    if len(prob_quadrant_df) > 0:
-        prob_quadrant_df["obs_bad_pred"] = (
-            prob_quadrant_df[
-                "p_obs_bad_rollout"
-            ] > p_obs_threshold
-        ).astype(int)
-
-        prob_quadrant_df["prior_bad_pred"] = (
-            prob_quadrant_df[
-                "p_prior_bad_rollout"
-            ] > p_prior_threshold
-        ).astype(int)
-
-        prob_quadrant = pd.crosstab(
-            prob_quadrant_df[
-                "obs_bad_pred"
-            ],
-            prob_quadrant_df[
-                "prior_bad_pred"
-            ],
-            rownames=["obs_bad_pred"],
-            colnames=["prior_bad_pred"],
-            dropna=False,
-        )
-    else:
-        prob_quadrant = pd.DataFrame()
-
-    coupling_csv_path = (
-        f"./risk_quadrant_summary_threshold"
-        f"{args.risk_threshold}.csv"
-    )
-
+    # Keep the historical filename, but report absolute-risk coupling plus the
+    # three-way pair state; no second learned classifier exists.
     quadrant_rows = []
     for obs_state in [0, 1]:
         for prior_state in [0, 1]:
-            count = int(
-                (
-                    (df["obs_risk_label"] == obs_state)
-                    & (
-                        df["prior_risk_label"]
-                        == prior_state
-                    )
-                ).sum()
-            )
             quadrant_rows.append({
                 "obs_risk_label": obs_state,
                 "prior_risk_label": prior_state,
-                "count": count,
+                "count": int(((df["obs_risk_label"] == obs_state) &
+                              (df["prior_risk_label"] == prior_state)).sum()),
             })
+    quadrant_path = f"./risk_quadrant_summary_threshold{args.risk_threshold}.csv"
+    pd.DataFrame(quadrant_rows).to_csv(quadrant_path, index=False)
 
-    pd.DataFrame(
-        quadrant_rows
-    ).to_csv(
-        coupling_csv_path,
-        index=False,
+    pair_counts = df["pair_state_gt"].value_counts(dropna=False).to_dict()
+    pair_path = f"./pair_state_summary_threshold{args.risk_threshold}.csv"
+    pd.DataFrame([
+        {"pair_state_gt": key, "count": int(value)}
+        for key, value in pair_counts.items()
+    ]).to_csv(pair_path, index=False)
+
+    artifact_paths = save_shared_artifacts(
+        args, held_out_base, train_bases,
+        scaler, regressor, calibrator, p_risk_threshold, metrics,
     )
 
-    print("\\n[Obs/Prior decoupling diagnostics]")
-    print(
-        "Pearson corr("
-        "p_obs_bad_rollout, p_prior_bad_rollout"
-        f") = {prob_corr:.6f}"
-        if np.isfinite(prob_corr)
-        else "Probability correlation unavailable."
-    )
-    print("\\nGT-label quadrants:")
-    print(label_quadrant)
+    print("\n" + "=" * 72)
+    print("FINAL shared-quality label generation complete")
+    print("held-out base      :", held_out_base)
+    print("train bases        :", train_bases)
+    print("rows / episodes    :", len(df), "/", df["sequence"].nunique())
+    print("p_risk_threshold   :", f"{p_risk_threshold:.4f}")
+    print("advantage margin cm:", f"{args.prior_advantage_margin_cm:.4f}")
+    print("label CSV          :", output_csv)
+    print("shared artifacts   :", artifact_paths)
+    print("IMPORTANT: GT generated E_obs/E_prior only; it never entered B5 decisions.")
+    print("=" * 72)
 
-    if len(prob_quadrant) > 0:
-        print(
-            f"\\nPredicted probability quadrants "
-            f"(p_obs_threshold={p_obs_threshold:.3f}, p_prior_threshold={p_prior_threshold:.3f}):"
-        )
-        print(prob_quadrant)
-
-    print(
-        f"Risk quadrant summary saved: "
-        f"{coupling_csv_path}"
-    )
-
-    print("\n" + "=" * 60)
-    print(f"数据总行数: {len(df)}")
-    print(f"obs_risk=1 占比: {df['obs_risk_label'].mean()*100:.2f}%")
-    print(f"prior_risk=1 占比: {df['prior_risk_label'].mean()*100:.2f}%")
-    print(f"逐帧标签: {output_csv}")
-    print(f"类别平衡: {balance_csv_path}")
-    print("=" * 60)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="生成 YCBInEOAT observation/prior risk labels")
-    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv",
-                        help="冻结的 reference manifest；本程序不会重建或覆盖它")
-    parser.add_argument('--ycb_dir', type=str, default="./datasets/YCBInEOAT", help="GT根目录")
-    parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted", help="RGB/Depth根目录")
-    parser.add_argument('--res_dir', type=str, default="./results_collection", help="Prediction根目录")
+    parser = argparse.ArgumentParser(
+        description="Generate continuous pose-error supervision with a fold-specific shared B5 pose-quality estimator"
+    )
+    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv")
+    parser.add_argument('--ycb_dir', type=str, default="./datasets/YCBInEOAT")
+    parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted")
+    parser.add_argument('--res_dir', type=str, default="./results_collection")
     parser.add_argument('--mesh_path_root', type=str, default="./datasets/YCB_Video_Models/CADmodels")
     parser.add_argument('--target_seqs', nargs='+', default=["mustard0", "bleach_hard_00_03_chaitanya", "bleach0"])
     parser.add_argument('--corruption_lists', nargs='+', default=["_occ40", "_black10", "_clean", "_drop60", "_occ60"])
-    parser.add_argument('--ci_object', type=str, default="bleach0")
+    parser.add_argument('--ci_object', type=str, default="bleach0", help="Held-out base object for this fold")
     parser.add_argument('--ci_episode', nargs='+', default=["_black10_2", "_black10_3", "_black10_4", "_black10_5"])
     parser.add_argument('--cad_models_seq', nargs='+', default=["006_mustard_bottle", "021_bleach_cleanser", "021_bleach_cleanser"])
-    parser.add_argument('--risk_threshold', type=float, default=1.0, help="ADD-S风险阈值(cm)")
+    parser.add_argument('--risk_threshold', type=float, default=1.0, help="Absolute ADD-S risk threshold in cm")
+    parser.add_argument(
+        '--prior_advantage_margin_cm', type=float, default=0.1,
+        help='B5 decision margin: prior is meaningful only if Ehat_prior + margin < Ehat_obs'
+    )
+    parser.add_argument('--train_fraction', type=float, default=0.7)
+    parser.add_argument('--on_policy_refine_rounds', type=int, default=1)
     parser.add_argument('--blackout_min_frames', type=int, default=10)
 
-    # ==================== FoundationPose independent recovery ====================
-    parser.add_argument(
-        '--foundationpose_python',
-        type=str,
-        default="/home/wyg/anaconda3/envs/foundationpose/bin/python",
-        help="FoundationPose conda 环境 Python 的绝对路径"
-    )
-    parser.add_argument(
-        '--foundationpose_dir',
-        type=str,
-        default="/home/wyg/FoundationPose",
-        help="FoundationPose repository 根目录"
-    )
-    parser.add_argument(
-        '--foundationpose_refiner_weight',
-        type=str,
-        default="/home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth",
-        help="冻结的 FoundationPose PoseRefinePredictor 权重"
-    )
-    parser.add_argument(
-        '--foundationpose_refine_iter',
-        type=int,
-        default=5,
-        help="FoundationPose PoseRefinePredictor refinement iterations"
-    )
+    parser.add_argument('--foundationpose_python', type=str, default="/home/wyg/anaconda3/envs/foundationpose/bin/python")
+    parser.add_argument('--foundationpose_dir', type=str, default="/home/wyg/FoundationPose")
+    parser.add_argument('--foundationpose_refiner_weight', type=str, default="/home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth")
+    parser.add_argument('--foundationpose_refine_iter', type=int, default=5)
+
+    parser.add_argument('--sam2_python', type=str, default="/home/wyg/anaconda3/envs/sam2/bin/python")
+    parser.add_argument('--sam2_dir', type=str, default="/home/wyg/sam2")
+    parser.add_argument('--sam2_config', type=str, default="configs/sam2.1/sam2.1_hiera_l.yaml")
+    parser.add_argument('--sam2_checkpoint', type=str, default="/home/wyg/sam2/checkpoints/sam2.1_hiera_large.pt")
+    parser.add_argument('--sam2_cache_root', type=str, default="./sam2_recovery_cache")
+
+    parser.add_argument('--shared_model_out', type=str, default="./shared_pose_quality_model.joblib")
+    parser.add_argument('--shared_scaler_out', type=str, default="./shared_pose_quality_scaler.joblib")
+    parser.add_argument('--shared_calibrator_out', type=str, default="./shared_risk_calibrator.joblib")
+    parser.add_argument('--shared_config_out', type=str, default="./shared_quality_config.json")
+
     args = parser.parse_args()
-
-    print("\n[FoundationPose label-rollout configuration]")
-    print("  python :", args.foundationpose_python)
-    print("  repo   :", args.foundationpose_dir)
-    print("  refiner weight:", args.foundationpose_refiner_weight)
-    print("  refine_iter:", args.foundationpose_refine_iter)
-
+    if not (0.0 < args.train_fraction < 1.0):
+        raise ValueError("train_fraction must be in (0,1)")
+    if args.on_policy_refine_rounds < 1:
+        raise ValueError("on_policy_refine_rounds must be >= 1")
     main(args)

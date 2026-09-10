@@ -4,18 +4,20 @@ import numpy as np
 import open3d as o3d
 import cv2
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import MinMaxScaler
 from b5_policy import se3_log_map, se3_exp_map, compute_se3_prior, init_b5_state, b5_transition
 import Utils as U
 from scipy.spatial.transform import Rotation as R_sci
-from scipy.optimize import minimize
 import numpy as np
 from collections import Counter
-from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, brier_score_loss
+from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, brier_score_loss, mean_absolute_error, balanced_accuracy_score
 import argparse
-from scipy.stats import t
+import joblib
+import trimesh
+import pyrender
+from scipy.stats import t, spearmanr
 import hashlib
 import pandas as pd
 
@@ -247,621 +249,350 @@ def load_foundationpose_recovery_rgb(rgb_file):
     return rgb_real, rgb_file
 
 
-def main(args):
-    np.random.seed(args.seed)
-    try:
-        o3d.utility.random.seed(args.seed)
-    except Exception:
-        pass
-    # ==================== 2. 载入数据集与训练好的风险分类器 ====================
-    print("正在载入 CSV 数据集并训练分类器...")
-    df = pd.read_csv(args.csv_path)
-    required_label_columns = {"sequence", "frame_id", "obs_risk_label", "prior_risk_label"}
-    missing_label_columns = required_label_columns - set(df.columns)
-    if missing_label_columns:
-        raise ValueError(f"Label CSV 缺少字段: {sorted(missing_label_columns)}")
-    if df.duplicated(["sequence", "frame_id"]).any():
-        duplicated = df.loc[df.duplicated(["sequence", "frame_id"], keep=False), ["sequence", "frame_id"]]
-        raise ValueError(f"Label CSV 存在重复(sequence, frame_id): {duplicated.head(10).to_dict('records')}")
-    path = args.result_dir
-    test_seq = os.path.basename(path)
-    train_pattern = "|".join(args.train_seqs)
-    train_df = df[df['sequence'].str.contains(train_pattern)]
+# =====================================================================
+# Shared pose-quality deployment features.
+# These definitions intentionally mirror 2-risk_label.py.
+# =====================================================================
+cv_to_gl = np.array([
+    [1, 0, 0, 0],
+    [0, -1, 0, 0],
+    [0, 0, -1, 0],
+    [0, 0, 0, 1],
+], dtype=np.float64)
 
-    matched_train_seqs = df[df['sequence'].str.contains(train_pattern)]['sequence'].unique()  
+SHARED_FEATURE_COLUMNS = [
+    "x1_norm",
+    "x2_inlier_error",
+    "x4_support_ratio",
+    "x5_geometry_inconsistency",
+]
 
 
-    #对匹配到的每一个训练序列，按时间轴切成前 80% (训练) 和 后 20% (校准)
-    train_dfs, cal_dfs = [], []
-    for seq in matched_train_seqs:
-        sub_df = df[df['sequence'] == seq]
-        split_idx = int(len(sub_df) * 0.7) # 70% 时间截断点
-        
-        train_dfs.append(sub_df.iloc[:split_idx]) # 前 70% 时间段进入训练集
-        cal_dfs.append(sub_df.iloc[split_idx:])   # 后 30% 时间段进入校准集
+def reliability_depth_residual(depth_real, pred_pose, scene, renderer, mesh_node):
+    pose_render = cv_to_gl @ pred_pose
+    scene.set_pose(mesh_node, pose_render)
+    depth_render = renderer.render(scene, flags=pyrender.RenderFlags.DEPTH_ONLY)
+    valid = depth_render > 0
+    if np.sum(valid) > 20:
+        residual = np.abs(depth_render[valid] - depth_real[valid])
+        return float(np.mean(residual) * 100.0)
+    return 20.0
 
-    train_df = pd.concat(train_dfs)
-    cal_df   = pd.concat(cal_dfs)
 
-    test_df = df[df['sequence'] == test_seq].copy()
-    test_df['frame_id'] = test_df['frame_id'].astype(int)
-    if test_df['frame_id'].duplicated().any():
-        raise ValueError(f"测试序列 {test_seq} 存在重复 frame_id，拒绝构建概率字典")
-    test_df = test_df.set_index('frame_id')
+def reliability_inlier_ratio(valid_depth, Z_pred, Z_real):
+    if valid_depth.sum() > 0:
+        Z_pred_valid = Z_pred[valid_depth]
+        Z_real_valid = Z_real[valid_depth]
+        depth_diff = np.abs(Z_pred_valid - Z_real_valid) * 100.0
+        return float(1.0 - np.mean(depth_diff < 2.0))
+    return 1.0
 
-    test_ALL_df = df[df['sequence'].str.contains(args.test_base_seq)]
-    
-    print(f"训练集包含序列关键词: {args.train_seqs} | 行数: {len(train_df)}")
-    print(f"测试集 (单序列) 名称: {test_seq} | 行数: {len(test_df)}")
-    print(f"测试集 (全量变体) 名称: {args.test_base_seq} | 行数: {len(test_ALL_df)}")
 
-    if len(test_df) == 0:
-        print("错误: 测试集为空，请检查 CSV 文件中的序列名称！")
+def cad_depth_geometry_inconsistency(
+    T_pose,
+    depth_real,
+    model_pts,
+    K_mat,
+    inlier_threshold_m=0.02,
+    min_projected_pixels=20,
+):
+    T_pose = np.asarray(T_pose, dtype=np.float64).reshape(4, 4)
+    pts = np.asarray(model_pts, dtype=np.float64).reshape(-1, 3)
+    depth = np.asarray(depth_real, dtype=np.float32)
+    K_arr = np.asarray(K_mat, dtype=np.float64).reshape(3, 3)
+    h, w = depth.shape[:2]
 
-    # ============================================================
-    # Decoupled risk predictors
-    #
-    # Observation-risk and prior-risk MUST use their own pose-conditioned
-    # feature sets. The only shared inputs are temporal innovation features.
-    # This matches 2-risk_label_decoupled.py.
-    # ============================================================
-    feature_cols_obs = [
-        'x1_obs_depth_residual',
-        'x2_obs_inlier_error',
-        'x4_obs_support_ratio',
-        'x5_obs_geometry_inconsistency',
-        'x3_trans_innovation',
-        'x3_rot_innovation',
-    ]
-
-    feature_cols_prior = [
-        'x1_prior_depth_residual',
-        'x2_prior_inlier_error',
-        'x5_prior_geometry_inconsistency',
-        'x3_trans_innovation',
-        'x3_rot_innovation',
-    ]
-
-    required_feature_columns = set(
-        feature_cols_obs + feature_cols_prior
+    pts_cam = (T_pose[:3, :3] @ pts.T).T + T_pose[:3, 3]
+    z = pts_cam[:, 2]
+    valid_z = np.isfinite(z) & (z > 1e-8)
+    if np.count_nonzero(valid_z) < min_projected_pixels:
+        return 1.0
+    pts_cam = pts_cam[valid_z]
+    z = pts_cam[:, 2]
+    u = np.rint(K_arr[0, 0] * pts_cam[:, 0] / z + K_arr[0, 2]).astype(np.int64)
+    v = np.rint(K_arr[1, 1] * pts_cam[:, 1] / z + K_arr[1, 2]).astype(np.int64)
+    inside = (
+        (u >= 0) & (u < w) & (v >= 0) & (v < h) & np.isfinite(z)
     )
-    missing_feature_columns = (
-        required_feature_columns - set(df.columns)
+    if np.count_nonzero(inside) < min_projected_pixels:
+        return 1.0
+    u, v, z = u[inside], v[inside], z[inside]
+    flat_idx = v * w + u
+    cad_depth_flat = np.full(h * w, np.inf, dtype=np.float64)
+    np.minimum.at(cad_depth_flat, flat_idx, z)
+    projected_mask = np.isfinite(cad_depth_flat)
+    projected_pixels = int(np.count_nonzero(projected_mask))
+    if projected_pixels < min_projected_pixels:
+        return 1.0
+    idx = np.flatnonzero(projected_mask)
+    cad_z = cad_depth_flat[idx]
+    obs_z = depth.reshape(-1)[idx].astype(np.float64)
+    valid_obs = np.isfinite(obs_z) & (obs_z > 0.05) & (obs_z < 5.0)
+    if np.count_nonzero(valid_obs) == 0:
+        return 1.0
+    residual = np.abs(cad_z[valid_obs] - obs_z[valid_obs])
+    inlier_count = int(np.count_nonzero(residual < inlier_threshold_m))
+    return float(1.0 - inlier_count / float(projected_pixels))
+
+
+def extract_pose_conditioned_features(
+    T_pose,
+    depth_real,
+    model_pts,
+    scene,
+    renderer,
+    mesh_node,
+):
+    x1 = reliability_depth_residual(
+        depth_real, T_pose, scene, renderer, mesh_node
     )
-    if missing_feature_columns:
+    pts = np.asarray(model_pts, dtype=np.float64)
+    R_p, t_p = T_pose[:3, :3], T_pose[:3, 3]
+    pts_cam = (R_p @ pts.T).T + t_p
+    X, Y, Z = pts_cam[:, 0], pts_cam[:, 1], pts_cam[:, 2]
+    h, w = depth_real.shape[:2]
+    valid_z = Z > 1e-8
+    u = np.zeros(len(Z), dtype=int)
+    v = np.zeros(len(Z), dtype=int)
+    u[valid_z] = np.round(K[0, 0] * X[valid_z] / Z[valid_z] + K[0, 2]).astype(int)
+    v[valid_z] = np.round(K[1, 1] * Y[valid_z] / Z[valid_z] + K[1, 2]).astype(int)
+    valid_bounds = valid_z & (u >= 0) & (u < w) & (v >= 0) & (v < h)
+    u_v, v_v, Z_p = u[valid_bounds], v[valid_bounds], Z[valid_bounds]
+    if len(u_v) > 0:
+        Z_real = depth_real[v_v, u_v]
+        x2 = reliability_inlier_ratio(Z_real > 0, Z_p, Z_real)
+        x4 = 1.0 - (np.sum(Z_real > 0.1) / (len(Z_real) + 1e-5))
+    else:
+        x2, x4 = 1.0, 1.0
+    x5 = cad_depth_geometry_inconsistency(
+        T_pose, depth_real, model_pts, K,
+        inlier_threshold_m=0.02,
+        min_projected_pixels=20,
+    )
+    return {"x1": float(x1), "x2": float(x2), "x4": float(x4), "x5": float(x5)}
+
+
+def shared_feature_vector(features, d_obj_cm):
+    return np.asarray([
+        float(features["x1"]) / float(d_obj_cm),
+        float(features["x2"]),
+        float(features["x4"]),
+        float(features["x5"]),
+    ], dtype=np.float64)
+
+
+def predict_shared_quality(features, d_obj_cm, scaler, regressor, calibrator):
+    x = shared_feature_vector(features, d_obj_cm).reshape(1, -1)
+    e_hat = max(float(regressor.predict(scaler.transform(x))[0]), 0.0)
+    E_hat_cm = float(e_hat * float(d_obj_cm))
+    p_risk = float(np.clip(calibrator.predict([E_hat_cm])[0], 0.0, 1.0))
+    return e_hat, E_hat_cm, p_risk
+
+
+def load_shared_artifacts(args):
+    with open(args.shared_config_path, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    if cfg.get("version") != "shared_pose_quality_v1":
+        raise ValueError(f"Unsupported shared-quality config: {cfg.get('version')}")
+    if cfg.get("held_out_base") != args.test_base_seq:
         raise ValueError(
-            "Label CSV 缺少 decoupled predictor 特征列: "
-            f"{sorted(missing_feature_columns)}\n"
-            "请先使用 2-risk_label_decoupled.py 重新生成 label CSV。"
+            "Shared model held-out base mismatch: "
+            f"config={cfg.get('held_out_base')} eval={args.test_base_seq}"
+        )
+    cfg_train = set(cfg.get("train_bases", []))
+    if cfg_train != set(args.train_seqs):
+        raise ValueError(
+            f"Shared model train bases mismatch: config={sorted(cfg_train)}, "
+            f"eval={sorted(set(args.train_seqs))}"
+        )
+    if not np.isclose(float(cfg["risk_threshold_cm"]), float(args.risk_threshold)):
+        raise ValueError("Shared config risk_threshold_cm mismatch")
+    if not np.isclose(
+        float(cfg["prior_advantage_margin_cm"]),
+        float(args.prior_advantage_margin_cm),
+    ):
+        raise ValueError("Shared config prior_advantage_margin_cm mismatch")
+    if cfg.get("feature_columns") != SHARED_FEATURE_COLUMNS:
+        raise ValueError(
+            f"Shared feature schema mismatch: {cfg.get('feature_columns')}"
         )
 
-    # ---------------- Observation-risk feature matrices ----------------
-    X_obs_train = train_df[feature_cols_obs].values
-    X_obs_cal = cal_df[feature_cols_obs].values
-    X_obs_test = test_df[feature_cols_obs].values
-    X_obs_ALL_test = test_ALL_df[feature_cols_obs].values
+    # Verify frozen artifact bytes if hashes were written by 2-risk_label.py.
+    for key, path in [
+        ("scaler", args.shared_scaler_path),
+        ("model", args.shared_model_path),
+        ("calibrator", args.shared_calibrator_path),
+    ]:
+        expected = cfg.get(f"{key}_sha256")
+        if expected is not None:
+            actual = compute_full_sha256(path)
+            if actual != expected:
+                raise ValueError(
+                    f"Frozen {key} SHA-256 mismatch: expected={expected}, actual={actual}"
+                )
 
-    # ---------------- Prior-risk feature matrices ----------------
-    X_prior_train = train_df[feature_cols_prior].values
-    X_prior_cal = cal_df[feature_cols_prior].values
-    X_prior_test = test_df[feature_cols_prior].values
-    X_prior_ALL_test = test_ALL_df[feature_cols_prior].values
-
-    y_obs_train = train_df['obs_risk_label'].values
-    y_obs_cal = cal_df['obs_risk_label'].values
-    y_obs_test = test_df['obs_risk_label'].values
-    y_obs_ALL_test = test_ALL_df['obs_risk_label'].values
-
-    y_prior_train = train_df['prior_risk_label'].values
-    y_prior_cal = cal_df['prior_risk_label'].values
-    y_prior_test = test_df['prior_risk_label'].values
-    y_prior_ALL_test = test_ALL_df['prior_risk_label'].values
-
-    # IMPORTANT:
-    # Separate scalers. Observation and prior feature spaces are different.
-    scaler_obs = MinMaxScaler()
-    X_obs_train_scaled = scaler_obs.fit_transform(
-        X_obs_train
-    )
-    X_obs_cal_scaled = scaler_obs.transform(
-        X_obs_cal
-    )
-    X_obs_test_scaled = scaler_obs.transform(
-        X_obs_test
-    )
-    X_obs_test_ALL_scaled = scaler_obs.transform(
-        X_obs_ALL_test
-    )
-
-    scaler_prior = MinMaxScaler()
-    X_prior_train_scaled = scaler_prior.fit_transform(
-        X_prior_train
-    )
-    X_prior_cal_scaled = scaler_prior.transform(
-        X_prior_cal
-    )
-    X_prior_test_scaled = scaler_prior.transform(
-        X_prior_test
-    )
-    X_prior_test_ALL_scaled = scaler_prior.transform(
-        X_prior_ALL_test
-    )
-
-    # Separate learned predictors.
-    clf_obs = LogisticRegression(
-        max_iter=1000
-    )
-    clf_obs.fit(
-        X_obs_train_scaled,
-        y_obs_train,
-    )
-
-    clf_prior = LogisticRegression(
-        max_iter=1000
-    )
-    clf_prior.fit(
-        X_prior_train_scaled,
-        y_prior_train,
-    )
+    scaler = joblib.load(args.shared_scaler_path)
+    regressor = joblib.load(args.shared_model_path)
+    calibrator = joblib.load(args.shared_calibrator_path)
+    p_risk_threshold = float(cfg["p_risk_threshold"])
+    return cfg, scaler, regressor, calibrator, p_risk_threshold
 
 
-    # ============================================================
-    # Temperature scaling
-    # Each predictor is calibrated in its own feature space.
-    # ============================================================
-    cal_logits_obs = clf_obs.decision_function(
-        X_obs_cal_scaled
-    )
-    test_logits_obs = clf_obs.decision_function(
-        X_obs_test_scaled
-    )
-    test_ALL_logits_obs = clf_obs.decision_function(
-        X_obs_test_ALL_scaled
-    )
-
-    cal_logits_prior = clf_prior.decision_function(
-        X_prior_cal_scaled
-    )
-    test_logits_prior = clf_prior.decision_function(
-        X_prior_test_scaled
-    )
-    test_ALL_logits_prior = clf_prior.decision_function(
-        X_prior_test_ALL_scaled
-    )
-
-    def eval_loss_obs(t):
-        scaled = cal_logits_obs / t[0]
-        probs = 1.0 / (
-            1.0 + np.exp(-scaled)
-        )
-        probs = np.clip(
-            probs,
-            1e-7,
-            1 - 1e-7,
-        )
-        return -np.mean(
-            y_obs_cal * np.log(probs)
-            + (1 - y_obs_cal)
-            * np.log(1 - probs)
-        )
-
-    def eval_loss_prior(t):
-        scaled = cal_logits_prior / t[0]
-        probs = 1.0 / (
-            1.0 + np.exp(-scaled)
-        )
-        probs = np.clip(
-            probs,
-            1e-7,
-            1 - 1e-7,
-        )
-        return -np.mean(
-            y_prior_cal * np.log(probs)
-            + (1 - y_prior_cal)
-            * np.log(1 - probs)
-        )
-
-    res_obs = minimize(
-        eval_loss_obs,
-        [1.0],
-        bounds=[(0.01, 10.0)],
-    )
-    temp_factor_obs = float(
-        res_obs.x[0]
-    )
-
-    res_prior = minimize(
-        eval_loss_prior,
-        [1.0],
-        bounds=[(0.01, 10.0)],
-    )
-    temp_factor_prior = float(
-        res_prior.x[0]
-    )
-
-    # Learn/freeze separate operating thresholds only from calibration.
-    cal_probs_obs = 1.0 / (
-        1.0 + np.exp(
-            -(cal_logits_obs / temp_factor_obs)
-        )
-    )
-    cal_probs_prior = 1.0 / (
-        1.0 + np.exp(
-            -(cal_logits_prior / temp_factor_prior)
-        )
-    )
-
-    threshold_context = {
-        "csv_sha256":
-            compute_full_sha256(args.csv_path),
-        "train_seqs":
-            list(args.train_seqs),
-        "train_cal_split":
-            "per_sequence_first70_train_last30_cal",
-        "risk_label_threshold_cm":
-            float(args.risk_threshold),
+def _safe_prob_metrics(labels, probs):
+    labels = np.asarray(labels, dtype=np.int64)
+    probs = np.asarray(probs, dtype=np.float64)
+    if len(labels) == 0 or len(np.unique(labels)) < 2:
+        return {"auroc": np.nan, "auprc": np.nan, "brier": np.nan, "ece": np.nan}
+    precision, recall, _ = precision_recall_curve(labels, probs)
+    return {
+        "auroc": float(roc_auc_score(labels, probs)),
+        "auprc": float(auc(recall, precision)),
+        "brier": float(brier_score_loss(labels, probs)),
+        "ece": float(compute_ece(probs, labels)),
     }
 
-    obs_threshold_path = os.path.abspath(
-        "p_obs_threshold.json"
+
+def _latency_string(errors, start_index, threshold_cm=0.5):
+    if start_index is None or not np.isfinite(start_index):
+        return "N/A"
+    start_index = int(start_index)
+    if start_index < 0 or start_index >= len(errors):
+        return "N/A"
+    for i in range(start_index, len(errors)):
+        if errors[i] < threshold_cm:
+            return f"{i - start_index:.1f} frames"
+    return "N/A (Failed)"
+
+
+def build_eval_renderer(mesh_file):
+    mesh = trimesh.load(mesh_file)
+    render_mesh = pyrender.Mesh.from_trimesh(mesh, smooth=False)
+    scene = pyrender.Scene()
+    mesh_node = scene.add(render_mesh)
+    camera = pyrender.IntrinsicsCamera(
+        fx=K[0, 0], fy=K[1, 1], cx=K[0, 2], cy=K[1, 2]
     )
-    prior_threshold_path = os.path.abspath(
-        "p_prior_threshold.json"
+    scene.add(camera, pose=np.eye(4))
+    renderer = pyrender.OffscreenRenderer(viewport_width=640, viewport_height=480)
+    return scene, renderer, mesh_node
+
+
+def evaluate_episode(
+    args,
+    result_dir,
+    labels_df,
+    model_pts,
+    open3d_model,
+    d_obj_cm,
+    scene,
+    renderer,
+    mesh_node,
+    scaler,
+    regressor,
+    calibrator,
+    p_risk_threshold,
+):
+    last_name = os.path.basename(result_dir)
+    test_df = labels_df[labels_df["sequence"] == last_name].copy()
+    if len(test_df) == 0:
+        raise ValueError(f"Label CSV contains no test sequence {last_name}")
+    test_df["frame_id"] = test_df["frame_id"].astype(int)
+    test_df = test_df.set_index("frame_id")
+
+    df_manifest = load_episode_manifest(
+        args.manifest_path,
+        last_name,
+        args.data_dir,
+        args.gt_dir,
+        result_dir,
     )
+    if set(df_manifest["frame_id"].astype(int)) != set(test_df.index.astype(int)):
+        raise ValueError(f"[{last_name}] label/manifest frame IDs mismatch")
 
-    def load_threshold_if_compatible(
-        path,
-        threshold_key,
-        feature_columns,
-    ):
-        if not os.path.isfile(path):
-            return None
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-            if cfg.get("context") != threshold_context:
-                return None
-            if cfg.get("feature_columns") != list(feature_columns):
-                return None
-            value = float(cfg[threshold_key])
-            if not (0.0 < value < 1.0):
-                return None
-            return cfg
-        except Exception:
-            return None
-
-    obs_threshold_cfg = load_threshold_if_compatible(
-        obs_threshold_path,
-        "p_obs_threshold",
-        feature_cols_obs,
-    )
-    prior_threshold_cfg = load_threshold_if_compatible(
-        prior_threshold_path,
-        "p_prior_threshold",
-        feature_cols_prior,
-    )
-
-    if (
-        obs_threshold_cfg is not None
-        and prior_threshold_cfg is not None
-    ):
-        p_obs_threshold = float(
-            obs_threshold_cfg["p_obs_threshold"]
-        )
-        p_prior_threshold = float(
-            prior_threshold_cfg["p_prior_threshold"]
-        )
-        obs_threshold_score = float(
-            obs_threshold_cfg["balanced_accuracy"]
-        )
-        prior_threshold_score = float(
-            prior_threshold_cfg["balanced_accuracy"]
-        )
-        print("\n[Frozen thresholds] loaded from JSON:")
-        print(
-            f"  p_obs_threshold   = "
-            f"{p_obs_threshold:.3f}"
-        )
-        print(
-            f"  p_prior_threshold = "
-            f"{p_prior_threshold:.3f}"
-        )
-    else:
-        p_obs_threshold, obs_threshold_score = (
-            select_risk_threshold(
-                y_obs_cal,
-                cal_probs_obs,
-            )
-        )
-        p_prior_threshold, prior_threshold_score = (
-            select_risk_threshold(
-                y_prior_cal,
-                cal_probs_prior,
-            )
-        )
-
-        obs_threshold_cfg = {
-            "p_obs_threshold": p_obs_threshold,
-            "balanced_accuracy": obs_threshold_score,
-            "selection_protocol":
-                "calibration_balanced_accuracy_after_temperature_scaling",
-            "temperature_factor": temp_factor_obs,
-            "feature_columns": list(feature_cols_obs),
-            "context": threshold_context,
-        }
-        prior_threshold_cfg = {
-            "p_prior_threshold": p_prior_threshold,
-            "balanced_accuracy": prior_threshold_score,
-            "selection_protocol":
-                "calibration_balanced_accuracy_after_temperature_scaling",
-            "temperature_factor": temp_factor_prior,
-            "feature_columns": list(feature_cols_prior),
-            "context": threshold_context,
-        }
-
-        with open(
-            obs_threshold_path,
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                obs_threshold_cfg,
-                f,
-                indent=4,
-                ensure_ascii=False,
-            )
-        with open(
-            prior_threshold_path,
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                prior_threshold_cfg,
-                f,
-                indent=4,
-                ensure_ascii=False,
-            )
-
-        print(
-            "\n[Calibration] learned and froze "
-            "separate thresholds:"
-        )
-        print(
-            f"  p_obs_threshold   = "
-            f"{p_obs_threshold:.3f} | "
-            f"balanced_acc={obs_threshold_score:.4f}"
-        )
-        print(
-            f"  p_prior_threshold = "
-            f"{p_prior_threshold:.3f} | "
-            f"balanced_acc={prior_threshold_score:.4f}"
-        )
-        print(f"  saved: {obs_threshold_path}")
-        print(f"  saved: {prior_threshold_path}")
-
-    p_obs_bad = 1.0 / (
-        1.0
-        + np.exp(
-            -(
-                test_logits_obs
-                / temp_factor_obs
-            )
-        )
-    )
-    p_obs_bad_ALL = 1.0 / (
-        1.0
-        + np.exp(
-            -(
-                test_ALL_logits_obs
-                / temp_factor_obs
-            )
-        )
-    )
-
-    p_prior_bad = 1.0 / (
-        1.0
-        + np.exp(
-            -(
-                test_logits_prior
-                / temp_factor_prior
-            )
-        )
-    )
-    p_prior_bad_ALL = 1.0 / (
-        1.0
-        + np.exp(
-            -(
-                test_ALL_logits_prior
-                / temp_factor_prior
-            )
-        )
-    )
-
-    p_obs_bad_dict = dict(
-        zip(
-            test_df.index.tolist(),
-            p_obs_bad.tolist(),
-        )
-    )
-    p_prior_bad_dict = dict(
-        zip(
-            test_df.index.tolist(),
-            p_prior_bad.tolist(),
-        )
-    )
-
-    # B5 blackout/support logic must continue to use the OBSERVATION
-    # support feature, not a prior-conditioned support feature.
-    support_dict = (
-        test_df[
-            'x4_obs_support_ratio'
-        ].to_dict()
-    )
-
-    # Diagnostic only: probability coupling after decoupled training.
-    if (
-        len(p_obs_bad) > 1
-        and np.std(p_obs_bad) > 0
-        and np.std(p_prior_bad) > 0
-    ):
-        single_seq_prob_corr = float(
-            np.corrcoef(
-                p_obs_bad,
-                p_prior_bad,
-            )[0, 1]
-        )
-    else:
-        single_seq_prob_corr = np.nan
-
-
-    for fid in list(test_df.index[:10]):
-        print(
-            f"frame_id={fid:4d} | "
-            f"P(obs_bad)={p_obs_bad_dict[fid]:.4f} | "
-            f"P(prior_bad)={p_prior_bad_dict[fid]:.4f} | "
-            f"support={support_dict[fid]:.4f}"
-        )
-    
-    # ==================== 3. 计算 4 大概率与标定指标 ====================
-    auroc_obs = roc_auc_score(y_obs_ALL_test, p_obs_bad_ALL)
-    precision_obs, recall_obs, _ = precision_recall_curve(y_obs_ALL_test, p_obs_bad_ALL)
-    auprc_obs = auc(recall_obs, precision_obs)
-    brier_obs = brier_score_loss(y_obs_ALL_test, p_obs_bad_ALL)
-    ece_obs = compute_ece(p_obs_bad_ALL,y_obs_ALL_test)
-
-    auroc_prior = roc_auc_score(y_prior_ALL_test, p_prior_bad_ALL)
-    precision_prior, recall_prior, _ = precision_recall_curve(y_prior_ALL_test, p_prior_bad_ALL)
-    auprc_prior = auc(recall_prior, precision_prior)
-    brier_prior = brier_score_loss(y_prior_ALL_test, p_prior_bad_ALL)
-    ece_prior = compute_ece(p_prior_bad_ALL, y_prior_ALL_test)
-
-
-    # ==================== 5. 运行 6 个 Baselines====================
-    print("正在测试序列上运行 6 个 Baselines PK...")
-
-    
-    point_path = args.point_path
-    with open(point_path, 'r') as f:
-        model_pts = np.array([list(map(float, line.rstrip().split())) for line in f.readlines()])
-    open3d_model = U.toOpen3dCloud(model_pts, colors=np.zeros(model_pts.shape, dtype=np.float64))
-
-
-    last_name = os.path.basename(args.result_dir)
-    df_manifest = load_episode_manifest(args.manifest_path, last_name,  args.data_dir,args.gt_dir,args.result_dir)
-    manifest_frame_ids = set(df_manifest["frame_id"].astype(int).tolist())
-    risk_frame_ids = set(test_df.index.astype(int).tolist())
-    if manifest_frame_ids != risk_frame_ids:
-        missing_in_risk = sorted(manifest_frame_ids - risk_frame_ids)
-        missing_in_manifest = sorted(risk_frame_ids - manifest_frame_ids)
-        raise ValueError(
-            f"[{last_name}] label CSV 与 master manifest 的 frame_id 不一致。"
-            f" manifest-only={missing_in_risk[:10]}, label-only={missing_in_manifest[:10]}"
-        )
-
-    # 定义 6 个 Baselines 最终的逐帧姿态误差结果 (cm)
-    b1_errs,  b2_errs,  b3_errs,  b4_errs,  b5_errs,  b6_errs  = [], [], [], [], [], []
-    b5_modes = [] # 记录三模式历史
-    matched_frames=[]
-    false_recovery_triggers = 0
-    recovery_latencies1,recovery_latencies2,recovery_latencies3,recovery_latencies4,recovery_latencies5,recovery_latencies6 = [],[],[],[],[],[] # 记录恢复延迟
-    T_history2,T_history3,T_history4,T_history5,T_history6 =  [], [], [], [], []
+    b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs = [], [], [], [], [], []
+    b5_modes, matched_frames = [], []
+    T_history2, T_history3, T_history4, T_history5, T_history6 = [], [], [], [], []
     b5_state = init_b5_state()
     recovery_record = None
+    quality_records = []
+    label_consistency_failures = []
 
-
-    #for i, frame_id in enumerate(matched_frames):
     for row in df_manifest.itertuples():
-    # 直接从权威 Manifest 行中提取数据，绝对不可能错位！
-        i = row.seq_idx
-        frame_id = row.frame_idx
+        i = int(row.seq_idx)
+        frame_id = int(row.frame_idx)
         matched_frames.append(frame_id)
-        rgb_file   = row.rgb_path
-        depth_file = row.depth_path
-        gt_file    = row.gt_path
-        pred_file  = row.pred_path
-
-        # 读取姿态与深度图
-        T_obs = np.loadtxt(pred_file).reshape(4, 4)
-        T_gt  = np.loadtxt(gt_file).reshape(4, 4)
-        depth_raw = cv2.imread(depth_file, cv2.IMREAD_UNCHANGED)
-        
-        if i < 2: 
-            T_prior_current2,T_prior_current3,T_prior_current4,T_prior_current5,T_prior_current6 = T_obs,T_obs,T_obs,T_obs,T_obs  # 初始化阶段
-        else:
-            T_prior_current2 = compute_se3_prior(T_history2[-1],T_history2[-2])
-            T_prior_current3 = compute_se3_prior(T_history3[-1],T_history3[-2])
-            T_prior_current4 = compute_se3_prior(T_history4[-1],T_history4[-2])
-            T_prior_current5 = compute_se3_prior(T_history5[-1],T_history5[-2])
-            T_prior_current6 = compute_se3_prior(T_history6[-1],T_history6[-2])
-
-        p_obs_bad = p_obs_bad_dict[frame_id]
-        p_prior_bad = p_prior_bad_dict[frame_id]
-        support = support_dict[frame_id]
-        # B1: Obs-Only 
-        #b1_errs.append(e_obs)
-        b1_errs.append(U.adi(T_obs,T_gt,open3d_model)* 100)
-        
-        # B2: Fixed-alpha Smoothing (0.5)
-        delta=se3_log_map(np.linalg.inv(T_prior_current2)@T_obs)
-        T_final2=T_prior_current2 @ se3_exp_map(args.alpha*delta)
-        b2_errs.append(U.adi(T_final2,T_gt,open3d_model)* 100)
-        T_history2.append(T_final2)
-
-        # B3: Hard Depth Threshold (深度缺失则听惯性)
-        if support<0.4:
-            T_final3 = T_obs
-        else:
-            T_final3 = T_prior_current3
-        T_history3.append(T_final3)
-        b3_errs.append(U.adi(T_final3,T_gt,open3d_model)* 100)
-
-        # B4: Robust Huber Weighting
-        innovation=se3_log_map(np.linalg.inv(T_prior_current4)@T_obs)
-        r=np.linalg.norm(innovation)
-        delta=0.1
-        if r<=delta:
-            alpha=1.0
-        else:
-            alpha=delta/r
-        T_huber=T_prior_current4@se3_exp_map(alpha*innovation)
-        T_history4.append(T_huber)
-        b4_errs.append(U.adi(T_huber,T_gt,open3d_model)* 100)
-
-        #  B5: Proposed Three-Mode Policy
-        #
-        #  IMPORTANT:
-        #  RGB is loaded for EVERY frame from the frozen reference manifest.
-        #  b5_policy must cache the immediately pre-blackout RGB + T_final
-        #  so it can construct rgb_template2 at blackout onset.
-        #
-        #  Recovery:
-        #    first RGB + init_mask.png -> rgb_template1
-        #    pre-blackout RGB + T_final + CAD + template1 -> rgb_template2
-        #    recovery RGB + template2 -> padded mask
-        #    current RGB-D + mask -> FoundationPose.register()
+        T_obs = np.loadtxt(row.pred_path).reshape(4, 4)
+        T_gt = np.loadtxt(row.gt_path).reshape(4, 4)
+        depth_raw = cv2.imread(row.depth_path, cv2.IMREAD_UNCHANGED)
+        if depth_raw is None:
+            raise FileNotFoundError(row.depth_path)
         depth_real = depth_raw.astype(np.float32) / 1000.0
+        # row.rgb_path is already resolved by load_episode_manifest. Preserve
+        # that exact artifact/order for SAM2 while retaining existing RGB I/O.
+        rgb_real, rgb_path = load_foundationpose_recovery_rgb(row.rgb_path)
 
-        rgb_real, current_rgb_file = load_foundationpose_recovery_rgb(
-            rgb_file=rgb_file,
+        if i < 2:
+            T_prior2 = T_prior3 = T_prior4 = T_prior5 = T_prior6 = T_obs
+        else:
+            T_prior2 = compute_se3_prior(T_history2[-1], T_history2[-2])
+            T_prior3 = compute_se3_prior(T_history3[-1], T_history3[-2])
+            T_prior4 = compute_se3_prior(T_history4[-1], T_history4[-2])
+            T_prior5 = compute_se3_prior(T_history5[-1], T_history5[-2])
+            T_prior6 = compute_se3_prior(T_history6[-1], T_history6[-2])
+
+        obs_features = extract_pose_conditioned_features(
+            T_obs, depth_real, model_pts, scene, renderer, mesh_node
+        )
+        prior_features = extract_pose_conditioned_features(
+            T_prior5, depth_real, model_pts, scene, renderer, mesh_node
+        )
+        e_obs_hat, E_obs_hat_cm, p_obs_risk = predict_shared_quality(
+            obs_features, d_obj_cm, scaler, regressor, calibrator
+        )
+        e_prior_hat, E_prior_hat_cm, p_prior_risk = predict_shared_quality(
+            prior_features, d_obj_cm, scaler, regressor, calibrator
         )
 
+        # B1: observation only.
+        E_obs_gt_cm = U.adi(T_obs, T_gt, open3d_model) * 100.0
+        E_prior_gt_cm = U.adi(T_prior5, T_gt, open3d_model) * 100.0
+        b1_errs.append(E_obs_gt_cm)
+
+        # B2: fixed alpha.
+        delta = se3_log_map(np.linalg.inv(T_prior2) @ T_obs)
+        T_final2 = T_prior2 @ se3_exp_map(args.alpha * delta)
+        T_history2.append(T_final2)
+        b2_errs.append(U.adi(T_final2, T_gt, open3d_model) * 100.0)
+
+        # B3: hard observation-support threshold (legacy baseline only).
+        if obs_features["x4"] < 0.4:
+            T_final3 = T_obs
+        else:
+            T_final3 = T_prior3
+        T_history3.append(T_final3)
+        b3_errs.append(U.adi(T_final3, T_gt, open3d_model) * 100.0)
+
+        # B4: Huber innovation weighting.
+        innovation = se3_log_map(np.linalg.inv(T_prior4) @ T_obs)
+        r = np.linalg.norm(innovation)
+        huber_delta = 0.1
+        huber_alpha = 1.0 if r <= huber_delta else huber_delta / r
+        T_huber = T_prior4 @ se3_exp_map(huber_alpha * innovation)
+        T_history4.append(T_huber)
+        b4_errs.append(U.adi(T_huber, T_gt, open3d_model) * 100.0)
+
+        # B5: exact same shared-quality B5 transition as final label rollout.
         T_final, current_mode, b5_state, recovery_info = b5_transition(
             T_obs=T_obs,
-            T_prior=T_prior_current5,
-            p_obs_bad=p_obs_bad,
-            p_prior_bad=p_prior_bad,
-            support=support,
+            T_prior=T_prior5,
+            support=obs_features["x4"],
             depth_real=depth_real,
             model_pts=model_pts,
             K=K,
-            p_obs_threshold=p_obs_threshold,
-            p_prior_threshold=p_prior_threshold,
             frame_index=i,
             frame_id=frame_id,
             state=b5_state,
             blackout_min_frames=args.blackout_min_frames,
-            use_prior_predictor=True,
-
             rgb_real=rgb_real,
             base_sequence=args.test_base_seq,
             ycbineoat_root=args.ycbineoat_root,
@@ -870,584 +601,562 @@ def main(args):
             foundationpose_dir=args.foundationpose_dir,
             foundationpose_refiner_weight=args.foundationpose_refiner_weight,
             foundationpose_refine_iter=args.foundationpose_refine_iter,
+            rgb_path=rgb_path,
+            sam2_python=args.sam2_python,
+            sam2_dir=args.sam2_dir,
+            sam2_config=args.sam2_config,
+            sam2_checkpoint=args.sam2_checkpoint,
+            sam2_cache_root=args.sam2_cache_root,
+            E_obs_hat_cm=E_obs_hat_cm,
+            E_prior_hat_cm=E_prior_hat_cm,
+            p_obs_risk=p_obs_risk,
+            p_prior_risk=p_prior_risk,
+            p_risk_threshold=p_risk_threshold,
+            prior_advantage_margin_cm=args.prior_advantage_margin_cm,
         )
-
-        if recovery_info is not None:
-            print("\n========== RECOVERY DEBUG ==========")
-            print(f"Recovery frame         : {frame_id}")
-            print(
-                f"Recovery trigger       : "
-                f"{recovery_info.get('recovery_trigger')}"
-            )
-            print(
-                f"Recovery method        : "
-                f"{recovery_info.get('recovery_method')}"
-            )
-            print(
-                f"Reference frame        : "
-                f"{recovery_info.get('reference_frame_id')}"
-            )
-            print(
-                f"init_mask              : "
-                f"{recovery_info.get('init_mask_path')}"
-            )
-
-            if recovery_info.get("T_recovery") is not None:
-                fp_error_cm = U.adi(
-                    recovery_info["T_recovery"],
-                    T_gt,
-                    open3d_model,
-                ) * 100
-                print(
-                    f"FP recovery error      : "
-                    f"{fp_error_cm:.4f} cm"
-                )
-            else:
-                print("FP recovery error      : N/A")
-
-            se3_error_cm = U.adi(
-                T_prior_current5,
-                T_gt,
-                open3d_model,
-            ) * 100
-            print(
-                f"SE3 prior error        : "
-                f"{se3_error_cm:.4f} cm"
-            )
-
-            print(
-                f"Template2 source       : "
-                f"{recovery_info.get('template2_source')}"
-            )
-            print(
-                f"Template1 match success: "
-                f"{recovery_info.get('template1_guided_match_success')}"
-            )
-            print(
-                f"Template1 match score  : "
-                f"{recovery_info.get('template1_guided_match_score')}"
-            )
-            print(
-                f"Template2 match success: "
-                f"{recovery_info.get('template2_match_success')}"
-            )
-            print(
-                f"Template2 match score  : "
-                f"{recovery_info.get('template2_match_score')}"
-            )
-
-            recovery_mask = recovery_info.get(
-                "recovery_mask"
-            )
-            if recovery_mask is not None:
-                print(
-                    f"Recovery mask pixels   : "
-                    f"{int(np.count_nonzero(recovery_mask))}"
-                )
-            else:
-                print("Recovery mask pixels   : 0")
-
-            print(
-                f"Recovery success       : "
-                f"{recovery_info.get('recovery_success')}"
-            )
-            print(
-                f"Failure reason         : "
-                f"{recovery_info.get('recovery_failure_reason')}"
-            )
-            print("====================================\n")
-
-
-
         T_history5.append(T_final)
-        b5_error_current = U.adi(T_final, T_gt, open3d_model) * 100
+        b5_error_current = U.adi(T_final, T_gt, open3d_model) * 100.0
         b5_errs.append(b5_error_current)
         b5_modes.append(current_mode)
 
-        # 这里只记录“independent recovery action 本身”的误差；若 recovery action 失败，则记 NaN。
-        if recovery_info is not None and recovery_record is None:
-            if recovery_info["recovery_success"]:
-                b5_recovery_error_cm = U.adi(
-                    recovery_info["T_recovery"], T_gt, open3d_model
-                ) * 100
-            else:
-                b5_recovery_error_cm = np.nan
+        # Optional exact-consistency check against the final frozen label rollout.
+        if args.strict_label_rollout_check:
+            stored = test_df.loc[frame_id]
+            checks = {
+                "E_obs_hat_cm": E_obs_hat_cm,
+                "E_prior_hat_cm": E_prior_hat_cm,
+                "p_obs_risk_rollout": p_obs_risk,
+                "p_prior_risk_rollout": p_prior_risk,
+            }
+            for key, actual in checks.items():
+                if key in stored.index:
+                    expected = float(stored[key])
+                    if not np.isclose(
+                        expected, actual,
+                        rtol=args.label_rollout_rtol,
+                        atol=args.label_rollout_atol,
+                    ):
+                        label_consistency_failures.append(
+                            (frame_id, key, expected, actual)
+                        )
+            if "rollout_mode" in stored.index and str(stored["rollout_mode"]) != current_mode:
+                label_consistency_failures.append(
+                    (frame_id, "rollout_mode", str(stored["rollout_mode"]), current_mode)
+                )
+
+        if recovery_info is not None:
+            print(
+            f"\n[Recovery] episode={last_name} frame={frame_id}"
+            )
+            print(
+            "  trigger =",
+            recovery_info.get("recovery_trigger")
+            )
+            print(
+            "  raw =",
+            recovery_info.get("raw_recovery_generated")
+            )
+            print(
+            "  accepted =",
+            recovery_info.get("accepted_recovery")
+            )
+            print(
+            "  used =",
+            recovery_info.get("recovery_used")
+            )
+
+            print(
+            "  recovery_failure_reason =",
+            recovery_info.get("recovery_failure_reason")
+            )
+            print(
+            "  template2_match_reason =",
+            recovery_info.get("template2_match_reason")
+            )
+            print(
+            "  template2_candidate_count =",
+            recovery_info.get("template2_candidate_count")
+            )
+            print(
+            "  foundationpose_error =",
+            recovery_info.get("foundationpose_error")
+            )
+
+            if recovery_info.get("recovery_trigger") == "blackout_exit":
+                print("\n========== RECOVERY VALIDITY ==========")
+                print(
+                    "rejection_reasons:",
+                    recovery_info.get("recovery_rejection_reasons")
+                )
+                print(
+                    "IoU:",
+                    recovery_info.get("recovery_cad_mask_iou")
+                )
+                print(
+                    "coverage:",
+                    recovery_info.get("recovery_cad_coverage")
+                )
+                print(
+                    "center_error_norm:",
+                    recovery_info.get(
+                        "recovery_reprojection_center_error_norm"
+                    )
+                )
+                print(
+                    "depth_residual_m:",
+                    recovery_info.get(
+                        "recovery_rendered_depth_median_residual_m"
+                    )
+                )
+                print(
+                    "depth_support:",
+                    recovery_info.get(
+                        "recovery_rendered_depth_support"
+                    )
+                )
+                print(
+                    "template_score_margin:",
+                    recovery_info.get(
+                        "recovery_template_score_margin"
+                    )
+                )
+                print(
+                    "translation_jump_m:",
+                    recovery_info.get(
+                        "recovery_translation_jump_m"
+                    )
+                )
+                print(
+                    "rotation_jump_deg:",
+                    recovery_info.get(
+                        "recovery_rotation_jump_deg"
+                    )
+                )
+                print("=======================================\n")
+
+
+
+        if (
+            recovery_info is not None
+            and recovery_info.get("recovery_trigger") == "blackout_exit"
+            and recovery_record is None
+        ):
+            raw_generated = bool(recovery_info.get("raw_recovery_generated", False))
+            accepted = bool(recovery_info.get("accepted_recovery", False))
+            used = bool(recovery_info.get("recovery_used", False))
+            raw_pose = recovery_info.get("T_raw_recovery")
+            accepted_pose = recovery_info.get("T_accepted_recovery")
+            raw_error_cm = (
+                U.adi(raw_pose, T_gt, open3d_model) * 100.0
+                if raw_generated and raw_pose is not None else np.nan
+            )
+            accepted_error_cm = (
+                U.adi(accepted_pose, T_gt, open3d_model) * 100.0
+                if accepted and accepted_pose is not None else np.nan
+            )
             b1_recovery_error_cm = b1_errs[-1]
             recovery_record = {
                 "episode": last_name,
-                "recovery_frame": int(frame_id),
-                "recovery_success": bool(recovery_info["recovery_success"]),
+                "recovery_frame": frame_id,
+                "recovery_trigger": "blackout_exit",
+                "raw_recovery_generated": raw_generated,
+                "raw_recovery_error_cm": float(raw_error_cm) if np.isfinite(raw_error_cm) else np.nan,
+                "accepted_recovery": accepted,
+                "accepted_recovery_error_cm": float(accepted_error_cm) if np.isfinite(accepted_error_cm) else np.nan,
+                "recovery_used": used,
                 "B1_error_cm": float(b1_recovery_error_cm),
-                "B5_recovery_error_cm": float(b5_recovery_error_cm) if np.isfinite(b5_recovery_error_cm) else np.nan,
                 "B5_operational_error_cm": float(b5_error_current),
-                "B5_minus_B1_cm": float(b5_recovery_error_cm - b1_recovery_error_cm) if np.isfinite(b5_recovery_error_cm) else np.nan
+                "raw_minus_B1_cm": float(raw_error_cm - b1_recovery_error_cm) if np.isfinite(raw_error_cm) else np.nan,
+                "accepted_minus_B1_cm": float(accepted_error_cm - b1_recovery_error_cm) if np.isfinite(accepted_error_cm) else np.nan,
+                "operational_minus_B1_cm": float(b5_error_current - b1_recovery_error_cm),
             }
 
-        # B6: Oracle Decision Policy
-        err_obs = U.adi(T_obs, T_gt,open3d_model)
-        err_prior = U.adi(T_prior_current6,T_gt,open3d_model)
-        if err_obs < err_prior:
-            T_final_oracle = T_obs
-        else:
-            T_final_oracle = T_prior_current6
-        T_history6.append(T_final_oracle)
-        b6_errs.append(U.adi(T_final_oracle,T_gt,open3d_model)*100)
+        # B6 oracle upper bound with independent recursive history.
+        err_obs = U.adi(T_obs, T_gt, open3d_model)
+        err_prior = U.adi(T_prior6, T_gt, open3d_model)
+        T_final6 = T_obs if err_obs < err_prior else T_prior6
+        T_history6.append(T_final6)
+        b6_errs.append(U.adi(T_final6, T_gt, open3d_model) * 100.0)
 
-        # T_final2=T_prior_current2
-        # T_history2.append(T_final2)
-        #b7.append(U.adi(T_final2,T_gts[i],open3d_model)*100)
-       
-    blackout_start = b5_state["blackout_start_idx"]
-    blackout_end = b5_state["blackout_end_idx"]
-    print(Counter(b5_modes))
-    print("black_start:", blackout_start, "| frame:", b5_state["blackout_start_frame"])
-    print("black_end:", b5_state["last_blackout_idx"], "| frame:", b5_state["blackout_end_frame"])
-    print("recovery_index:", blackout_end, "| frame:", b5_state["recovery_frame"])
-    # print(b5_errs[42:200])
+        quality_records.append({
+            "episode": last_name,
+            "frame_id": frame_id,
+            "E_obs_cm": float(E_obs_gt_cm),
+            "E_prior_cm": float(E_prior_gt_cm),
+            "E_obs_hat_cm": float(E_obs_hat_cm),
+            "E_prior_hat_cm": float(E_prior_hat_cm),
+            "e_obs_hat_norm": float(e_obs_hat),
+            "e_prior_hat_norm": float(e_prior_hat),
+            "p_obs_risk": float(p_obs_risk),
+            "p_prior_risk": float(p_prior_risk),
+            "delta_E_gt_cm": float(E_prior_gt_cm - E_obs_gt_cm),
+            "delta_E_hat_cm": float(E_prior_hat_cm - E_obs_hat_cm),
+            "selected_mode": current_mode,
+        })
 
-    # ==================== 动作 A: 测量 【恢复延迟 Recovery Latency】 ====================
-    # 找到黑屏结束点 (第 160 帧)，测量复活需要几帧
-    a=0.5
-    if "black" in args.result_dir:
-        print("computing recovery_latencies")
-        for i in range(blackout_end, len(b5_errs)):
-            if b1_errs[i] < a: 
-                latency = i - blackout_end  # 恢复延迟帧数 (例如 1 帧)
-                recovery_latencies1.append(latency)
-                break
-        for i in range(blackout_end, len(b5_errs)):
-            if b2_errs[i] < a: 
-                
-                latency = i - blackout_end  # 恢复延迟帧数 (例如 1 帧)
-                recovery_latencies2.append(latency)
-                break
-        for i in range(blackout_end, len(b5_errs)):
-            if b3_errs[i] < a: 
+    if label_consistency_failures:
+        preview = label_consistency_failures[:10]
 
-                latency = i - blackout_end  # 恢复延迟帧数 (例如 1 帧)
-                recovery_latencies3.append(latency)
-                break
-        for i in range(blackout_end, len(b5_errs)):
-            if b4_errs[i] < a: 
-                
-                latency = i - blackout_end  # 恢复延迟帧数 (例如 1 帧)
-                recovery_latencies4.append(latency)
-                break
-        for i in range(blackout_end, len(b5_errs)):
-            if b5_errs[i] < a: 
-                
-                latency = i - blackout_end  # 恢复延迟帧数 (例如 1 帧)
-                recovery_latencies5.append(latency)
-                break
-        for i in range(blackout_end, len(b5_errs)):
-            if b6_errs[i] < a: 
-                
-                latency = i - blackout_end  # 恢复延迟帧数 (例如 1 帧)
-                recovery_latencies6.append(latency)
-                break
-
-
-    if len(recovery_latencies5) > 0:
-        # 恢复成功：记录真实的复活帧数
-        avg_recovery_latency5  = f"{recovery_latencies5[0]:.1f} frames"
-    else:
-        # 恢复失败 (黑屏后彻底跟丢)：记录为 N/A (Failed)！
-        avg_recovery_latency5  = "N/A (Failed)"
-
-    if len(recovery_latencies1) > 0:
-        # 恢复成功：记录真实的复活帧数
-        avg_recovery_latency1  = f"{recovery_latencies1[0]:.1f} frames"
-    else:
-        # 恢复失败 (黑屏后彻底跟丢)：记录为 N/A (Failed)！
-        avg_recovery_latency1  = "N/A (Failed)"
-
-    if len(recovery_latencies2) > 0:
-        # 恢复成功：记录真实的复活帧数
-        avg_recovery_latency2  = f"{recovery_latencies2[0]:.1f} frames"
-    else:
-        # 恢复失败 (黑屏后彻底跟丢)：记录为 N/A (Failed)！
-        avg_recovery_latency2  = "N/A (Failed)"
-
-    if len(recovery_latencies3) > 0:
-        # 恢复成功：记录真实的复活帧数
-        avg_recovery_latency3  = f"{recovery_latencies3[0]:.1f} frames"
-    else:
-        # 恢复失败 (黑屏后彻底跟丢)：记录为 N/A (Failed)！
-        avg_recovery_latency3  = "N/A (Failed)"
-
-    if len(recovery_latencies4) > 0:
-        # 恢复成功：记录真实的复活帧数
-        avg_recovery_latency4  = f"{recovery_latencies4[0]:.1f} frames"
-    else:
-        # 恢复失败 (黑屏后彻底跟丢)：记录为 N/A (Failed)！
-        avg_recovery_latency4  = "N/A (Failed)"
-
-    if len(recovery_latencies6) > 0:
-        # 恢复成功：记录真实的复活帧数
-        avg_recovery_latency6  = f"{recovery_latencies6[0]:.1f} frames"
-    else:
-        # 恢复失败 (黑屏后彻底跟丢)：记录为 N/A (Failed)！
-        avg_recovery_latency6  = "N/A (Failed)"
-
-    # ==================== 动作 C: 保存逐帧 CSV 日志与黑屏复活轨迹图 ====================
-    # ==================== 6. 保存图像与 CSV 日志 ====================
-    # 保存逐帧 CSV 日志
-    df_log = pd.DataFrame({
-        "frame_id": matched_frames,
-        "p_obs_bad": [p_obs_bad_dict[f] for f in matched_frames],
-        "p_prior_bad": [p_prior_bad_dict[f] for f in matched_frames],
-        "selected_mode": b5_modes,
-        "error_b1_obs_cm": b1_errs,
-        "error_b2_obs_cm": b2_errs,
-        "error_b3_obs_cm": b3_errs,
-        "error_b4_obs_cm": b4_errs,
-        "error_b5_ours_cm": b5_errs,
-        "error_b6_obs_cm": b6_errs,
-
-    })
-    df_log.to_csv(f"./checkpoint2_per_frame_{last_name}_log_threshold{args.risk_threshold}.csv", index=False)
-
-    # 保存 Reliability Diagram
-    plt.figure(figsize=(7, 6))
-    plt.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration (ECE=0)')
-    n_bins = 10
-    bin_boundaries = np.linspace(0, 1, n_bins + 1)
-    bin_accs, bin_confs = [], []
-    for i in range(n_bins):
-        in_bin = (p_obs_bad_ALL > bin_boundaries[i]) & (p_obs_bad_ALL <= bin_boundaries[i+1])
-        if np.sum(in_bin) > 0:
-            bin_accs.append(np.mean(y_obs_ALL_test[in_bin]))
-            bin_confs.append(np.mean(p_obs_bad_ALL[in_bin]))
-    plt.plot(bin_confs, bin_accs, 's-', color='darkorange', linewidth=2, label=f'Ours (ECE={ece_obs:.3f})')
-    plt.title(r'Reliability Diagram for Observation Risk', fontsize=11)
-    plt.xlabel(r'Predicted $P(\mathrm{Observation\ Bad})$', fontsize=11)
-    plt.ylabel('Empirical Observed Help Frequency', fontsize=11)
-    plt.legend(); plt.grid(True, linestyle='--')
-    plt.savefig(f'reliability_diagram_observation_risk_threshold{args.risk_threshold}.png', dpi=300, bbox_inches='tight')
-
-    plt.figure(figsize=(7, 6))
-    plt.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration (ECE=0)')
-    n_bins = 10
-    bin_boundaries = np.linspace(0, 1, n_bins + 1)
-    bin_accs, bin_confs = [], []
-    for i in range(n_bins):
-        in_bin = (p_prior_bad_ALL > bin_boundaries[i]) & (p_prior_bad_ALL <= bin_boundaries[i+1])
-        if np.sum(in_bin) > 0:
-            bin_accs.append(np.mean(y_prior_ALL_test[in_bin]))
-            bin_confs.append(np.mean(p_prior_bad_ALL[in_bin]))
-    plt.plot(bin_confs, bin_accs, 's-', color='darkorange', linewidth=2, label=f'Ours (ECE={ece_prior:.3f})')
-    plt.title(r'Reliability Diagram for Prior Risk', fontsize=11)
-    plt.xlabel(r'Predicted $P(\mathrm{Prior\ Bad})$', fontsize=11)
-    plt.ylabel('Empirical Observed Help Frequency', fontsize=11)
-    plt.legend(); plt.grid(True, linestyle='--')
-    plt.savefig(f'reliability_diagram_prior_risk_threshold{args.risk_threshold}.png', dpi=300, bbox_inches='tight')
-
-    if "black" in args.result_dir: 
-        # 保存 Trajectory Trace Plot
-        plt.figure(figsize=(10, 5))
-        plt.plot(b1_errs[:], 'r-', label='B1: Obs-Only (Diverges on Blackout)', alpha=0.7)
-        plt.plot(b5_errs[:], 'g--', label='B5: Ours (Three-Mode Policy)', linewidth=2)
-        plt.axvspan(blackout_start, blackout_end, color='gray', alpha=0.3, label='10-Frame Complete Blackout')
-        plt.title('Temporal Trajectory Trace: Pose Error & Recovery under Blackout', fontsize=12)
-        plt.xlabel('Frame Number', fontsize=11)
-        plt.ylabel('ADD-S Pose Error (cm)', fontsize=11)
-        plt.legend(); plt.grid(True, linestyle='--')
-        plt.savefig(f'trajectory_recovery_plot_threshold{args.risk_threshold}.png', dpi=300, bbox_inches='tight')
-
-    print("\n所有的 11 项交付物已全部生成完毕！图片与 CSV 已成功保存！")
-
-
-    adds_scores = [calc_auc(b1_errs), calc_auc(b2_errs), calc_auc(b3_errs), calc_auc(b4_errs), calc_auc(b5_errs), calc_auc(b6_errs)]
-    fail_rates = [np.mean(np.array(b1_errs) > 2.0)*100, np.mean(np.array(b2_errs) > 2.0)*100,np.mean(np.array(b3_errs) > 2.0)*100, np.mean(np.array(b4_errs) > 2.0)*100,np.mean(np.array(b5_errs) > 2.0)*100, np.mean(np.array(b6_errs) > 2.0)*100]
-    latency_scores = [avg_recovery_latency1, avg_recovery_latency2, avg_recovery_latency3, avg_recovery_latency4, avg_recovery_latency5, avg_recovery_latency6]
-    false_triggers = ["N/A", "N/A", "N/A", "N/A", f"{false_recovery_triggers} times", "0 times"]
-    prob_metrics_obs = {
-        'auroc_obs': auroc_obs,
-        'auprc_obs': auprc_obs,
-        'brier_obs': brier_obs,
-        'ece_obs': ece_obs,
-        'temp_factor_obs': temp_factor_obs,
-        'p_obs_threshold': p_obs_threshold,
-    }
-    prob_metrics_prior = {
-        'auroc_prior': auroc_prior,
-        'auprc_prior': auprc_prior,
-        'brier_prior': brier_prior,
-        'ece_prior': ece_prior,
-        'temp_factor_prior': temp_factor_prior,
-        'p_prior_threshold': p_prior_threshold,
-    }
-    
+        print(
+            f"[INFO][{last_name}] "
+            "label-generation rollout differs from final deployment rollout. "
+            "This is allowed because the final predictor is trained after "
+            "label generation."
+        )
+        print(
+            f"[INFO][{last_name}] "
+            f"first rollout differences={preview}"
+        )
 
     blackout_intervals = []
-    for interval in b5_state["blackout_intervals"]:
-        interval_record = {"episode": last_name}
-        interval_record.update(interval)
-        blackout_intervals.append(interval_record)
+    for interval in b5_state.get("blackout_intervals", []):
+        rec = {"episode": last_name}
+        rec.update(interval)
+        blackout_intervals.append(rec)
 
-    return (adds_scores, fail_rates, latency_scores, false_triggers, prob_metrics_obs,
-            prob_metrics_prior, recovery_record, blackout_intervals)
-            
+    recovery_start = None
+    if blackout_intervals:
+        recovery_start = blackout_intervals[0]["recovery_index"]
+    latency_scores = [
+        _latency_string(b1_errs, recovery_start),
+        _latency_string(b2_errs, recovery_start),
+        _latency_string(b3_errs, recovery_start),
+        _latency_string(b4_errs, recovery_start),
+        _latency_string(b5_errs, recovery_start),
+        _latency_string(b6_errs, recovery_start),
+    ]
+    false_triggers = ["N/A", "N/A", "N/A", "N/A", "0 times", "0 times"]
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--csv_path', type=str, default="./per_frame_label_threshold1.0.csv", help="csv数据集路径")
-    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv",
-                        help="冻结的 reference manifest（只读，不在 evaluation 中重建）")
-    parser.add_argument('--result_dir', nargs='+',type=str, default=["./results_collection/mustard0/mustard0_black10",
-                                                                     "./results_collection/mustard0/mustard0_black10_2",
-                                                                     "./results_collection/mustard0/mustard0_black10_3",
-                                                                     "./results_collection/mustard0/mustard0_black10_4",
-                                                                     "./results_collection/mustard0/mustard0_black10_5",], 
-                                                                     help="要测试的所有序列路径")
-    parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/mustard0/annotated_poses", help="GT_Pose Path")
-    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/points.xyz", help="point_path")   #021_bleach_cleanser  006_mustard_bottle
-    parser.add_argument('--train_seqs', nargs='+', default=["bleach0", "bleach_hard_00_03_chaitanya"], help="训练集包含的序列关键字列表")
-    parser.add_argument('--test_base_seq', type=str, default="mustard0", help="测试集物体的基础名称")
-    parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted", help="受损数据集基础路径")
-    parser.add_argument('--alpha', type=float, default=0.5, help="B2-alpha")
-    parser.add_argument('--risk_threshold', type=float, default=1.0, help="risk_threshold")
-    parser.add_argument('--blackout_min_frames', type=int, default=10, help="触发blackout recovery所需连续blackout帧数")
-    parser.add_argument(
-        '--ycbineoat_root',
-        type=str,
-        default="./datasets/YCBInEOAT",
-        help="官方 YCBInEOAT 根目录，用于读取 <base_sequence>/init_mask.png"
-    )
+    # Per-frame deployment log.
+    qdf = pd.DataFrame(quality_records)
+    qdf["error_b1_obs_cm"] = b1_errs
+    qdf["error_b2_cm"] = b2_errs
+    qdf["error_b3_cm"] = b3_errs
+    qdf["error_b4_cm"] = b4_errs
+    qdf["error_b5_ours_cm"] = b5_errs
+    qdf["error_b6_oracle_cm"] = b6_errs
+    log_path = f"./checkpoint2_per_frame_{last_name}_log_threshold{args.risk_threshold}.csv"
+    qdf.to_csv(log_path, index=False)
 
-    # ==================== FoundationPose template-mask recovery ====================
-    parser.add_argument(
-        '--foundationpose_python',
-        type=str,
-        default="/home/wyg/anaconda3/envs/foundationpose/bin/python",
-        help="FoundationPose conda 环境的 Python 绝对路径"
-    )
-    parser.add_argument(
-        '--foundationpose_dir',
-        type=str,
-        default="/home/wyg/FoundationPose",
-        help="FoundationPose repository 根目录"
-    )
-    parser.add_argument(
-        '--foundationpose_mesh_file',
-        type=str,
-        default="./datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.obj",
-        help="当前目标物体 CAD mesh；bleach/mustard 请分别传各自 textured.obj"
-    )
-    parser.add_argument(
-        '--foundationpose_refiner_weight',
-        type=str,
-        default="/home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth",
-        help="冻结的 FoundationPose PoseRefinePredictor 权重"
-    )
-    parser.add_argument(
-        '--foundationpose_refine_iter',
-        type=int,
-        default=5,
-        help="FoundationPose PoseRefinePredictor refinement iterations"
-    )
-    parser.add_argument('--bootstrap_samples', type=int, default=10000, help="paired episode bootstrap次数")
-    parser.add_argument('--seed', type=int, default=42, help="随机种子")
-    args = parser.parse_args()
+    if blackout_intervals:
+        start = int(blackout_intervals[0]["blackout_start_index"])
+        end = int(blackout_intervals[0]["recovery_index"])
+        plt.figure(figsize=(10, 5))
+        plt.plot(b1_errs, label="B1: Obs-Only")
+        plt.plot(b5_errs, label="B5: Shared Pose-Quality")
+        plt.axvspan(start, end, alpha=0.3, label="Blackout")
+        plt.xlabel("Frame index")
+        plt.ylabel("ADD-S error (cm)")
+        plt.legend()
+        plt.grid(True, linestyle="--")
+        plt.savefig(
+            f"trajectory_recovery_plot_{last_name}_threshold{args.risk_threshold}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close()
+
+    adds_scores = [calc_auc(x) for x in [b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs]]
+    fail_rates = [float(np.mean(np.asarray(x) > 2.0) * 100.0) for x in [b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs]]
+    return adds_scores, fail_rates, latency_scores, false_triggers, recovery_record, blackout_intervals, quality_records
+
+
+def save_reliability_diagram(probs, labels, title, xlabel, ylabel, path, ece):
+    plt.figure(figsize=(7, 6))
+    plt.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration')
+    boundaries = np.linspace(0, 1, 11)
+    accs, confs = [], []
+    probs = np.asarray(probs, dtype=float)
+    labels = np.asarray(labels, dtype=int)
+    for i in range(10):
+        mask = (probs > boundaries[i]) & (probs <= boundaries[i + 1])
+        if np.any(mask):
+            accs.append(np.mean(labels[mask]))
+            confs.append(np.mean(probs[mask]))
+    plt.plot(confs, accs, 's-', linewidth=2, label=f'Shared calibrator (ECE={ece:.3f})')
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+    plt.grid(True, linestyle='--')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+
+def main(args):
     np.random.seed(args.seed)
+    try:
+        o3d.utility.random.seed(args.seed)
+    except Exception:
+        pass
 
-    print("\n[FoundationPose recovery configuration]")
-    print("  python :", args.foundationpose_python)
-    print("  repo   :", args.foundationpose_dir)
-    print("  mesh   :", os.path.abspath(args.foundationpose_mesh_file))
-    print("  refiner weight:", args.foundationpose_refiner_weight)
-    print("  RGB source: frozen reference_manifest.csv -> rgb_path")
-    print("  refine_iter:", args.foundationpose_refine_iter)
+    labels_df = pd.read_csv(args.csv_path)
+    required = {
+        "sequence", "frame_id", "E_obs_cm", "E_prior_cm",
+        "E_obs_hat_cm", "E_prior_hat_cm",
+        "p_obs_risk_rollout", "p_prior_risk_rollout", "rollout_mode",
+    }
+    missing = required - set(labels_df.columns)
+    if missing:
+        raise ValueError(
+            f"Label CSV missing shared-quality columns {sorted(missing)}; "
+            "regenerate it with the new 2-risk_label.py."
+        )
+
+    cfg, scaler, regressor, calibrator, p_risk_threshold = load_shared_artifacts(args)
+    print("\n[Frozen shared pose-quality model]")
+    print("held-out base       :", cfg["held_out_base"])
+    print("train bases         :", cfg["train_bases"])
+    print("p_risk_threshold    :", p_risk_threshold)
+    print("risk threshold (cm) :", cfg["risk_threshold_cm"])
+    print("advantage margin cm :", cfg["prior_advantage_margin_cm"])
+
+    model_pts = np.loadtxt(args.point_path, dtype=np.float64).reshape(-1, 3)
+    open3d_model = U.toOpen3dCloud(
+        model_pts, colors=np.zeros(model_pts.shape, dtype=np.float64)
+    )
+    d_obj_cm = float(
+        np.linalg.norm(np.max(model_pts, axis=0) - np.min(model_pts, axis=0)) * 100.0
+    )
+    scene, renderer, mesh_node = build_eval_renderer(args.foundationpose_mesh_file)
+
     baseline_names = [
         "B1: Obs-Only se(3)-TrackNet",
         "B2: Fixed-Alpha (0.5) Interpolation",
         "B3: Hard Depth Threshold",
         "B4: Robust Huber Weighting",
-        "B5: Proposed Three-Mode Policy (Ours)",
-        "B6: Oracle Decision Policy (Upper Bound)"
+        "B5: Proposed Shared Pose-Quality Policy",
+        "B6: Oracle Decision Policy (Upper Bound)",
     ]
 
-    ADDS_dict = {}
-    FAIL_dict = {}
-    LATENCY_dict = {}
-    TRIGGER_dict = {}
-    RECOVERY_dict = {}
-    BLACKOUT_INTERVALS_dict = {}
-    
-    last_prob_metrics_obs = None # 用于保存概率标定指标
-    last_prob_metrics_prior = None
+    ADDS, FAIL, LATENCY, TRIGGER = {}, {}, {}, {}
+    RECOVERY, BLACKOUT = {}, {}
+    all_quality_records = []
 
-    result_dirs = args.result_dir 
-    
-    for single_dir in result_dirs:
-        args.result_dir = single_dir 
-        basename = os.path.basename(single_dir)
-        
-        print(f"\n正在评估 Episode: {basename} ...")
-        
-        # 接收 main(args) 返回的 5 个元组/列表！
-        (adds_s, fails, lats, fts, prob_metrics_obs, prob_metrics_prior,
-         recovery_record, blackout_intervals) = main(args)
-        
-        ADDS_dict[basename] = adds_s
-        FAIL_dict[basename] = fails
-        LATENCY_dict[basename] = lats
-        TRIGGER_dict[basename] = fts
-        RECOVERY_dict[basename] = recovery_record
-        BLACKOUT_INTERVALS_dict[basename] = blackout_intervals
-        last_prob_metrics_obs = prob_metrics_obs # 记录概率指标
-        last_prob_metrics_prior = prob_metrics_prior 
+    for result_dir in args.result_dir:
+        ep = os.path.basename(result_dir)
+        print(f"\n=== Evaluating {ep} ===")
+        (
+            adds, fails, lats, triggers,
+            recovery_record, blackout_intervals, quality_records,
+        ) = evaluate_episode(
+            args, result_dir, labels_df,
+            model_pts, open3d_model, d_obj_cm,
+            scene, renderer, mesh_node,
+            scaler, regressor, calibrator, p_risk_threshold,
+        )
+        ADDS[ep], FAIL[ep], LATENCY[ep], TRIGGER[ep] = adds, fails, lats, triggers
+        RECOVERY[ep], BLACKOUT[ep] = recovery_record, blackout_intervals
+        all_quality_records.extend(quality_records)
 
-    print("\n" + "="*100)
-    print("="*100)
+    qdf = pd.DataFrame(all_quality_records)
+    obs_labels = (qdf["E_obs_cm"].values > args.risk_threshold).astype(int)
+    prior_labels = (qdf["E_prior_cm"].values > args.risk_threshold).astype(int)
+    obs_metrics = _safe_prob_metrics(obs_labels, qdf["p_obs_risk"].values)
+    prior_metrics = _safe_prob_metrics(prior_labels, qdf["p_prior_risk"].values)
 
-    summary_rows = []
+    obs_mae = float(mean_absolute_error(qdf["E_obs_cm"], qdf["E_obs_hat_cm"]))
+    prior_mae = float(mean_absolute_error(qdf["E_prior_cm"], qdf["E_prior_hat_cm"]))
+    obs_med = float(np.median(np.abs(qdf["E_obs_cm"] - qdf["E_obs_hat_cm"])))
+    prior_med = float(np.median(np.abs(qdf["E_prior_cm"] - qdf["E_prior_hat_cm"])))
+    obs_spear = float(spearmanr(qdf["E_obs_cm"], qdf["E_obs_hat_cm"]).statistic)
+    prior_spear = float(spearmanr(qdf["E_prior_cm"], qdf["E_prior_hat_cm"]).statistic)
 
-    # 原始 episode summary 继续保留，但不再给每个 baseline 单独 bootstrap CI；
-    for b_idx, b_name in enumerate(baseline_names):
-        scores_for_this_baseline = [ADDS_dict[ep][b_idx] for ep in ADDS_dict.keys()]
-        mean_score = float(np.mean(scores_for_this_baseline))
-        row_data = {"Baseline / Method": b_name}
-        for ep in ADDS_dict.keys():
-            row_data[f"ADD-S ({ep})"] = f"{ADDS_dict[ep][b_idx]:.3f}%"
-        row_data["Mean ADD-S (%)"] = f"{mean_score:.3f}%"
-        for ep in FAIL_dict.keys():
-            row_data[f"Failure Rate ({ep})"] = f"{FAIL_dict[ep][b_idx]:.3f}%"
-        for ep in LATENCY_dict.keys():
-            row_data[f"Latency ({ep})"] = LATENCY_dict[ep][b_idx]
-        for ep in TRIGGER_dict.keys():
-            row_data[f"False Triggers ({ep})"] = TRIGGER_dict[ep][b_idx]
-        summary_rows.append(row_data)
+    margin = float(args.prior_advantage_margin_cm)
+    non_tie = np.abs(qdf["delta_E_gt_cm"].values) > margin
+    pair_auroc = np.nan
+    pair_bal_acc = np.nan
+    pair_order_acc = np.nan
+    if np.count_nonzero(non_tie) > 1:
+        pair_y = (qdf.loc[non_tie, "delta_E_gt_cm"].values > margin).astype(int)
+        pair_score = qdf.loc[non_tie, "delta_E_hat_cm"].values.astype(float)
+        if len(np.unique(pair_y)) == 2:
+            pair_auroc = float(roc_auc_score(pair_y, pair_score))
+            pair_pred = (pair_score > 0.0).astype(int)
+            pair_bal_acc = float(balanced_accuracy_score(pair_y, pair_pred))
+            pair_order_acc = float(np.mean(pair_pred == pair_y))
 
-    df_summary = pd.DataFrame(summary_rows)
+    # Probability/regression/ranking metrics.
+    metric_rows = [
+        {"Metric": "Shared error MAE_obs_cm", "Value": obs_mae},
+        {"Metric": "Shared error MedianAE_obs_cm", "Value": obs_med},
+        {"Metric": "Shared error Spearman_obs", "Value": obs_spear},
+        {"Metric": "AUROC_obs_abs_risk", "Value": obs_metrics["auroc"]},
+        {"Metric": "AUPRC_obs_abs_risk", "Value": obs_metrics["auprc"]},
+        {"Metric": "Brier_obs_abs_risk", "Value": obs_metrics["brier"]},
+        {"Metric": "ECE_obs_abs_risk", "Value": obs_metrics["ece"]},
+        {"Metric": "Shared error MAE_prior_cm", "Value": prior_mae},
+        {"Metric": "Shared error MedianAE_prior_cm", "Value": prior_med},
+        {"Metric": "Shared error Spearman_prior", "Value": prior_spear},
+        {"Metric": "AUROC_prior_abs_risk", "Value": prior_metrics["auroc"]},
+        {"Metric": "AUPRC_prior_abs_risk", "Value": prior_metrics["auprc"]},
+        {"Metric": "Brier_prior_abs_risk", "Value": prior_metrics["brier"]},
+        {"Metric": "ECE_prior_abs_risk", "Value": prior_metrics["ece"]},
+        {"Metric": "Pairwise_AUROC_prior_worse", "Value": pair_auroc},
+        {"Metric": "Pairwise_balanced_accuracy", "Value": pair_bal_acc},
+        {"Metric": "Pairwise_ordering_accuracy", "Value": pair_order_acc},
+        {"Metric": "p_risk_threshold_shared", "Value": p_risk_threshold},
+        {"Metric": "prior_advantage_margin_cm", "Value": margin},
+    ]
+    metrics_path = f"./checkpoint2_probability_calibration_metrics_threshold{args.risk_threshold}.csv"
+    pd.DataFrame(metric_rows).to_csv(metrics_path, index=False)
 
-    # ====================#4: paired episode-level AUC comparison ====================
-    blackout_eps = [ep for ep in ADDS_dict.keys() if "black" in ep.lower()]
-    if len(blackout_eps) != 5:
-        print(f"paired AUC 预期 5 个 blackout episodes, 当前得到 {len(blackout_eps)} 个: {blackout_eps}")
-
-    if blackout_eps:
-        interval_rows = []
-        for episode in blackout_eps:
-            episode_intervals = BLACKOUT_INTERVALS_dict.get(episode, [])
-            if len(episode_intervals) != 1:
-                raise RuntimeError(
-                    f"[{episode}] expected exactly one validated blackout interval, "
-                    f"found {len(episode_intervals)}"
-                )
-            interval_rows.extend(episode_intervals)
-        blackout_interval_path = f"./checkpoint2_blackout_frame_intervals_threshold{args.risk_threshold}.csv"
-        pd.DataFrame(interval_rows).to_csv(blackout_interval_path, index=False)
-        print(f"Exact blackout frame intervals saved: {blackout_interval_path}")
-
-    paired_auc_rows = []
-    auc_differences = []
-    for ep in blackout_eps:
-        auc_b1 = float(ADDS_dict[ep][0])
-        auc_b5 = float(ADDS_dict[ep][4])
-        delta_auc = auc_b5 - auc_b1
-        auc_differences.append(delta_auc)
-        paired_auc_rows.append({
-            "episode": ep,
-            "AUC_B1_percent": auc_b1,
-            "AUC_B5_percent": auc_b5,
-            "Delta_B5_minus_B1_percentage_points": delta_auc
-        })
-
-    auc_mean_diff, auc_ci_low, auc_ci_high = compute_paired_bootstrap_ci(
-        auc_differences,
-        n_bootstraps=args.bootstrap_samples,
-        seed=args.seed
+    save_reliability_diagram(
+        qdf["p_obs_risk"], obs_labels,
+        "Reliability Diagram for Observation Absolute Risk",
+        "Predicted P(Observation Risk)", "Empirical Risk Frequency",
+        f"reliability_diagram_observation_risk_threshold{args.risk_threshold}.png",
+        obs_metrics["ece"],
     )
-    paired_auc_rows.append({
+    save_reliability_diagram(
+        qdf["p_prior_risk"], prior_labels,
+        "Reliability Diagram for Prior Absolute Risk",
+        "Predicted P(Prior Risk)", "Empirical Risk Frequency",
+        f"reliability_diagram_prior_risk_threshold{args.risk_threshold}.png",
+        prior_metrics["ece"],
+    )
+
+    # Episode summary.
+    summary_rows = []
+    for b_idx, b_name in enumerate(baseline_names):
+        row = {"Baseline / Method": b_name}
+        vals = [ADDS[ep][b_idx] for ep in ADDS]
+        for ep in ADDS:
+            row[f"ADD-S ({ep})"] = f"{ADDS[ep][b_idx]:.3f}%"
+            row[f"Failure Rate ({ep})"] = f"{FAIL[ep][b_idx]:.3f}%"
+            row[f"Latency ({ep})"] = LATENCY[ep][b_idx]
+            row[f"False Triggers ({ep})"] = TRIGGER[ep][b_idx]
+        row["Mean ADD-S (%)"] = f"{np.mean(vals):.3f}%"
+        summary_rows.append(row)
+    summary_df = pd.DataFrame(summary_rows)
+    first_ep = os.path.basename(args.result_dir[0])
+    summary_path = f"./checkpoint2_full_metrics_episode_summary_{first_ep}_threshold{args.risk_threshold}.csv"
+    summary_df.to_csv(summary_path, index=False)
+
+    blackout_eps = [ep for ep in ADDS if "black" in ep.lower()]
+    interval_rows = []
+    for ep in blackout_eps:
+        ints = BLACKOUT.get(ep, [])
+        if len(ints) != 1:
+            raise RuntimeError(f"[{ep}] expected exactly one blackout interval, got {len(ints)}")
+        interval_rows.extend(ints)
+    blackout_path = f"./checkpoint2_blackout_frame_intervals_threshold{args.risk_threshold}.csv"
+    pd.DataFrame(interval_rows).to_csv(blackout_path, index=False)
+
+    # Paired AUC.
+    paired_rows, diffs = [], []
+    for ep in blackout_eps:
+        b1, b5 = float(ADDS[ep][0]), float(ADDS[ep][4])
+        diff = b5 - b1
+        diffs.append(diff)
+        paired_rows.append({
+            "episode": ep,
+            "AUC_B1_percent": b1,
+            "AUC_B5_percent": b5,
+            "Delta_B5_minus_B1_percentage_points": diff,
+        })
+    mean_diff, low, high = compute_paired_bootstrap_ci(
+        diffs, n_bootstraps=args.bootstrap_samples, seed=args.seed
+    )
+    paired_rows.append({
         "episode": "PAIRED_MEAN",
         "AUC_B1_percent": np.nan,
         "AUC_B5_percent": np.nan,
-        "Delta_B5_minus_B1_percentage_points": auc_mean_diff,
-        "Paired_95CI_low": auc_ci_low,
-        "Paired_95CI_high": auc_ci_high
+        "Delta_B5_minus_B1_percentage_points": mean_diff,
+        "Paired_95CI_low": low,
+        "Paired_95CI_high": high,
     })
-    paired_auc_df = pd.DataFrame(paired_auc_rows)
-    paired_auc_path = f"./checkpoint2_paired_auc_B5_vs_B1_threshold{args.risk_threshold}.csv"
-    paired_auc_df.to_csv(paired_auc_path, index=False)
-    print(f" Paired AUC comparison 已保存: {paired_auc_path}")
-    print(f"   paired mean Δ(B5-B1) = {auc_mean_diff:.4f} percentage points")
-    print(f"   paired episode-bootstrap 95% CI = [{auc_ci_low:.4f}, {auc_ci_high:.4f}]")
+    pd.DataFrame(paired_rows).to_csv(
+        f"./checkpoint2_paired_auc_B5_vs_B1_threshold{args.risk_threshold}.csv",
+        index=False,
+    )
 
-    # ====================  paired recovery-frame validation ====================
+
+    compact_cols = [
+        "episode", "recovery_frame", "recovery_trigger",
+        "raw_recovery_generated", "raw_recovery_error_cm",
+        "accepted_recovery", "accepted_recovery_error_cm",
+        "recovery_used", "B1_error_cm", "B5_operational_error_cm",
+        "raw_minus_B1_cm", "accepted_minus_B1_cm", "operational_minus_B1_cm",
+    ]
     recovery_rows = []
-    recovery_differences = []
     for ep in blackout_eps:
-        rec = RECOVERY_dict.get(ep)
+        rec = RECOVERY.get(ep)
         if rec is None:
-            recovery_rows.append({
+            rec = {
                 "episode": ep,
                 "recovery_frame": np.nan,
-                "recovery_success": False,
+                "recovery_trigger": "blackout_exit_not_recorded",
+                "raw_recovery_generated": False,
+                "raw_recovery_error_cm": np.nan,
+                "accepted_recovery": False,
+                "accepted_recovery_error_cm": np.nan,
+                "recovery_used": False,
                 "B1_error_cm": np.nan,
-                "B5_recovery_error_cm": np.nan,
                 "B5_operational_error_cm": np.nan,
-                "Delta_B5_minus_B1_cm": np.nan
-            })
-            continue
-        recovery_rows.append({
-            "episode": ep,
-            "recovery_frame": rec["recovery_frame"],
-            "recovery_success": rec["recovery_success"],
-            "B1_error_cm": rec["B1_error_cm"],
-            "B5_recovery_error_cm": rec["B5_recovery_error_cm"],
-            "B5_operational_error_cm": rec["B5_operational_error_cm"],
-            "Delta_B5_minus_B1_cm": rec["B5_minus_B1_cm"]
-        })
-        if np.isfinite(rec["B5_minus_B1_cm"]):
-            recovery_differences.append(rec["B5_minus_B1_cm"])
-
-    rec_mean_diff, rec_ci_low, rec_ci_high = compute_paired_bootstrap_ci(
-        recovery_differences,
-        n_bootstraps=args.bootstrap_samples,
-        seed=args.seed
-    )
-    recovery_rows.append({
-        "episode": "PAIRED_MEAN",
-        "recovery_frame": np.nan,
-        "recovery_success": np.nan,
-        "B1_error_cm": np.nan,
-        "B5_recovery_error_cm": np.nan,
-        "B5_operational_error_cm": np.nan,
-        "Delta_B5_minus_B1_cm": rec_mean_diff,
-        "Paired_95CI_low_cm": rec_ci_low,
-        "Paired_95CI_high_cm": rec_ci_high
-    })
-    recovery_df = pd.DataFrame(recovery_rows)
+                "raw_minus_B1_cm": np.nan,
+                "accepted_minus_B1_cm": np.nan,
+                "operational_minus_B1_cm": np.nan,
+            }
+        recovery_rows.append({k: rec.get(k, np.nan) for k in compact_cols})
     recovery_path = f"./checkpoint2_paired_recovery_B5_vs_B1_threshold{args.risk_threshold}.csv"
-    recovery_df.to_csv(recovery_path, index=False)
-    print(f"Paired recovery-frame validation 已保存: {recovery_path}")
-    print(f"   paired mean Δerror(B5-B1) = {rec_mean_diff:.4f} cm")
-    print(f"   paired episode-bootstrap 95% CI = [{rec_ci_low:.4f}, {rec_ci_high:.4f}]")
+    pd.DataFrame(recovery_rows, columns=compact_cols).to_csv(recovery_path, index=False)
 
-    # ====================  5 大概率标定指标 ====================
-    if last_prob_metrics_obs is not None and last_prob_metrics_prior is not None:
-        prob_df = pd.DataFrame([
-            {"Metric": "1. AUROC_obs (Risk Discrimination)",       "Value": f"{last_prob_metrics_obs['auroc_obs']:.4f}"},
-            {"Metric": "2. AUPRC_obs (Precision-Recall AUC)",     "Value": f"{last_prob_metrics_obs['auprc_obs']:.4f}"},
-            {"Metric": "3. Brier Score_obs (Probability MSE)",    "Value": f"{last_prob_metrics_obs['brier_obs']:.4f}"},
-            {"Metric": "4. ECE_obs (Expected Calibration Error)", "Value": f"{last_prob_metrics_obs['ece_obs']:.4f}"},
-            {"Metric": "5. Temp_Factor_obs (Temperature Scalar)", "Value": f"{last_prob_metrics_obs['temp_factor_obs']:.4f}"},
-            {"Metric": "6. p_obs_threshold (Frozen Calibration Threshold)", "Value": f"{last_prob_metrics_obs['p_obs_threshold']:.4f}"},
-            {"Metric": "1. AUROC_prior (Risk Discrimination)",       "Value": f"{last_prob_metrics_prior['auroc_prior']:.4f}"},
-            {"Metric": "2. AUPRC_prior (Precision-Recall AUC)",     "Value": f"{last_prob_metrics_prior['auprc_prior']:.4f}"},
-            {"Metric": "3. Brier Score_prior (Probability MSE)",    "Value": f"{last_prob_metrics_prior['brier_prior']:.4f}"},
-            {"Metric": "4. ECE_prior (Expected Calibration Error)", "Value": f"{last_prob_metrics_prior['ece_prior']:.4f}"},
-            {"Metric": "5. Temp_Factor_prior (Temperature Scalar)", "Value": f"{last_prob_metrics_prior['temp_factor_prior']:.4f}"},
-            {"Metric": "6. p_prior_threshold (Frozen Calibration Threshold)", "Value": f"{last_prob_metrics_prior['p_prior_threshold']:.4f}"}
-        ])
+    print("\n=== Shared pose-quality evaluation complete ===")
+    print("metrics          :", metrics_path)
+    print("episode summary  :", summary_path)
+    print("blackout intervals:", blackout_path)
+    print("paired recovery  :", recovery_path)
+    print(f"Pairwise AUROC prior-worse = {pair_auroc:.4f}")
+    print(f"Obs risk AUROC            = {obs_metrics['auroc']:.4f}")
+    print(f"Prior risk AUROC          = {prior_metrics['auroc']:.4f}")
 
-        prob_csv_path = f"./checkpoint2_probability_calibration_metrics_threshold{args.risk_threshold}.csv"
-        prob_df.to_csv(prob_csv_path, index=False)
-        print(f"5 大概率标定指标已成功导出为 CSV: {prob_csv_path}")
 
-    # 5. 导出为全指标大 CSV 文件
-    basename2 = os.path.basename(result_dirs[0])
-    csv_out_path = f"./checkpoint2_full_metrics_episode_summary_{basename2}_threshold{args.risk_threshold}.csv"
-    df_summary.to_csv(csv_out_path, index=False)
-    print(f"全指标 Episode 级汇总表格已保存为: {csv_out_path}")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--csv_path', type=str, default="./per_frame_label_threshold1.0.csv")
+    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv")
+    parser.add_argument('--result_dir', nargs='+', type=str, default=[
+        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10",
+        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_2",
+        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_3",
+        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_4",
+        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_5",
+    ])
+    parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/bleach_hard_00_03_chaitanya/annotated_poses")
+    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/points.xyz")   #021_bleach_cleanser, 006_mustard_bottle
+    parser.add_argument('--train_seqs', nargs='+', default=["mustard0", "bleach0"])
+    parser.add_argument('--test_base_seq', type=str, default="bleach_hard_00_03_chaitanya")
+    parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted")
+    parser.add_argument('--alpha', type=float, default=0.5)
+    parser.add_argument('--risk_threshold', type=float, default=1.0)
+    parser.add_argument(
+        '--prior_advantage_margin_cm', type=float, default=0.1,
+    )
+    parser.add_argument('--blackout_min_frames', type=int, default=10)
+    parser.add_argument('--ycbineoat_root', type=str, default="./datasets/YCBInEOAT")
+
+    parser.add_argument('--foundationpose_python', type=str, default="/home/wyg/anaconda3/envs/foundationpose/bin/python")
+    parser.add_argument('--foundationpose_dir', type=str, default="/home/wyg/FoundationPose")
+    parser.add_argument('--foundationpose_mesh_file', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj")
+    parser.add_argument('--foundationpose_refiner_weight', type=str, default="/home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth")
+    parser.add_argument('--foundationpose_refine_iter', type=int, default=5)
+
+    parser.add_argument('--sam2_python', type=str, default="/home/wyg/anaconda3/envs/sam2/bin/python")
+    parser.add_argument('--sam2_dir', type=str, default="/home/wyg/sam2")
+    parser.add_argument('--sam2_config', type=str, default="configs/sam2.1/sam2.1_hiera_t.yaml")
+    parser.add_argument('--sam2_checkpoint', type=str, default="/home/wyg/sam2/checkpoints/sam2.1_hiera_tiny.pt")
+    parser.add_argument('--sam2_cache_root', type=str, default="./sam2_recovery_cache")
+
+    parser.add_argument('--shared_model_path', type=str, default="./shared_pose_quality_model.joblib")
+    parser.add_argument('--shared_scaler_path', type=str, default="./shared_pose_quality_scaler.joblib")
+    parser.add_argument('--shared_calibrator_path', type=str, default="./shared_risk_calibrator.joblib")
+    parser.add_argument('--shared_config_path', type=str, default="./shared_quality_config.json")
+
+    parser.add_argument('--strict_label_rollout_check', action='store_true', default=True)
+    parser.add_argument('--label_rollout_rtol', type=float, default=1e-5)
+    parser.add_argument('--label_rollout_atol', type=float, default=1e-5)
+    parser.add_argument('--bootstrap_samples', type=int, default=10000)
+    parser.add_argument('--seed', type=int, default=42)
+    args = parser.parse_args()
+    main(args)

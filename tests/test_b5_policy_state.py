@@ -20,7 +20,25 @@ if "scipy.spatial.transform" not in sys.modules:
     spatial = types.ModuleType("scipy.spatial")
     transform = types.ModuleType("scipy.spatial.transform")
 
-    transform.Rotation = object
+    class FakeRotation:
+        @staticmethod
+        def from_matrix(R):
+            class FakeRotVec:
+                def as_rotvec(self):
+                    return np.zeros(3)
+
+            return FakeRotVec()
+
+        @staticmethod
+        def from_rotvec(w):
+            class FakeRot:
+                def as_matrix(self):
+                    return np.eye(3)
+
+            return FakeRot()
+
+    transform.Rotation = FakeRotation
+
 
     scipy.spatial = spatial
     spatial.transform = transform
@@ -68,8 +86,22 @@ class TestB5PolicyState(unittest.TestCase):
             T_obs=identity,
             T_prior=identity,
 
-            p_obs_bad=0.0,
-            p_prior_bad=0.0,
+            # Revised B5 policy:
+            # observation and temporal prior share the same pose-quality
+            # estimator. The policy compares continuous quality estimates
+            # instead of using two independent risk predictors.
+            E_obs_hat_cm=1.0,
+            E_prior_hat_cm=1.0,
+
+            # calibrated risk probabilities (same interpretation:
+            # larger probability means higher pose risk)
+            p_obs_risk=0.1,
+            p_prior_risk=0.1,
+
+            p_risk_threshold=0.8,
+
+            # prior is selected only when it is better by this margin
+            prior_advantage_margin_cm=0.1,
 
             # support 当前已经不参与 blackout 判断
             support=0.0,
@@ -83,16 +115,11 @@ class TestB5PolicyState(unittest.TestCase):
 
             K=np.eye(3),
 
-            # 新接口：obs / prior 阈值分离
-            p_obs_threshold=0.8,
-            p_prior_threshold=0.8,
-
             frame_index=index,
             frame_id=frame_id,
             state=state,
 
             blackout_min_frames=2,
-            use_prior_predictor=True,
         )
 
 
@@ -198,6 +225,51 @@ class TestB5PolicyState(unittest.TestCase):
         self.assertEqual(
             [],
             state["blackout_intervals"],
+        )
+
+
+    def test_mode2_when_prior_has_clear_quality_advantage(self):
+        state = b5.init_b5_state()
+
+        identity = np.eye(4)
+
+        depth_real = np.ones(
+            (10, 10),
+            dtype=np.float32,
+        )
+
+        _, mode, _, _ = b5.b5_transition(
+            T_obs=identity,
+            T_prior=identity,
+
+            E_obs_hat_cm=5.0,
+            E_prior_hat_cm=1.0,
+
+            p_obs_risk=0.9,
+            p_prior_risk=0.1,
+
+            p_risk_threshold=0.8,
+            prior_advantage_margin_cm=0.1,
+
+            support=0.0,
+            depth_real=depth_real,
+
+            model_pts=np.zeros(
+                (1, 3),
+                dtype=np.float64,
+            ),
+            K=np.eye(3),
+
+            frame_index=0,
+            frame_id=0,
+            state=state,
+
+            blackout_min_frames=10,
+        )
+
+        self.assertEqual(
+            "MODE_2_UNCERTAINTY_FUSION",
+            mode,
         )
 
 
