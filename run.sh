@@ -1,6 +1,6 @@
 #!/bin/bash
 set -Eeuo pipefail
-
+export PYOPENGL_PLATFORM=egl
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
 export PYTHONDONTWRITEBYTECODE=1
