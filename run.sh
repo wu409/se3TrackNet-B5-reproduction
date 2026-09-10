@@ -1100,8 +1100,6 @@ for base in "${BASE_SEQUENCES[@]}"; do
 
     # Threshold files are global fixed names in 3-train_evaluation.py. Remove the
     # previous base's files so this base establishes its own context first.
-    rm -f p_obs_threshold.json p_prior_threshold.json
-
     # Fixed-name outputs are also global. Remove them before the new base so a
     # failed/incomplete run can never be mistaken for current output.
     rm -f \
@@ -1144,14 +1142,6 @@ for base in "${BASE_SEQUENCES[@]}"; do
         --bootstrap_samples "$BOOTSTRAP_SAMPLES" \
         --seed "$SEED"
 
-    require_file p_obs_threshold.json "$base frozen observation threshold JSON"
-    require_file p_prior_threshold.json "$base frozen prior threshold JSON"
-
-    # Archive the object-specific threshold files immediately.
-    cp p_obs_threshold.json "$EVAL_DIR/p_obs_threshold.json"
-    cp p_prior_threshold.json "$EVAL_DIR/p_prior_threshold.json"
-    sha256sum p_obs_threshold.json p_prior_threshold.json \
-        > "$EVAL_DIR/frozen_probability_threshold_sha256.txt"
 
     # Archive per-frame logs only for the conditions actually executed.
     for condition in "${TEST_CONDITIONS[@]}"; do
