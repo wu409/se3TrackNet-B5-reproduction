@@ -4,6 +4,7 @@ set -Eeuo pipefail
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
 export PYTHONDONTWRITEBYTECODE=1
+export PYOPENGL_PLATFORM=${PYOPENGL_PLATFORM:-egl}
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
