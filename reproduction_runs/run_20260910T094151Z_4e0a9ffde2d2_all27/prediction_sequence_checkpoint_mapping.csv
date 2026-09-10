@@ -1,0 +1,4 @@
+sequence,object_name,checkpoint,mean,std
+mustard0,mustard_bottle,mustard_bottle/model_best_val.pth.tar,mustard_bottle/mean.npy,mustard_bottle/std.npy
+bleach0,bleach_cleanser,bleach_cleanser/model_best_val.pth.tar,bleach_cleanser/mean.npy,bleach_cleanser/std.npy
+bleach_hard_00_03_chaitanya,bleach_cleanser,bleach_cleanser/model_best_val.pth.tar,bleach_cleanser/mean.npy,bleach_cleanser/std.npy

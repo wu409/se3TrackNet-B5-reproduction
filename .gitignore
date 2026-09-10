@@ -9,9 +9,9 @@ docker/
 results/
 results_collection/
 .vscode/
-*.csv
+/*.csv
 recovery_debug/
-*.png
+/*.png
 label_p_obs_threshold.json
 label_p_prior_threshold.json
 p_obs_threshold.json

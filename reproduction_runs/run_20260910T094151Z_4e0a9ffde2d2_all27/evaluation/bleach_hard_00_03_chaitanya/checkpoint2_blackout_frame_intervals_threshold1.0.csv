@@ -1,0 +1,6 @@
+episode,blackout_start_index,blackout_end_index,recovery_index,blackout_start_frame,blackout_end_frame,recovery_frame
+bleach_hard_00_03_chaitanya_black10,45,54,55,54,63,64
+bleach_hard_00_03_chaitanya_black10_2,275,284,285,330,339,340
+bleach_hard_00_03_chaitanya_black10_3,295,304,305,350,359,360
+bleach_hard_00_03_chaitanya_black10_4,250,259,260,295,304,305
+bleach_hard_00_03_chaitanya_black10_5,63,72,73,72,81,82
