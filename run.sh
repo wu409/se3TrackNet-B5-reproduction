@@ -1,6 +1,6 @@
 #!/bin/bash
 set -Eeuo pipefail
-export PYOPENGL_PLATFORM=egl
+
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
 export PYTHONDONTWRITEBYTECODE=1
@@ -1098,9 +1098,7 @@ for base in "${BASE_SEQUENCES[@]}"; do
     require_file "$SHARED_CALIBRATOR_PATH" "$base shared risk calibrator"
     require_file "$SHARED_CONFIG_PATH" "$base shared quality config"
 
-    # Threshold files are global fixed names in 3-train_evaluation.py. Remove the
-    # previous base's files so this base establishes its own context first.
-    # Fixed-name outputs are also global. Remove them before the new base so a
+    # Remove only outputs that 3-train_evaluation.py actually generates so a
     # failed/incomplete run can never be mistaken for current output.
     rm -f \
         "checkpoint2_blackout_frame_intervals_threshold${RISK_THRESHOLD}.csv" \
@@ -1108,8 +1106,14 @@ for base in "${BASE_SEQUENCES[@]}"; do
         "checkpoint2_paired_recovery_B5_vs_B1_threshold${RISK_THRESHOLD}.csv" \
         "checkpoint2_probability_calibration_metrics_threshold${RISK_THRESHOLD}.csv" \
         "reliability_diagram_observation_risk_threshold${RISK_THRESHOLD}.png" \
-        "reliability_diagram_prior_risk_threshold${RISK_THRESHOLD}.png" \
-        "trajectory_recovery_plot_threshold${RISK_THRESHOLD}.png"
+        "reliability_diagram_prior_risk_threshold${RISK_THRESHOLD}.png"
+
+    for condition in "${TEST_CONDITIONS[@]}"; do
+        episode="${base}${condition}"
+        rm -f \
+            "checkpoint2_per_frame_${episode}_log_threshold${RISK_THRESHOLD}.csv" \
+            "trajectory_recovery_plot_${episode}_threshold${RISK_THRESHOLD}.png"
+    done
     rm -f checkpoint2_full_metrics_episode_summary_*_threshold"${RISK_THRESHOLD}".csv
 
     python 3-train_evaluation.py \
@@ -1142,8 +1146,7 @@ for base in "${BASE_SEQUENCES[@]}"; do
         --bootstrap_samples "$BOOTSTRAP_SAMPLES" \
         --seed "$SEED"
 
-
-    # Archive per-frame logs only for the conditions actually executed.
+    # Archive per-frame logs for every executed episode.
     for condition in "${TEST_CONDITIONS[@]}"; do
         episode="${base}${condition}"
         log_file="checkpoint2_per_frame_${episode}_log_threshold${RISK_THRESHOLD}.csv"
@@ -1151,7 +1154,7 @@ for base in "${BASE_SEQUENCES[@]}"; do
         cp "$log_file" "$EVAL_DIR/"
     done
 
-    # Archive fixed-name per-base outputs before the next base overwrites them.
+    # Archive fixed-name outputs that 3-train_evaluation.py actually produces.
     FIXED_OUTPUTS=(
         "checkpoint2_blackout_frame_intervals_threshold${RISK_THRESHOLD}.csv"
         "checkpoint2_paired_auc_B5_vs_B1_threshold${RISK_THRESHOLD}.csv"
@@ -1159,11 +1162,18 @@ for base in "${BASE_SEQUENCES[@]}"; do
         "checkpoint2_probability_calibration_metrics_threshold${RISK_THRESHOLD}.csv"
         "reliability_diagram_observation_risk_threshold${RISK_THRESHOLD}.png"
         "reliability_diagram_prior_risk_threshold${RISK_THRESHOLD}.png"
-        "trajectory_recovery_plot_threshold${RISK_THRESHOLD}.png"
     )
     for output in "${FIXED_OUTPUTS[@]}"; do
         require_file "$output" "$base evaluation output"
         cp "$output" "$EVAL_DIR/"
+    done
+
+    # 3-train_evaluation.py writes one recovery trajectory plot per blackout episode.
+    for condition in "${TEST_CONDITIONS[@]}"; do
+        episode="${base}${condition}"
+        trajectory_plot="trajectory_recovery_plot_${episode}_threshold${RISK_THRESHOLD}.png"
+        require_file "$trajectory_plot" "$episode recovery trajectory plot"
+        cp "$trajectory_plot" "$EVAL_DIR/"
     done
 
     FIRST_TEST_CONDITION="${TEST_CONDITIONS[0]}"
