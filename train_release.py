@@ -124,8 +124,7 @@ def prepare(generated_manifest=False):
             if len(list(folder.glob(suffix))) != len(group):
                 raise ValueError("Manifest/directory frame count mismatch: " + str(folder))
     for base in BASES:
-        for name in ("init_mask.png", "cam_K.txt"):
-            record(Path(env["GT_ROOT"]) / base / name)
+        record(Path(env["GT_ROOT"]) / base / "init_mask.png")
         cad = Path(env["CAD_MODEL_ROOT"]) / CAD[base]
         for required in ("points.xyz", "textured.obj"):
             record(cad / required)
@@ -147,32 +146,50 @@ def prepare(generated_manifest=False):
     for p in source.iterdir():
         if p.is_file():
             record(p)
-    with (release / "train_manifest.csv").open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=columns)
-        writer.writeheader()
-        writer.writerows({k: r[k] for k in columns} for r in rows)
-    with (release / "train_cal_split.csv").open("w", encoding="utf-8", newline="") as f:
-        fields = ["base_sequence", "sequence", "sequence_index", "frame_id", "split"]
-        writer = csv.DictWriter(f, fieldnames=fields)
-        writer.writeheader()
-        writer.writerows({k: r[k] for k in fields} for r in rows)
-    record(release / "train_manifest.csv")
-    record(release / "train_cal_split.csv")
-    dump(release / "input_hashes.json", inventory)
+    training_manifest = manifest
+    if not generated_manifest:
+        # Backward compatibility for the old run_train.sh entry point only.
+        training_manifest = release / "train_manifest.csv"
+        with training_manifest.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows({k: r[k] for k in columns} for r in rows)
+        with (release / "train_cal_split.csv").open("w", encoding="utf-8", newline="") as f:
+            fields = ["base_sequence", "sequence", "sequence_index", "frame_id", "split"]
+            writer = csv.DictWriter(f, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows({k: r[k] for k in fields} for r in rows)
+        record(training_manifest)
+        record(release / "train_cal_split.csv")
+    # Persist selection/split boundaries as configuration, not another manifest.
+    split_summary = []
+    for seq in sorted({r["sequence"] for r in rows}):
+        group = [r for r in rows if r["sequence"] == seq]
+        cut = sum(r["split"] == "train" for r in group)
+        split_summary.append({"sequence": seq, "frames": len(group),
+                              "train_index_start": 0, "train_index_stop_exclusive": cut,
+                              "cal_index_start": cut, "cal_index_stop_exclusive": len(group)})
     keys = ("TRAIN_PYTHON", "DATASET_ROOT", "GT_ROOT", "RESULT_ROOT", "CAD_MODEL_ROOT",
             "FOUNDATIONPOSE_PYTHON", "FOUNDATIONPOSE_DIR", "FOUNDATIONPOSE_REFINER_WEIGHT",
             "FOUNDATIONPOSE_SCORER_WEIGHT", "SAM2_PYTHON", "SAM2_DIR", "SAM2_CONFIG",
             "SAM2_CHECKPOINT", "PYOPENGL_PLATFORM", "PYTHONHASHSEED", "TRAIN_CONDITIONS_JSON")
     config = {"status": "prepared_not_frozen", "created_utc": datetime.now(timezone.utc).isoformat(),
+              "training_manifest": str(training_manifest.resolve()),
+              "manifest_mode": "single_reference" if generated_manifest else "legacy_subset",
+              "training_selection": split_summary,
               "train_bases": BASES, "conditions": conditions, "held_out_base": None,
               "train_fraction": 0.7, "on_policy_refine_rounds": 1, "seed": 42,
               "risk_threshold_cm": 1.0, "prior_advantage_margin_cm": 0.1,
               "blackout_min_frames": 10, "foundationpose_refine_iter": 5,
-              "test_data_used": False, "backbone_retrained": False,
+              "test_data_used": False, "test_data_used_for_fitting": False,
+              "manifest_contains_reserved_sequences": generated_manifest,
+              "backbone_retrained": False,
               "backbone_observations": "existing per-frame predictions, content-hashed",
               "bitwise_determinism_guaranteed": False,
               "paths": {k: env.get(k) for k in keys}}
     dump(release / "effective_config.json", config)
+    record(release / "effective_config.json")
+    dump(release / "input_hashes.json", inventory)
     for label, key in (("training", "TRAIN_PYTHON"), ("sam2", "SAM2_PYTHON"),
                        ("foundationpose", "FOUNDATIONPOSE_PYTHON")):
         result = subprocess.run([env[key], "-m", "pip", "freeze"],
@@ -202,7 +219,14 @@ def seal():
                           ("prior_advantage_margin_cm", 0.1)):
         if cfg.get(key) != expected:
             raise ValueError("Unexpected final-fit parameter: " + key)
-    if cfg["manifest_sha256"] != sha(release / "train_manifest.csv"):
+    effective_path = release / "effective_config.json"
+    if effective_path.is_file():
+        effective = json.loads(effective_path.read_text(encoding="utf-8"))
+        training_manifest = Path(effective.get("training_manifest", release / "train_manifest.csv"))
+    else:
+        # Older prepared releases did not record the manifest path separately.
+        training_manifest = release / "train_manifest.csv"
+    if cfg["manifest_sha256"] != sha(training_manifest):
         raise ValueError("Wrong training manifest")
     for key, name in (("model", "shared_pose_quality_model.joblib"),
                       ("scaler", "shared_pose_quality_scaler.joblib"),
