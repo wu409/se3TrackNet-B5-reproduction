@@ -1,0 +1,8 @@
+{
+  "status": "final_development_model_frozen",
+  "sealed_utc": "2026-09-14T06:38:40.046198+00:00",
+  "p_risk_threshold": 0.74,
+  "training_mode": "final_development_fit",
+  "test_evaluation_completed": false,
+  "note": "Model/source/input release only; new-test runner still requires adaptation."
+}

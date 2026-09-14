@@ -1,0 +1,48 @@
+{
+  "version": "shared_pose_quality_v1",
+  "training_mode": "final_development_fit",
+  "seed": 42,
+  "fit_conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "held_out_base": null,
+  "train_bases": [
+    "mustard0",
+    "bleach0",
+    "bleach_hard_00_03_chaitanya"
+  ],
+  "feature_columns": [
+    "x1_norm",
+    "x2_inlier_error",
+    "x4_support_ratio",
+    "x5_geometry_inconsistency"
+  ],
+  "target": "normalized_ADD-S_error_E_over_D_obj",
+  "risk_definition": "E_cm > 1",
+  "risk_threshold_cm": 1.0,
+  "p_risk_threshold": 0.74,
+  "prior_advantage_margin_cm": 0.1,
+  "train_fraction": 0.7,
+  "on_policy_refine_rounds": 1,
+  "manifest_sha256": "34ca3018b8c42ff30547b610a012b40015e3148824cb4277fc34a5fd0f09ccd0",
+  "fit_metrics": {
+    "train_samples": 23166,
+    "cal_samples": 9972,
+    "train_mae_cm": 6.900650306860941,
+    "cal_mae_cm": 12.142065011536166,
+    "cal_risk_auroc": 0.9922735977000239,
+    "p_risk_threshold": 0.74,
+    "threshold_balanced_accuracy": 0.9640342321135191
+  },
+  "scaler_sha256": "b4eb1714656dd33f32c4b4cec87757b36cb99e3b21db480f24e0713e649ca54b",
+  "model_sha256": "e730b169408fc4496bed66368c78a4002d3a4fb8fe82369f85726eefa88ed62e",
+  "calibrator_sha256": "90eb8282d3657a975dc48c3d1fefeec9ba93244b427680dcdd0a9166b77eb16a"
+}
