@@ -1,4 +1,6 @@
 import os
+import time
+import importlib.util
 import json
 import numpy as np
 import open3d as o3d
@@ -40,7 +42,7 @@ def compute_ece(probs, labels, n_bins=10):
     bin_boundaries = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
     for i in range(n_bins):
-        in_bin = (probs > bin_boundaries[i]) & (probs <= bin_boundaries[i+1])
+        in_bin = ((probs >= bin_boundaries[i]) if i == 0 else (probs > bin_boundaries[i])) & (probs <= bin_boundaries[i+1])
         if np.sum(in_bin) > 0:
             ece += np.abs(np.mean(labels[in_bin]) - np.mean(probs[in_bin])) * (np.sum(in_bin) / len(probs))
     return ece
@@ -394,7 +396,14 @@ def load_shared_artifacts(args):
         cfg = json.load(f)
     if cfg.get("version") != "shared_pose_quality_v1":
         raise ValueError(f"Unsupported shared-quality config: {cfg.get('version')}")
-    if cfg.get("held_out_base") != args.test_base_seq:
+    if getattr(args, "frozen_test", False):
+        if cfg.get("training_mode") != "final_development_fit" or cfg.get("held_out_base") is not None:
+            raise ValueError("Frozen test requires a final-development model, not a held-out fold")
+        if args.test_base_seq in cfg.get("train_bases", []):
+            raise ValueError("Development sequence cannot enter frozen new-sequence test")
+        if cfg.get("manifest_sha256") != compute_full_sha256(args.manifest_path):
+            raise ValueError("Frozen test must use the original training release's reference manifest")
+    elif cfg.get("held_out_base") != args.test_base_seq:
         raise ValueError(
             "Shared model held-out base mismatch: "
             f"config={cfg.get('held_out_base')} eval={args.test_base_seq}"
@@ -424,6 +433,8 @@ def load_shared_artifacts(args):
         ("calibrator", args.shared_calibrator_path),
     ]:
         expected = cfg.get(f"{key}_sha256")
+        if getattr(args, "frozen_test", False) and expected is None:
+            raise ValueError("Frozen config is missing artifact hash: " + key)
         if expected is not None:
             actual = compute_full_sha256(path)
             if actual != expected:
@@ -441,8 +452,12 @@ def load_shared_artifacts(args):
 def _safe_prob_metrics(labels, probs):
     labels = np.asarray(labels, dtype=np.int64)
     probs = np.asarray(probs, dtype=np.float64)
-    if len(labels) == 0 or len(np.unique(labels)) < 2:
+    if len(labels) == 0:
         return {"auroc": np.nan, "auprc": np.nan, "brier": np.nan, "ece": np.nan}
+    if len(np.unique(labels)) < 2:
+        return {"auroc": np.nan, "auprc": np.nan,
+                "brier": float(brier_score_loss(labels, probs)),
+                "ece": float(compute_ece(probs, labels))}
     precision, recall, _ = precision_recall_curve(labels, probs)
     return {
         "auroc": float(roc_auc_score(labels, probs)),
@@ -477,6 +492,24 @@ def build_eval_renderer(mesh_file):
     return scene, renderer, mesh_node
 
 
+def decision_inputs(variant, obs_error, prior_error, obs_risk, prior_risk):
+    """Predeclared controls; GT never enters these decisions or frozen B5 code.
+
+    simple: accept observations outside blackout, extrapolate own prior during
+    blackout, use the SAME SAM2/FP/gate and prior fallback at blackout exit.
+    Both ablations keep the trained predictor, geometry gate and state machine.
+    """
+    if variant == "simple":
+        return 0.0, 0.0, 0.0, 0.0
+    if variant == "no_absolute_gate":
+        return obs_error, prior_error, 1.0, prior_risk
+    if variant == "no_relative_advantage":
+        return obs_error, obs_error, obs_risk, prior_risk
+    if variant != "full":
+        raise ValueError("Unknown policy variant: " + variant)
+    return obs_error, prior_error, obs_risk, prior_risk
+
+
 def evaluate_episode(
     args,
     result_dir,
@@ -493,11 +526,13 @@ def evaluate_episode(
     p_risk_threshold,
 ):
     last_name = os.path.basename(result_dir)
-    test_df = labels_df[labels_df["sequence"] == last_name].copy()
-    if len(test_df) == 0:
-        raise ValueError(f"Label CSV contains no test sequence {last_name}")
-    test_df["frame_id"] = test_df["frame_id"].astype(int)
-    test_df = test_df.set_index("frame_id")
+    test_df = None
+    if not getattr(args, "frozen_test", False):
+        test_df = labels_df[labels_df["sequence"] == last_name].copy()
+        if len(test_df) == 0:
+            raise ValueError(f"Label CSV contains no test sequence {last_name}")
+        test_df["frame_id"] = test_df["frame_id"].astype(int)
+        test_df = test_df.set_index("frame_id")
 
     df_manifest = load_episode_manifest(
         args.manifest_path,
@@ -506,8 +541,10 @@ def evaluate_episode(
         args.gt_dir,
         result_dir,
     )
-    if set(df_manifest["frame_id"].astype(int)) != set(test_df.index.astype(int)):
+    if test_df is not None and set(df_manifest["frame_id"].astype(int)) != set(test_df.index.astype(int)):
         raise ValueError(f"[{last_name}] label/manifest frame IDs mismatch")
+    if "base_sequence" in df_manifest and set(df_manifest["base_sequence"].astype(str)) != {args.test_base_seq}:
+        raise ValueError("Manifest base_sequence and initial-mask base do not match")
 
     b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs = [], [], [], [], [], []
     b5_modes, matched_frames = [], []
@@ -541,6 +578,7 @@ def evaluate_episode(
             T_prior5 = compute_se3_prior(T_history5[-1], T_history5[-2])
             T_prior6 = compute_se3_prior(T_history6[-1], T_history6[-2])
 
+        quality_start = time.perf_counter()
         obs_features = extract_pose_conditioned_features(
             T_obs, depth_real, model_pts, scene, renderer, mesh_node
         )
@@ -553,6 +591,7 @@ def evaluate_episode(
         e_prior_hat, E_prior_hat_cm, p_prior_risk = predict_shared_quality(
             prior_features, d_obj_cm, scaler, regressor, calibrator
         )
+        quality_wall_ms = (time.perf_counter() - quality_start) * 1000.0
 
         # B1: observation only.
         E_obs_gt_cm = U.adi(T_obs, T_gt, open3d_model) * 100.0
@@ -583,6 +622,9 @@ def evaluate_episode(
         b4_errs.append(U.adi(T_huber, T_gt, open3d_model) * 100.0)
 
         # B5: exact same shared-quality B5 transition as final label rollout.
+        decision = decision_inputs(getattr(args, "policy_variant", "full"),
+                                   E_obs_hat_cm, E_prior_hat_cm, p_obs_risk, p_prior_risk)
+        transition_start = time.perf_counter()
         T_final, current_mode, b5_state, recovery_info = b5_transition(
             T_obs=T_obs,
             T_prior=T_prior5,
@@ -608,20 +650,21 @@ def evaluate_episode(
             sam2_config=args.sam2_config,
             sam2_checkpoint=args.sam2_checkpoint,
             sam2_cache_root=args.sam2_cache_root,
-            E_obs_hat_cm=E_obs_hat_cm,
-            E_prior_hat_cm=E_prior_hat_cm,
-            p_obs_risk=p_obs_risk,
-            p_prior_risk=p_prior_risk,
+            E_obs_hat_cm=decision[0],
+            E_prior_hat_cm=decision[1],
+            p_obs_risk=decision[2],
+            p_prior_risk=decision[3],
             p_risk_threshold=p_risk_threshold,
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
         )
+        transition_wall_ms = (time.perf_counter() - transition_start) * 1000.0
         T_history5.append(T_final)
         b5_error_current = U.adi(T_final, T_gt, open3d_model) * 100.0
         b5_errs.append(b5_error_current)
         b5_modes.append(current_mode)
 
         # Optional exact-consistency check against the final frozen label rollout.
-        if args.strict_label_rollout_check:
+        if not getattr(args, "frozen_test", False) and args.strict_label_rollout_check:
             stored = test_df.loc[frame_id]
             checks = {
                 "E_obs_hat_cm": E_obs_hat_cm,
@@ -799,21 +842,20 @@ def evaluate_episode(
             "delta_E_gt_cm": float(E_prior_gt_cm - E_obs_gt_cm),
             "delta_E_hat_cm": float(E_prior_hat_cm - E_obs_hat_cm),
             "selected_mode": current_mode,
+            "policy_variant": getattr(args, "policy_variant", "full"),
+            "both_candidates_bad": int(E_obs_gt_cm > args.risk_threshold and E_prior_gt_cm > args.risk_threshold),
+            "local_candidate_oracle_cm": float(min(E_obs_gt_cm, E_prior_gt_cm)),
+            "is_blackout": int(b5_state.get("is_depth_blackout", False)),
+            "recovery_attempted": int(recovery_info is not None),
+            "sam2_cache_hit": int(bool(recovery_info and recovery_info.get("sam2_cache_hit", False))),
+            "quality_wall_ms": quality_wall_ms,
+            "transition_wall_ms": transition_wall_ms,
+            "policy_wall_ms": transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") == "simple" else quality_wall_ms),
         })
 
     if label_consistency_failures:
         preview = label_consistency_failures[:10]
-
-        print(
-            f"[INFO][{last_name}] "
-            "label-generation rollout differs from final deployment rollout. "
-            "This is allowed because the final predictor is trained after "
-            "label generation."
-        )
-        print(
-            f"[INFO][{last_name}] "
-            f"first rollout differences={preview}"
-        )
+        raise ValueError(f"[{last_name}] strict label/rollout mismatch: {preview}")
 
     blackout_intervals = []
     for interval in b5_state.get("blackout_intervals", []):
@@ -850,7 +892,7 @@ def evaluate_episode(
         end = int(blackout_intervals[0]["recovery_index"])
         plt.figure(figsize=(10, 5))
         plt.plot(b1_errs, label="B1: Obs-Only")
-        plt.plot(b5_errs, label="B5: Shared Pose-Quality")
+        plt.plot(b5_errs, label="Policy: " + getattr(args, "policy_variant", "full"))
         plt.axvspan(start, end, alpha=0.3, label="Blackout")
         plt.xlabel("Frame index")
         plt.ylabel("ADD-S error (cm)")
@@ -932,6 +974,15 @@ def build_recovery_decomposition(episode, intervals, events, errors_by_method,
                 float(np.mean(window > threshold_cm) * 100.0) if n else np.nan)
             row[method + "_window_auc_percent"] = calc_auc(window) if n else np.nan
             row[method + "_full_sequence_auc_percent"] = calc_auc(errors) if len(errors) else np.nan
+            # Latency is confirmed only after five consecutive good frames.
+            # Search the same fixed post-exit window; never encode no-success as zero.
+            good = window <= threshold_cm
+            confirmation = next((j for j in range(4, n) if np.all(good[j-4:j+1])), None)
+            row[method + "_latency_success"] = int(confirmation is not None)
+            row[method + "_latency_confirmed_frames"] = confirmation if confirmation is not None else np.nan
+            row[method + "_latency_censored"] = int(confirmation is None)
+            row[method + "_latency_followup_frames"] = n
+            row[method + "_latency_required_good_frames"] = 5
         rows.append(row)
     return rows
 
@@ -989,7 +1040,7 @@ def save_reliability_diagram(probs, labels, title, xlabel, ylabel, path, ece):
     probs = np.asarray(probs, dtype=float)
     labels = np.asarray(labels, dtype=int)
     for i in range(10):
-        mask = (probs > boundaries[i]) & (probs <= boundaries[i + 1])
+        mask = ((probs >= boundaries[i]) if i == 0 else (probs > boundaries[i])) & (probs <= boundaries[i + 1])
         if np.any(mask):
             accs.append(np.mean(labels[mask]))
             confs.append(np.mean(probs[mask]))
@@ -1003,20 +1054,38 @@ def save_reliability_diagram(probs, labels, title, xlabel, ylabel, path, ece):
     plt.close()
 
 
+def bind_frozen_quality_implementation():
+    """Reuse training-snapshot feature extraction/K exactly, without calling its main."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "2-risk_label.py")
+    spec = importlib.util.spec_from_file_location("frozen_quality_features", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    def extract(T_pose, depth_real, model_pts, scene, renderer, mesh_node):
+        return module.extract_pose_conditioned_features(
+            T_pose, depth_real, 0, [model_pts], [scene], [renderer], [mesh_node], include_support=True)
+    global K, cv_to_gl, SHARED_FEATURE_COLUMNS, extract_pose_conditioned_features, predict_shared_quality
+    K, cv_to_gl = module.K, module.cv_to_gl
+    SHARED_FEATURE_COLUMNS = module.SHARED_FEATURE_COLUMNS
+    extract_pose_conditioned_features = extract
+    predict_shared_quality = module.predict_shared_quality
+
+
 def main(args):
+    if getattr(args, "frozen_test", False):
+        bind_frozen_quality_implementation()
     np.random.seed(args.seed)
     try:
         o3d.utility.random.seed(args.seed)
     except Exception:
         pass
 
-    labels_df = pd.read_csv(args.csv_path)
+    labels_df = None if getattr(args, "frozen_test", False) else pd.read_csv(args.csv_path)
     required = {
         "sequence", "frame_id", "E_obs_cm", "E_prior_cm",
         "E_obs_hat_cm", "E_prior_hat_cm",
         "p_obs_risk_rollout", "p_prior_risk_rollout", "rollout_mode",
     }
-    missing = required - set(labels_df.columns)
+    missing = required - set(labels_df.columns) if labels_df is not None else set()
     if missing:
         raise ValueError(
             f"Label CSV missing shared-quality columns {sorted(missing)}; "
@@ -1030,6 +1099,9 @@ def main(args):
     print("p_risk_threshold    :", p_risk_threshold)
     print("risk threshold (cm) :", cfg["risk_threshold_cm"])
     print("advantage margin cm :", cfg["prior_advantage_margin_cm"])
+    if getattr(args, "preflight_only", False):
+        print("Frozen feature implementation and model imports validated; no inference executed.")
+        return
 
     model_pts = np.loadtxt(args.point_path, dtype=np.float64).reshape(-1, 3)
     open3d_model = U.toOpen3dCloud(
@@ -1046,8 +1118,9 @@ def main(args):
         "B3: Hard Depth Threshold",
         "B4: Robust Huber Weighting",
         "B5: Proposed Shared Pose-Quality Policy",
-        "B6: Oracle Decision Policy (Upper Bound)",
+        "B6: Recursive Obs/Prior Oracle (diagnostic, not a global upper bound)",
     ]
+    baseline_names[4] = "B5 slot: " + getattr(args, "policy_variant", "full")
 
     ADDS, FAIL, LATENCY, TRIGGER = {}, {}, {}, {}
     RECOVERY, BLACKOUT = {}, {}
@@ -1155,7 +1228,7 @@ def main(args):
         for ep in ADDS:
             row[f"ADD-S ({ep})"] = f"{ADDS[ep][b_idx]:.3f}%"
             row[f"Failure Rate ({ep})"] = f"{FAIL[ep][b_idx]:.3f}%"
-            row[f"Latency ({ep})"] = LATENCY[ep][b_idx]
+            row[f"Legacy latency <0.5cm single-frame ({ep})"] = LATENCY[ep][b_idx]
             row[f"False Triggers ({ep})"] = TRIGGER[ep][b_idx]
         row["Mean ADD-S (%)"] = f"{np.mean(vals):.3f}%"
         summary_rows.append(row)
@@ -1245,6 +1318,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('--frozen_test', action='store_true', help='No test label CSV; final model only; no fitting')
+    parser.add_argument('--preflight_only', action='store_true', help='Load frozen features/artifacts only; no rendering or rollout')
+    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_absolute_gate', 'no_relative_advantage'], default='full')
     parser.add_argument('--csv_path', type=str, default="./per_frame_label_threshold1.0.csv")
     parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv")
     parser.add_argument('--result_dir', nargs='+', type=str, default=[
@@ -1290,4 +1366,6 @@ if __name__ == "__main__":
     parser.add_argument('--bootstrap_samples', type=int, default=10000)
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
+    if args.policy_variant != 'full' and not args.frozen_test:
+        parser.error('Policy controls require --frozen_test')
     main(args)
