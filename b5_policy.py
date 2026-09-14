@@ -3735,7 +3735,8 @@ def b5_transition(
       MODE 1: observation absolute risk is low.
       MODE 2: observation is risky AND
               E_prior_hat + margin < E_obs_hat.
-      MODE 3: otherwise; prior contributes at most weakly.
+      MODE 3: otherwise, including the prior-streak limit; prior contributes
+              at most weakly and the streak counter resets.
 
     Ground truth is never an input to this function.
     """
@@ -3860,15 +3861,10 @@ def b5_transition(
             })
         state["consecutive_blackout"] = 0
 
-    # B. Recovery trigger is shared by label rollout and deployment.
+    # B. Only blackout exit triggers recovery; a prior-streak limit uses weak fusion.
     recovery_trigger = None
     if not is_blackout and state.get("exited_blackout", False):
         recovery_trigger = "blackout_exit"
-    elif (
-        not is_blackout
-        and int(state.get("prior_streak", 0)) >= int(max_prior_streak)
-    ):
-        recovery_trigger = "prior_streak"
 
     # C. State machine.
     if is_blackout:
@@ -3941,7 +3937,9 @@ def b5_transition(
         prior_drift_score = float(state.get("prior_drift_score", 0.0))
         drift_penalty = max(0.0, 1.0 - prior_drift_score)
 
-        if p_obs_risk <= p_risk_threshold:
+        # After five consecutive strong fusions, force one weak-fusion frame.
+        # Its existing branch resets prior_streak without calling recovery.
+        if prior_streak < int(max_prior_streak) and p_obs_risk <= p_risk_threshold:
             current_mode = "MODE_1_ACCEPT"
             T_final = T_obs
             state["prior_streak"] = 0

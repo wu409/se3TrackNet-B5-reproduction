@@ -981,6 +981,9 @@ def save_shared_artifacts(
     joblib.dump(risk_calibrator, paths["calibrator"])
     cfg = {
         "version": "shared_pose_quality_v1",
+        "training_mode": "final_development_fit" if getattr(args, "final_fit", False) else "leave_one_sequence_out",
+        "seed": int(getattr(args, "seed", 42)),
+        "fit_conditions": list(args.corruption_lists),
         "held_out_base": held_out_base,
         "train_bases": list(train_bases),
         "feature_columns": list(SHARED_FEATURE_COLUMNS),
@@ -1018,11 +1021,32 @@ def save_shared_artifacts(
     return paths
 
 
+def select_training_bases(args):
+    if getattr(args, "final_fit", False):
+        expected = {"mustard0", "bleach0", "bleach_hard_00_03_chaitanya"}
+        if len(args.target_seqs) != 3 or set(args.target_seqs) != expected:
+            raise ValueError("final_fit requires exactly the three development sequences")
+        return None, list(args.target_seqs)
+    held_out_base = args.ci_object
+    if held_out_base not in args.target_seqs:
+        raise ValueError(f"ci_object/held-out base {held_out_base} not in target_seqs")
+    return held_out_base, [x for x in args.target_seqs if x != held_out_base]
+
+
 def main(args):
     global ARGS_RISK_THRESHOLD_CM
     ARGS_RISK_THRESHOLD_CM = args.risk_threshold
+    held_out_base, train_bases = select_training_bases(args)
+    np.random.seed(getattr(args, "seed", 42))
+    if hasattr(o3d.utility, "random"):
+        o3d.utility.random.seed(getattr(args, "seed", 42))
 
     manifest = pd.read_csv(args.manifest_path)
+    if getattr(args, "final_fit", False):
+        selected = {base + suffix for base in train_bases for suffix in args.corruption_lists}
+        manifest = manifest[manifest["sequence"].isin(selected)].copy()
+        if set(manifest["sequence"]) != selected:
+            raise ValueError("Final-fit manifest is missing development conditions")
     required_cols = {
         "base_sequence", "condition", "sequence", "sequence_index", "frame_id",
         "rgb_path", "depth_path", "gt_path", "pred_path",
@@ -1061,11 +1085,7 @@ def main(args):
         d_objs.append(float(d))
         print(f"Object {model_seq}: D_obj={d:.3f} cm")
 
-    held_out_base = args.ci_object
-    if held_out_base not in args.target_seqs:
-        raise ValueError(f"ci_object/held-out base {held_out_base} not in target_seqs")
-    train_bases = [x for x in args.target_seqs if x != held_out_base]
-    print("\n=== Fold-specific shared pose-quality training ===")
+    print("\n=== Shared pose-quality training: final development fit or held-out fold ===")
     print("held-out:", held_out_base)
     print("train bases:", train_bases)
 
@@ -1136,8 +1156,8 @@ def main(args):
 
     # Additional CI blackout episodes only for the held-out object, preserving
     # the existing 19-episode-per-pass workflow.
-    held_idx = base_to_idx[held_out_base]
-    for suffix in args.ci_episode:
+    held_idx = base_to_idx.get(held_out_base)
+    for suffix in (args.ci_episode if held_out_base is not None else []):
         seq = held_out_base + suffix
         episode_df = get_episode_df(manifest, seq)
         print(f"[FINAL frozen rollout] {seq}")
@@ -1214,6 +1234,8 @@ if __name__ == "__main__":
     parser.add_argument('--target_seqs', nargs='+', default=["mustard0", "bleach_hard_00_03_chaitanya", "bleach0"])
     parser.add_argument('--corruption_lists', nargs='+', default=["_occ40", "_black10", "_clean", "_drop60", "_occ60"])
     parser.add_argument('--ci_object', type=str, default="bleach0", help="Held-out base object for this fold")
+    parser.add_argument('--final_fit', action='store_true', help="Fit all three development bases; no held-out fold or extra CI episodes")
+    parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--ci_episode', nargs='+', default=["_black10_2", "_black10_3", "_black10_4", "_black10_5"])
     parser.add_argument('--cad_models_seq', nargs='+', default=["006_mustard_bottle", "021_bleach_cleanser", "021_bleach_cleanser"])
     parser.add_argument('--risk_threshold', type=float, default=1.0, help="Absolute ADD-S risk threshold in cm")

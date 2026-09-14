@@ -514,6 +514,7 @@ def evaluate_episode(
     T_history2, T_history3, T_history4, T_history5, T_history6 = [], [], [], [], []
     b5_state = init_b5_state()
     recovery_record = None
+    recovery_events = []
     quality_records = []
     label_consistency_failures = []
 
@@ -736,11 +737,7 @@ def evaluate_episode(
 
 
 
-        if (
-            recovery_info is not None
-            and recovery_info.get("recovery_trigger") == "blackout_exit"
-            and recovery_record is None
-        ):
+        if recovery_info is not None:
             raw_generated = bool(recovery_info.get("raw_recovery_generated", False))
             accepted = bool(recovery_info.get("accepted_recovery", False))
             used = bool(recovery_info.get("recovery_used", False))
@@ -755,10 +752,16 @@ def evaluate_episode(
                 if accepted and accepted_pose is not None else np.nan
             )
             b1_recovery_error_cm = b1_errs[-1]
-            recovery_record = {
+            recovery_event = {
                 "episode": last_name,
                 "recovery_frame": frame_id,
-                "recovery_trigger": "blackout_exit",
+                "recovery_trigger": recovery_info.get("recovery_trigger"),
+                "recovery_index": i,
+                "sam2_called": bool(recovery_info.get("sam2_called", False)),
+                "sam2_cache_hit": bool(recovery_info.get("sam2_cache_hit", False)),
+                "fallback_prior_error_cm": float(E_prior_gt_cm),
+                "failure_reason": recovery_info.get("recovery_failure_reason") or "",
+                "rejection_reasons": json.dumps(recovery_info.get("recovery_rejection_reasons", []), ensure_ascii=False),
                 "raw_recovery_generated": raw_generated,
                 "raw_recovery_error_cm": float(raw_error_cm) if np.isfinite(raw_error_cm) else np.nan,
                 "accepted_recovery": accepted,
@@ -770,6 +773,10 @@ def evaluate_episode(
                 "accepted_minus_B1_cm": float(accepted_error_cm - b1_recovery_error_cm) if np.isfinite(accepted_error_cm) else np.nan,
                 "operational_minus_B1_cm": float(b5_error_current - b1_recovery_error_cm),
             }
+            recovery_events.append(recovery_event)
+            # Preserve the original single-event export for existing consumers.
+            if recovery_event["recovery_trigger"] == "blackout_exit" and recovery_record is None:
+                recovery_record = recovery_event
 
         # B6 oracle upper bound with independent recursive history.
         err_obs = U.adi(T_obs, T_gt, open3d_model)
@@ -825,7 +832,7 @@ def evaluate_episode(
         _latency_string(b5_errs, recovery_start),
         _latency_string(b6_errs, recovery_start),
     ]
-    false_triggers = ["N/A", "N/A", "N/A", "N/A", "0 times", "0 times"]
+    false_triggers = ["N/A"] * 6  # False triggers are not measured here.
 
     # Per-frame deployment log.
     qdf = pd.DataFrame(quality_records)
@@ -858,7 +865,120 @@ def evaluate_episode(
 
     adds_scores = [calc_auc(x) for x in [b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs]]
     fail_rates = [float(np.mean(np.asarray(x) > 2.0) * 100.0) for x in [b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs]]
-    return adds_scores, fail_rates, latency_scores, false_triggers, recovery_record, blackout_intervals, quality_records
+    recovery_metrics = build_recovery_decomposition(
+        last_name, blackout_intervals, recovery_events,
+        dict(zip(("B1", "B2", "B3", "B4", "B5"),
+                 (b1_errs, b2_errs, b3_errs, b4_errs, b5_errs))),
+        threshold_cm=args.risk_threshold,
+    )
+    return adds_scores, fail_rates, latency_scores, false_triggers, recovery_record, blackout_intervals, quality_records, recovery_metrics
+
+
+def build_recovery_decomposition(episode, intervals, events, errors_by_method,
+                                 threshold_cm=1.0, window_frames=60):
+    """One row per blackout exit, including rejected/missing recoveries.
+    Window includes the exit frame. GT is used only for offline evaluation.
+    """
+    rows = []
+    for interval in intervals:
+        start = int(interval["recovery_index"])
+        event = next((e for e in events
+                      if e["recovery_index"] == start
+                      and e["recovery_trigger"] == "blackout_exit"), None)
+        row = {
+            "row_type": "event", "episode": episode,
+            "recovery_index": start, "recovery_frame": interval["recovery_frame"],
+            "threshold_cm": threshold_cm, "window_requested_frames": window_frames,
+            "blackout_event_count": 1, "trigger_count": int(event is not None),
+            "sam2_requested_count": int(bool(event and event["sam2_called"])),
+            "sam2_cache_hit_count": int(bool(event and event["sam2_cache_hit"])),
+        }
+        generated = bool(event and event["raw_recovery_generated"])
+        accepted = bool(event and event["accepted_recovery"])
+        used = bool(event and event["recovery_used"])
+        raw_error = event["raw_recovery_error_cm"] if generated else np.nan
+        accepted_error = event["accepted_recovery_error_cm"] if accepted else np.nan
+        prior_error = event["fallback_prior_error_cm"] if event else np.nan
+        if generated and not np.isfinite(raw_error):
+            raw_error = np.inf
+        if accepted and not np.isfinite(accepted_error):
+            accepted_error = np.inf
+        if event and not np.isfinite(prior_error):
+            prior_error = np.inf
+        row.update({
+            "generated_count": int(generated), "accepted_count": int(accepted),
+            "used_count": int(used), "rejected_count": int(generated and not accepted),
+            "not_generated_count": int(not generated),
+            "raw_good_count": int(generated and raw_error <= threshold_cm),
+            "accepted_good_count": int(accepted and accepted_error <= threshold_cm),
+            "raw_recovery_error_cm": raw_error,
+            "accepted_recovery_error_cm": accepted_error,
+            "fallback_prior_error_cm": prior_error,
+            "raw_minus_fallback_prior_cm": raw_error - prior_error if generated else np.nan,
+            "outcome": ("accepted" if accepted else "rejected" if generated else
+                        "not_generated" if event else "not_triggered"),
+            "failure_reason": event["failure_reason"] if event else "no_recovery_event",
+            "rejection_reasons": event["rejection_reasons"] if event else "",
+        })
+        for method, errors in errors_by_method.items():
+            errors = np.asarray(errors, dtype=np.float64)
+            # Invalid outputs must not be silently removed or counted as accurate.
+            errors = np.where(np.isfinite(errors), errors, np.inf)
+            window = errors[start:start + window_frames]
+            n = len(window)
+            row[method + "_window_frames"] = n
+            row[method + "_window_complete"] = int(n == window_frames)
+            row[method + "_window_failure_percent"] = (
+                float(np.mean(window > threshold_cm) * 100.0) if n else np.nan)
+            row[method + "_window_auc_percent"] = calc_auc(window) if n else np.nan
+            row[method + "_full_sequence_auc_percent"] = calc_auc(errors) if len(errors) else np.nan
+        rows.append(row)
+    return rows
+
+
+def summarize_recovery_decomposition(rows, base_sequence):
+    """Descriptive within-base event summary, NOT an independent-object estimate.
+    Incomplete windows remain in event rows but are excluded from fixed-window
+    summary metrics; their counts are explicitly reported.
+    """
+    summary = {
+        "row_type": "summary", "episode": base_sequence,
+        "aggregation": "within_base_event_mean_not_independent_samples",
+        "threshold_cm": rows[0]["threshold_cm"] if rows else np.nan,
+        "window_requested_frames": 60,
+    }
+    counts = ("blackout_event_count", "trigger_count", "sam2_requested_count",
+              "sam2_cache_hit_count", "generated_count", "accepted_count",
+              "used_count", "rejected_count", "not_generated_count",
+              "raw_good_count", "accepted_good_count")
+    for key in counts:
+        summary[key] = sum(row[key] for row in rows)
+    for output, numerator, denominator in (
+        ("raw_accuracy_percent", "raw_good_count", "generated_count"),
+        ("accepted_accuracy_percent", "accepted_good_count", "accepted_count"),
+        ("acceptance_percent", "accepted_count", "generated_count"),
+        ("rejection_percent", "rejected_count", "generated_count"),
+    ):
+        summary[output] = (100.0 * summary[numerator] / summary[denominator]
+                           if summary[denominator] else np.nan)
+    for key, count_key in (("raw_recovery_error_cm", "generated_count"),
+                           ("accepted_recovery_error_cm", "accepted_count")):
+        values = [r[key] for r in rows if r[count_key]]
+        summary[key] = float(np.mean(values)) if values else np.nan
+    for method in ("B1", "B2", "B3", "B4", "B5"):
+        complete = [r for r in rows if r[method + "_window_complete"]]
+        summary[method + "_complete_window_count"] = len(complete)
+        summary[method + "_incomplete_window_count"] = len(rows) - len(complete)
+        for suffix in ("_window_failure_percent", "_window_auc_percent"):
+            summary[method + suffix] = (
+                float(np.mean([r[method + suffix] for r in complete]))
+                if complete else np.nan)
+        # Each original evaluation episode contributes only once here.
+        per_episode = {r["episode"]: r[method + "_full_sequence_auc_percent"] for r in rows}
+        summary[method + "_full_sequence_auc_percent"] = (
+            float(np.mean(list(per_episode.values()))) if per_episode else np.nan)
+    return summary
+
 
 
 def save_reliability_diagram(probs, labels, title, xlabel, ylabel, path, ece):
@@ -932,13 +1052,14 @@ def main(args):
     ADDS, FAIL, LATENCY, TRIGGER = {}, {}, {}, {}
     RECOVERY, BLACKOUT = {}, {}
     all_quality_records = []
+    all_recovery_metrics = []
 
     for result_dir in args.result_dir:
         ep = os.path.basename(result_dir)
         print(f"\n=== Evaluating {ep} ===")
         (
             adds, fails, lats, triggers,
-            recovery_record, blackout_intervals, quality_records,
+            recovery_record, blackout_intervals, quality_records, recovery_metrics,
         ) = evaluate_episode(
             args, result_dir, labels_df,
             model_pts, open3d_model, d_obj_cm,
@@ -948,8 +1069,18 @@ def main(args):
         ADDS[ep], FAIL[ep], LATENCY[ep], TRIGGER[ep] = adds, fails, lats, triggers
         RECOVERY[ep], BLACKOUT[ep] = recovery_record, blackout_intervals
         all_quality_records.extend(quality_records)
+        all_recovery_metrics.extend(recovery_metrics)
 
     qdf = pd.DataFrame(all_quality_records)
+    # Base-specific filename prevents run.sh's subsequent folds overwriting it.
+    recovery_decomposition_path = (
+        f"./checkpoint2_recovery_decomposition_{args.test_base_seq}"
+        f"_threshold{args.risk_threshold}.csv"
+    )
+    recovery_summary = summarize_recovery_decomposition(all_recovery_metrics, args.test_base_seq)
+    pd.DataFrame(all_recovery_metrics + [recovery_summary]).to_csv(
+        recovery_decomposition_path, index=False, encoding="utf-8-sig")
+    print("recovery decomposition:", recovery_decomposition_path)
     obs_labels = (qdf["E_obs_cm"].values > args.risk_threshold).astype(int)
     prior_labels = (qdf["E_prior_cm"].values > args.risk_threshold).astype(int)
     obs_metrics = _safe_prob_metrics(obs_labels, qdf["p_obs_risk"].values)
