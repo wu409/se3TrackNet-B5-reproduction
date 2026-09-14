@@ -1,4 +1,0 @@
-base_sequence,p_obs_threshold,obs_balanced_accuracy,warm_start_p_obs_threshold,warm_start_balanced_accuracy,p_prior_threshold,prior_balanced_accuracy,obs_selection_protocol,prior_selection_protocol,risk_label_threshold_cm
-mustard0,0.3499999999999999,,,,0.3499999999999999,,,,
-bleach0,0.33999999999999997,,,,0.33999999999999997,,,,
-bleach_hard_00_03_chaitanya,0.14999999999999997,,,,0.14999999999999997,,,,
