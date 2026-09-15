@@ -1028,9 +1028,9 @@ def save_shared_artifacts(
 
 def select_training_bases(args):
     if getattr(args, "final_fit", False):
-        expected = {"mustard0", "bleach0", "bleach_hard_00_03_chaitanya"}
-        if len(args.target_seqs) != 3 or set(args.target_seqs) != expected:
-            raise ValueError("final_fit requires exactly the three development sequences")
+        expected = {"mustard_easy_00_02","mustard0", "bleach0", "bleach_hard_00_03_chaitanya"}
+        if len(args.target_seqs) != 4 or set(args.target_seqs) != expected:
+            raise ValueError("final_fit requires exactly the four development sequences")
         return None, list(args.target_seqs)
     held_out_base = args.ci_object
     if held_out_base not in args.target_seqs:
@@ -1236,7 +1236,7 @@ if __name__ == "__main__":
     parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted")
     parser.add_argument('--res_dir', type=str, default="./results_collection")
     parser.add_argument('--mesh_path_root', type=str, default="./datasets/YCB_Video_Models/CADmodels")
-    parser.add_argument('--target_seqs', nargs='+', default=["mustard0", "bleach_hard_00_03_chaitanya", "bleach0"])
+    parser.add_argument('--target_seqs', nargs='+', default=["mustard_easy_00_02", "mustard0", "bleach_hard_00_03_chaitanya", "bleach0"])
     parser.add_argument('--corruption_lists', nargs='+', default=["_occ40", "_black10", "_clean", "_drop60", "_occ60"])
     parser.add_argument('--ci_object', type=str, default="bleach0", help="Held-out base object for this fold")
     parser.add_argument('--final_fit', action='store_true', help="Fit all three development bases; no held-out fold or extra CI episodes")
