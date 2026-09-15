@@ -1,0 +1,6 @@
+episode,recovery_frame,recovery_trigger,raw_recovery_generated,raw_recovery_error_cm,accepted_recovery,accepted_recovery_error_cm,recovery_used,B1_error_cm,B5_operational_error_cm,raw_minus_B1_cm,accepted_minus_B1_cm,operational_minus_B1_cm
+cracker_box_yalehand0_black10,100,blackout_exit,True,0.38363519128755397,False,,False,63.476327992098135,55.868427916791994,-63.09269280081058,,-7.607900075306141
+cracker_box_yalehand0_black10_2,260,blackout_exit,True,0.4587891114760505,False,,False,50.536404949383964,44.6439040786318,-50.07761583790791,,-5.8925008707521656
+cracker_box_yalehand0_black10_3,340,blackout_exit,True,0.5209978821301976,False,,False,50.477127663041365,46.28835467261692,-49.95612978091117,,-4.188772990424447
+cracker_box_yalehand0_black10_4,500,blackout_exit,True,0.5829317881559996,False,,False,54.35975361475449,52.14670706595811,-53.776821826598486,,-2.2130465487963775
+cracker_box_yalehand0_black10_5,610,blackout_exit,True,0.3305315955605946,False,,False,121.06463809149366,122.34870846213343,-120.73410649593306,,1.2840703706397676

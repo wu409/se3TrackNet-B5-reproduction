@@ -1,0 +1,15 @@
+{
+  "status": "frozen_test_complete",
+  "training_release": "/root/autodl-tmp/se3TrackNet-B5-reproduction/final_training_releases/train_20260914T125211Z_5a329d44",
+  "variants": [
+    "full",
+    "simple"
+  ],
+  "test_sequences": [
+    "cracker_box_reorient",
+    "cracker_box_yalehand0",
+    "sugar_box_yalehand0",
+    "sugar_box1",
+    "tomato_soup_can_yalehand0"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "created_utc": "2026-09-14T22:27:31.048931+00:00",
+  "training_release": "/root/autodl-tmp/se3TrackNet-B5-reproduction/final_training_releases/train_20260914T125211Z_5a329d44",
+  "reference_manifest_sha256": "70061b0e887927ee4732ca96882d876754bac4d60633c3f3ddfd168996b14e56",
+  "test_sequences": {
+    "cracker_box_reorient": "003_cracker_box",
+    "cracker_box_yalehand0": "003_cracker_box",
+    "sugar_box_yalehand0": "004_sugar_box",
+    "sugar_box1": "004_sugar_box",
+    "tomato_soup_can_yalehand0": "005_tomato_soup_can"
+  },
+  "conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "variants": [
+    "full",
+    "simple"
+  ],
+  "frames_per_variant": 44271,
+  "p_risk_threshold": 0.74,
+  "risk_threshold_cm": 1.0,
+  "prior_advantage_margin_cm": 0.1,
+  "evaluation_adapter_commit": "0f79074014e4d506a9bc897b99092e0b9d0f7977",
+  "evaluation_adapter_git_status": "?? frozen_test_runs/\n",
+  "training_commit": "not recorded by original release; do not infer it from current HEAD",
+  "recovery_window": "60 frames including first valid-depth frame after >=10-frame blackout",
+  "latency": "confirm five consecutive errors <= risk threshold; unsuccessful events censored at window/sequence end",
+  "rejection_denominator": "raw proposals generated; also report not-generated / all blackout exits",
+  "timing": "measured quality + transition wall time; excludes offline GT scoring, backbone inference and data I/O; not end-to-end FPS",
+  "timing_simple": "quality is computed for diagnostics but excluded from simple-policy time; no learned score affects simple decisions",
+  "test_gt": "offline scoring only; first-frame init_mask is an allowed input",
+  "uncertainty": "sequence/object clustered, never independent-frame CI; primary object bootstrap has only n=3",
+  "additional_ablations_pending": [
+    "stateful drift penalty/streak limit",
+    "recovery admission gate"
+  ],
+  "environment": {
+    "OMP_NUM_THREADS": "1",
+    "PYOPENGL_PLATFORM": "egl"
+  }
+}

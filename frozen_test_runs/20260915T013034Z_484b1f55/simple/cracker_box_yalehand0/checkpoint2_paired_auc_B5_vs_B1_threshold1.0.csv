@@ -1,0 +1,7 @@
+episode,AUC_B1_percent,AUC_B5_percent,Delta_B5_minus_B1_percentage_points,Paired_95CI_low,Paired_95CI_high
+cracker_box_yalehand0_black10,0.4040212028154755,0.4040212028154755,0.0,,
+cracker_box_yalehand0_black10_2,0.3918387113564204,0.3918387113564204,0.0,,
+cracker_box_yalehand0_black10_3,0.38889680939417176,0.38889680939417176,0.0,,
+cracker_box_yalehand0_black10_4,0.38836877570864,0.38836877570864,0.0,,
+cracker_box_yalehand0_black10_5,0.3953840803878483,0.3953840803878483,0.0,,
+PAIRED_MEAN,,,0.0,0.0,0.0
