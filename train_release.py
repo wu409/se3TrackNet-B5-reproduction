@@ -240,6 +240,8 @@ def seal():
         "sealed_utc": datetime.now(timezone.utc).isoformat(),
         "p_risk_threshold": cfg["p_risk_threshold"],
         "training_mode": cfg["training_mode"],
+        "recovery_gate_config": cfg.get("recovery_gate_config"),
+        "b5_policy_config": cfg.get("b5_policy_config"),
         "test_evaluation_completed": False,
         "note": "Model/source/input release only; new-test runner still requires adaptation."}
     files = []

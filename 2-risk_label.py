@@ -805,6 +805,7 @@ def rollout_episode(
     """
     rows = []
     T_B5_history = []
+    from b5_revision import make_prior, advance_history
     b5_state = init_b5_state()
     init_mask_path = resolve_initial_mask_file_for_episode(episode_df, args)
     mesh_file = resolve_foundationpose_mesh_file(args, obj_idx)
@@ -817,10 +818,7 @@ def rollout_episode(
         # array. SAM2 consumes these same artifacts in the same frame order.
         rgb_real, rgb_path = load_foundationpose_recovery_rgb(seq, row, args)
 
-        if len(T_B5_history) < 2:
-            T_prior = T_obs
-        else:
-            T_prior = compute_se3_prior(T_B5_history[-1], T_B5_history[-2])
+        T_prior = make_prior(T_B5_history, T_obs, b5_state, compute_se3_prior)
 
         obs_features = extract_pose_conditioned_features(
             T_pose=T_obs,
@@ -885,7 +883,7 @@ def rollout_episode(
             p_risk_threshold=p_risk_threshold,
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
         )
-        T_B5_history.append(T_final_B5)
+        T_B5_history = advance_history(T_B5_history, T_final_B5, b5_state)
 
         rows.append(build_label_row(
             seq=seq,
@@ -907,6 +905,11 @@ def rollout_episode(
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
             policy_model_stage=policy_model_stage,
         ))
+        rows[-1].update(policy_version=b5_state.get("policy_version"),
+            fusion_alpha=b5_state.get("last_fusion_alpha"),
+            forced_streak_reset=bool(b5_state.get("last_forced_streak_reset")),
+            motion_history_reset=bool(b5_state.get("reset_motion_history")),
+            output_uncertain=bool(b5_state.get("output_uncertain")))
     return rows
 
 
@@ -981,6 +984,8 @@ def save_shared_artifacts(
     joblib.dump(risk_calibrator, paths["calibrator"])
     cfg = {
         "version": "shared_pose_quality_v1",
+        "recovery_gate_config": __import__("recovery_gate").CONFIG.copy(),
+        "b5_policy_config": __import__("b5_revision").CONFIG.copy(),
         "training_mode": "final_development_fit" if getattr(args, "final_fit", False) else "leave_one_sequence_out",
         "seed": int(getattr(args, "seed", 42)),
         "fit_conditions": list(args.corruption_lists),

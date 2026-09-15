@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Frozen test entry point. Never trains or regenerates the reference manifest.
 # bash run_test.sh --release /absolute/path/to/frozen/release [--check-only]
+# Explicit post-test gate diagnostic (NOT an untouched-test result):
+# add --recovery-gate-revision occlusion-aware-dev --variants full simple
+# Default remains the exact gate in the supplied frozen release.
+# Full development revision (fusion + history restart + new gate):
+# --b5-policy-revision relative-quality-dev --variants full simple
 set -Eeuo pipefail
 SCRIPT_DIR=${BASH_SOURCE[0]%/*}
 [[ "$SCRIPT_DIR" != "${BASH_SOURCE[0]}" ]] || SCRIPT_DIR=.

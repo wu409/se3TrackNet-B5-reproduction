@@ -549,6 +549,9 @@ def evaluate_episode(
     b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs = [], [], [], [], [], []
     b5_modes, matched_frames = [], []
     T_history2, T_history3, T_history4, T_history5, T_history6 = [], [], [], [], []
+    revised_history = bool(getattr(b5_transition, "__globals__", {}).get("B5_POLICY_CONFIG"))
+    if revised_history:
+        from b5_revision import make_prior, advance_history
     b5_state = init_b5_state()
     recovery_record = None
     recovery_events = []
@@ -575,8 +578,14 @@ def evaluate_episode(
             T_prior2 = compute_se3_prior(T_history2[-1], T_history2[-2])
             T_prior3 = compute_se3_prior(T_history3[-1], T_history3[-2])
             T_prior4 = compute_se3_prior(T_history4[-1], T_history4[-2])
-            T_prior5 = compute_se3_prior(T_history5[-1], T_history5[-2])
+            if not revised_history:
+                T_prior5 = compute_se3_prior(T_history5[-1], T_history5[-2])
             T_prior6 = compute_se3_prior(T_history6[-1], T_history6[-2])
+
+        restart_zero_velocity = bool(revised_history and len(T_history5) == 1
+                                     and b5_state.get("motion_history_restarted", False))
+        if revised_history:
+            T_prior5 = make_prior(T_history5, T_obs, b5_state, compute_se3_prior)
 
         quality_start = time.perf_counter()
         obs_features = extract_pose_conditioned_features(
@@ -658,7 +667,10 @@ def evaluate_episode(
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
         )
         transition_wall_ms = (time.perf_counter() - transition_start) * 1000.0
-        T_history5.append(T_final)
+        if revised_history:
+            T_history5 = advance_history(T_history5, T_final, b5_state)
+        else:
+            T_history5.append(T_final)
         b5_error_current = U.adi(T_final, T_gt, open3d_model) * 100.0
         b5_errs.append(b5_error_current)
         b5_modes.append(current_mode)
@@ -728,6 +740,19 @@ def evaluate_episode(
 
             if recovery_info.get("recovery_trigger") == "blackout_exit":
                 print("\n========== RECOVERY VALIDITY ==========")
+                gate = (recovery_info.get("recovery_soft_evidence") or {}).get("gate", {})
+                if gate:
+                    print("gate_version:", gate.get("recovery_gate_version"))
+                    print("gate_status:", gate.get("recovery_gate_status"))
+                    print("acceptance_path:", gate.get("recovery_acceptance_path"))
+                    print("decision_category:", gate.get("recovery_decision_category"))
+                    print("occlusion / conflict / inlier fractions:",
+                          gate.get("recovery_occlusion_fraction"), gate.get("recovery_conflict_fraction"),
+                          gate.get("recovery_inlier_fraction"))
+                    print("positive inliers / visible support / spatial bins:",
+                          gate.get("recovery_inlier_pixels"), gate.get("recovery_visible_support_pixels"),
+                          gate.get("recovery_inlier_spatial_bins"))
+                    print("History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.")
                 print(
                     "rejection_reasons:",
                     recovery_info.get("recovery_rejection_reasons")
@@ -817,6 +842,16 @@ def evaluate_episode(
                 "operational_minus_B1_cm": float(b5_error_current - b1_recovery_error_cm),
             }
             recovery_events.append(recovery_event)
+            gate_diag = recovery_info.get("recovery_soft_evidence") or {}
+            gate_diag = gate_diag.get("gate", {})
+            recovery_event["recovery_gate_diagnostics"] = json.dumps(gate_diag, ensure_ascii=False)
+            for key in ("recovery_gate_version", "recovery_gate_status", "recovery_acceptance_path",
+                        "recovery_decision_category", "recovery_inlier_fraction",
+                        "recovery_conflict_fraction", "recovery_occlusion_fraction",
+                        "recovery_visible_support_pixels", "recovery_inlier_pixels",
+                        "recovery_visible_mask_explained", "recovery_visible_cad_coverage",
+                        "recovery_inlier_spatial_bins", "recovery_global_inlier_fraction"):
+                recovery_event[key] = gate_diag.get(key)
             # Preserve the original single-event export for existing consumers.
             if recovery_event["recovery_trigger"] == "blackout_exit" and recovery_record is None:
                 recovery_record = recovery_event
@@ -843,6 +878,12 @@ def evaluate_episode(
             "delta_E_hat_cm": float(E_prior_hat_cm - E_obs_hat_cm),
             "selected_mode": current_mode,
             "policy_variant": getattr(args, "policy_variant", "full"),
+            "policy_version": b5_state.get("policy_version", "legacy_frozen"),
+            "fusion_alpha": b5_state.get("last_fusion_alpha"),
+            "forced_streak_reset": int(bool(b5_state.get("last_forced_streak_reset"))),
+            "motion_history_reset": int(bool(b5_state.get("reset_motion_history"))),
+            "restart_zero_velocity_prior": int(restart_zero_velocity),
+            "output_uncertain": b5_state.get("output_uncertain"),
             "both_candidates_bad": int(E_obs_gt_cm > args.risk_threshold and E_prior_gt_cm > args.risk_threshold),
             "local_candidate_oracle_cm": float(min(E_obs_gt_cm, E_prior_gt_cm)),
             "is_blackout": int(b5_state.get("is_depth_blackout", False)),
@@ -962,6 +1003,10 @@ def build_recovery_decomposition(episode, intervals, events, errors_by_method,
             "failure_reason": event["failure_reason"] if event else "no_recovery_event",
             "rejection_reasons": event["rejection_reasons"] if event else "",
         })
+        if event:
+            for key, value in event.items():
+                if key.startswith("recovery_") and key not in row:
+                    row[key] = value
         for method, errors in errors_by_method.items():
             errors = np.asarray(errors, dtype=np.float64)
             # Invalid outputs must not be silently removed or counted as accurate.

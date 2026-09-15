@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+from b5_revision import CONFIG as B5_POLICY_CONFIG
 import cv2
 from scipy.spatial.transform import Rotation as R_sci
 
@@ -294,7 +295,9 @@ RECOVERY_CANDIDATE_MAX_DEPTH_DELTA_M = 0.35
 
 # Harry-requested target-object pose-validity evidence.
 #
-# Gate structure (development configuration):
+# LEGACY thresholds below are retained for compatibility/diagnostics only.
+# Active admission is configured in recovery_gate.py (unvalidated development).
+# Former gate structure:
 #   1) HARD catastrophe gates:
 #        - finite pose / valid CAD projection
 #        - previous-frame operational motion plausibility
@@ -1800,301 +1803,60 @@ def _project_cad_depth_residual(
 
 
 def evaluate_recovery_pose_validity(
-    T_recovery,
-    model_pts_3d,
-    K,
-    visible_mask,
-    depth_real,
-    reference_T_final=None,
-    template_score_margin=None,
-    previous_T_final=None,
-    T_prior_current=None,
+    T_recovery, model_pts_3d, K, visible_mask, depth_real,
+    reference_T_final=None, template_score_margin=None,
+    previous_T_final=None, T_prior_current=None,
 ):
-    """
-    Validate a raw FoundationPose recovery without using GT/T_obs/risk labels.
-
-    Two reference poses are deliberately separated:
-
-      * reference_T_final:
-          frozen pre-blackout/non-blackout reference used by Template2.  It is
-          retained here only as a backward-compatible fallback if an older
-          caller does not provide previous_T_final.
-
-      * previous_T_final:
-          immediately previous operational B5 output (t-1), including during
-          blackout.  Translation/rotation jump hard gates are measured against
-          this pose.
-
-      * T_prior_current:
-          temporal prediction for the current recovery frame.  Its innovation
-          relative to FoundationPose is logged as diagnostic evidence only; it
-          is NOT a hard gate because the recursive prior may itself have drifted.
-
-    Acceptance uses a two-level rule:
-
-      HARD catastrophe gates
-        - finite raw recovery pose
-        - valid CAD projection
-        - previous-frame translation/rotation plausibility
-        - rendered-depth support and rendered-depth residual
-
-      SOFT consistency evidence
-        - visible-mask IoU
-        - CAD coverage
-        - reprojection-center consistency
-        - Template2 score margin (only when a second candidate exists)
-
-      At least RECOVERY_MIN_SOFT_EVIDENCE_PASSES soft cues must pass.
-
-    This avoids the former all-AND gate where every noisy diagnostic had an
-    independent veto, while still requiring multiple target-object validity
-    cues in addition to FoundationPose completion.
-    """
-    margin_value = (
-        float(template_score_margin)
-        if template_score_margin is not None
-        else np.nan
-    )
-
-    result = {
-        "raw_recovery_generated": bool(T_recovery is not None),
-        "recovery_pose_valid": False,
-        "accepted_recovery": False,
-        "recovery_rejection_reasons": [],
-        "recovery_hard_gate_pass": False,
-        "recovery_soft_evidence_pass_count": 0,
-        "recovery_soft_evidence_required": int(RECOVERY_MIN_SOFT_EVIDENCE_PASSES),
-        "recovery_soft_evidence": {},
-
-        # New, unambiguous motion diagnostics.
-        "recovery_prev_translation_jump_m": np.inf,
-        "recovery_prev_rotation_jump_deg": np.inf,
-        "recovery_prior_translation_innovation_m": np.inf,
-        "recovery_prior_rotation_innovation_deg": np.inf,
-        "recovery_motion_reference_source": None,
-
-        # Backward-compatible aliases: these now mean PREVIOUS-FRAME jump.
-        "recovery_translation_jump_m": np.inf,
-        "recovery_rotation_jump_deg": np.inf,
-
-        "recovery_reprojection_center_error_norm": np.inf,
-        "recovery_template_score_margin": margin_value,
-        "recovery_template_score_margin_available": False,
-    }
-
-    if T_recovery is None or visible_mask is None:
-        result["recovery_rejection_reasons"].append(
-            "missing_pose_or_visible_mask"
-        )
-        return result
-
-    T_rec = np.asarray(T_recovery, dtype=np.float64).reshape(4, 4)
-    if not np.all(np.isfinite(T_rec)):
-        result["recovery_rejection_reasons"].append(
-            "non_finite_recovery_pose"
-        )
-        return result
-
-    # --------------------------------------------------------------
-    # 1) HARD motion plausibility: compare recovery(t) with B5(t-1).
-    #    For backward compatibility only, fall back to the old frozen
-    #    reference if previous_T_final was not supplied.
-    # --------------------------------------------------------------
-    motion_ref = previous_T_final
-    motion_ref_source = "previous_operational_t_minus_1"
-    if motion_ref is None:
-        motion_ref = reference_T_final
-        motion_ref_source = "legacy_frozen_reference_fallback"
-
-    if motion_ref is None:
-        result["recovery_rejection_reasons"].append(
-            "missing_previous_operational_pose"
-        )
-    else:
-        T_prev = np.asarray(motion_ref, dtype=np.float64).reshape(4, 4)
-        if not np.all(np.isfinite(T_prev)):
-            result["recovery_rejection_reasons"].append(
-                "non_finite_previous_operational_pose"
-            )
-        else:
-            prev_trans = float(
-                np.linalg.norm(T_rec[:3, 3] - T_prev[:3, 3])
-            )
-            prev_rot = _rotation_angle_deg(
-                T_prev[:3, :3].T @ T_rec[:3, :3]
-            )
-            result["recovery_prev_translation_jump_m"] = prev_trans
-            result["recovery_prev_rotation_jump_deg"] = prev_rot
-            result["recovery_translation_jump_m"] = prev_trans
-            result["recovery_rotation_jump_deg"] = prev_rot
-            result["recovery_motion_reference_source"] = motion_ref_source
-
-            if prev_trans > RECOVERY_MAX_TRANSLATION_JUMP_M:
-                result["recovery_rejection_reasons"].append(
-                    "prev_translation_jump_too_large"
-                )
-            if prev_rot > RECOVERY_MAX_ROTATION_JUMP_DEG:
-                result["recovery_rejection_reasons"].append(
-                    "prev_rotation_jump_too_large"
-                )
-
-    # Current-frame prior innovation is diagnostic only.  A drifting prior
-    # must not veto an otherwise geometrically valid independent recovery.
-    if T_prior_current is not None:
+    """Current-frame admission; history jumps and old soft cues are diagnostics."""
+    from recovery_gate import evaluate_current_frame
+    # Validate shape before using the projection helpers.
+    silhouette = None
+    T = np.asarray(T_recovery) if T_recovery is not None else None
+    if (T is not None and T.shape == (4, 4) and np.isfinite(T).all()
+            and visible_mask is not None and depth_real is not None
+            and np.asarray(visible_mask).ndim == 2):
         try:
-            T_prior_arr = np.asarray(
-                T_prior_current, dtype=np.float64
-            ).reshape(4, 4)
-            if np.all(np.isfinite(T_prior_arr)):
-                result["recovery_prior_translation_innovation_m"] = float(
-                    np.linalg.norm(
-                        T_rec[:3, 3] - T_prior_arr[:3, 3]
-                    )
-                )
-                result["recovery_prior_rotation_innovation_deg"] = (
-                    _rotation_angle_deg(
-                        T_prior_arr[:3, :3].T @ T_rec[:3, :3]
-                    )
-                )
-        except Exception:
-            pass
-
-    # --------------------------------------------------------------
-    # 2) CAD projection / visible-mask overlap + reprojection center.
-    #    CAD projection validity is hard; individual overlap/center tests
-    #    are soft evidence rather than independent vetoes.
-    # --------------------------------------------------------------
-    overlap = evaluate_recovery_cad_mask_consistency(
-        T_recovery=T_rec,
-        model_pts_3d=model_pts_3d,
-        K=K,
-        recovery_mask=visible_mask,
-    )
-    result.update(overlap)
-
-    soft_evidence = {
-        "visible_mask_iou": False,
-        "cad_coverage": False,
-        "reprojection_center": False,
-        "template_score_margin": False,
-    }
-
-    if not overlap.get("recovery_cad_mask_valid", False):
-        result["recovery_rejection_reasons"].append(
-            "cad_projection_invalid"
-        )
-    else:
-        soft_evidence["visible_mask_iou"] = bool(
-            float(overlap["recovery_cad_mask_iou"])
-            >= RECOVERY_MIN_VISIBLE_MASK_IOU
-        )
-        soft_evidence["cad_coverage"] = bool(
-            float(overlap["recovery_cad_coverage"])
-            >= RECOVERY_MIN_CAD_COVERAGE
-        )
-
-        cad_mask = _project_cad_silhouette_mask(
-            T_pose=T_rec,
-            model_pts_3d=model_pts_3d,
-            K=K,
-            image_shape=np.asarray(visible_mask).shape,
-        )
-        c_cad, _ = (
-            _mask_centroid_and_diag(cad_mask)
-            if cad_mask is not None
-            else (None, None)
-        )
-        c_vis, vis_diag = _mask_centroid_and_diag(visible_mask)
+            silhouette = _project_cad_silhouette_mask(
+                T_pose=T, model_pts_3d=model_pts_3d, K=K,
+                image_shape=np.asarray(visible_mask).shape)
+        except (ValueError, TypeError, IndexError):
+            silhouette = None
+    result = evaluate_current_frame(T_recovery, model_pts_3d, K, depth_real,
+                                    visible_mask, silhouette)
+    # Historical output fields are retained, but no duplicate-evidence voting.
+    result.update(recovery_soft_evidence_pass_count=None,
+                  recovery_soft_evidence_required=None, recovery_soft_evidence={"gate": dict(result)},
+                  recovery_template_score_margin=template_score_margin,
+                  recovery_template_score_margin_available=bool(
+                      template_score_margin is not None and np.isfinite(template_score_margin)))
+    if T is None or T.shape != (4, 4) or not np.isfinite(T).all():
+        return result
+    for ref, prefix in ((previous_T_final if previous_T_final is not None else reference_T_final,
+                         "prev"), (T_prior_current, "prior")):
+        if ref is None:
+            continue
+        ref = np.asarray(ref)
+        if ref.shape != (4, 4) or not np.isfinite(ref).all():
+            continue
+        translation = float(np.linalg.norm(T[:3, 3]-ref[:3, 3]))
+        rotation = _rotation_angle_deg(ref[:3, :3].T @ T[:3, :3])
+        if prefix == "prev":
+            result.update(recovery_prev_translation_jump_m=translation,
+                          recovery_prev_rotation_jump_deg=rotation,
+                          recovery_translation_jump_m=translation, recovery_rotation_jump_deg=rotation,
+                          recovery_motion_reference_source="diagnostic_only_previous_or_legacy")
+        else:
+            result.update(recovery_prior_translation_innovation_m=translation,
+                          recovery_prior_rotation_innovation_deg=rotation)
+    if silhouette is not None and visible_mask is not None:
+        result.update(evaluate_recovery_cad_mask_consistency(
+            T, model_pts_3d, K, visible_mask))
+        result.update(_project_cad_depth_residual(T, model_pts_3d, K, depth_real, visible_mask))
+        c_cad, _ = _mask_centroid_and_diag(silhouette)
+        c_vis, diag = _mask_centroid_and_diag(visible_mask)
         if c_cad is not None and c_vis is not None:
-            center_error_norm = float(
-                np.linalg.norm(c_cad - c_vis)
-                / max(vis_diag, 1.0)
-            )
-            result[
-                "recovery_reprojection_center_error_norm"
-            ] = center_error_norm
-            soft_evidence["reprojection_center"] = bool(
-                center_error_norm
-                <= RECOVERY_MAX_REPROJECTION_CENTER_ERROR_NORM
-            )
-
-    # --------------------------------------------------------------
-    # 3) Rendered CAD depth consistency: HARD gate.
-    # --------------------------------------------------------------
-    depth_diag = _project_cad_depth_residual(
-        T_pose=T_rec,
-        model_pts_3d=model_pts_3d,
-        K=K,
-        depth_real=depth_real,
-        visible_mask=visible_mask,
-    )
-    result.update(depth_diag)
-
-    if (
-        int(depth_diag["recovery_rendered_depth_support"])
-        < RECOVERY_MIN_RENDERED_DEPTH_SUPPORT
-    ):
-        result["recovery_rejection_reasons"].append(
-            "rendered_depth_support_too_low"
-        )
-    elif (
-        float(
-            depth_diag[
-                "recovery_rendered_depth_median_residual_m"
-            ]
-        )
-        > RECOVERY_MAX_RENDERED_DEPTH_MEDIAN_RESIDUAL_M
-    ):
-        result["recovery_rejection_reasons"].append(
-            "rendered_depth_residual_too_large"
-        )
-
-    # --------------------------------------------------------------
-    # 4) Template ambiguity margin: SOFT evidence.
-    #    +inf means there was no second surviving candidate, so the margin
-    #    is unavailable rather than "infinitely confident".
-    # --------------------------------------------------------------
-    margin_available = bool(
-        template_score_margin is not None
-        and np.isfinite(template_score_margin)
-    )
-    result["recovery_template_score_margin_available"] = margin_available
-    if margin_available:
-        soft_evidence["template_score_margin"] = bool(
-            float(template_score_margin)
-            >= RECOVERY_MIN_TEMPLATE_SCORE_MARGIN
-        )
-
-    soft_pass_count = int(sum(bool(v) for v in soft_evidence.values()))
-    result["recovery_soft_evidence"] = dict(soft_evidence)
-    result["recovery_soft_evidence_pass_count"] = soft_pass_count
-
-    if soft_pass_count < int(RECOVERY_MIN_SOFT_EVIDENCE_PASSES):
-        result["recovery_rejection_reasons"].append(
-            "insufficient_soft_consistency_evidence"
-        )
-
-    hard_reason_prefixes = (
-        "missing_",
-        "non_finite_",
-        "cad_projection_invalid",
-        "prev_translation_jump_too_large",
-        "prev_rotation_jump_too_large",
-        "rendered_depth_support_too_low",
-        "rendered_depth_residual_too_large",
-    )
-    hard_gate_pass = not any(
-        str(reason).startswith(hard_reason_prefixes)
-        for reason in result["recovery_rejection_reasons"]
-    )
-    result["recovery_hard_gate_pass"] = bool(hard_gate_pass)
-
-    valid = bool(
-        hard_gate_pass
-        and soft_pass_count >= int(RECOVERY_MIN_SOFT_EVIDENCE_PASSES)
-    )
-    result["recovery_pose_valid"] = valid
-    result["accepted_recovery"] = valid
+            result["recovery_reprojection_center_error_norm"] = float(
+                np.linalg.norm(c_cad-c_vis)/max(diag, 1.0))
     return result
 
 def _save_recovery_debug_artifacts(
@@ -3203,6 +2965,9 @@ def _execute_independent_recovery(
             diagnostics,
             key,
         )
+    # Preserve new diagnostics even for callers retaining legacy field lists.
+    recovery_info.update({k: v for k, v in diagnostics.items()
+                          if k.startswith("recovery_") and k not in recovery_info})
 
     return (
         T_recovery,
@@ -3735,12 +3500,13 @@ def b5_transition(
       MODE 1: observation absolute risk is low.
       MODE 2: observation is risky AND
               E_prior_hat + margin < E_obs_hat.
-      MODE 3: otherwise, including the prior-streak limit; prior contributes
-              at most weakly and the streak counter resets.
+      MODE 3: otherwise use bounded relative-quality fusion. At the streak
+              limit only, preserve one LEGACY weak-fusion step and reset.
 
     Ground truth is never an input to this function.
     """
     _ = support  # support is a learned feature, never a blackout detector.
+    from b5_revision import relative_alpha
 
     required_values = np.asarray([
         E_obs_hat_cm,
@@ -3769,6 +3535,11 @@ def b5_transition(
         raise ValueError("prior_advantage_margin_cm must be non-negative")
 
     state = dict(state)
+    state["reset_motion_history"] = False
+    state["last_fusion_alpha"] = None
+    state["last_forced_streak_reset"] = False
+    state["policy_version"] = B5_POLICY_CONFIG["version"]
+    state["output_uncertain"] = bool(p_obs_risk > p_risk_threshold and p_prior_risk > p_risk_threshold)
     state["blackout_intervals"] = [
         dict(item) for item in state.get("blackout_intervals", [])
     ]
@@ -3870,6 +3641,8 @@ def b5_transition(
     if is_blackout:
         current_mode = "MODE_3_BLACKOUT_WAITING"
         T_final = T_prior
+        state["last_fusion_alpha"] = 1.0
+        state["output_uncertain"] = True
 
     elif recovery_trigger is not None:
         T_recovery, recovery_ok, recovery_info = _execute_sam2_recovery(
@@ -3899,9 +3672,13 @@ def b5_transition(
             T_final = np.asarray(T_recovery, dtype=np.float64).reshape(4, 4)
             recovery_decision = "accept_valid_recovery"
             recovery_used = True
+            state["reset_motion_history"] = True
+            state["motion_history_restarted"] = True
+            state["output_uncertain"] = False
         else:
             T_final = T_prior
             recovery_used = False
+            state["output_uncertain"] = True
             if recovery_info is not None and recovery_info.get("raw_recovery_generated", False):
                 recovery_decision = "reject_invalid_raw_recovery_use_prior"
             else:
@@ -3914,6 +3691,7 @@ def b5_transition(
             recovery_info["T_operational_b5"] = np.asarray(T_final, dtype=np.float64).copy()
             recovery_info["operational_mode"] = "MODE_3_RECOVERY_EXECUTE"
         current_mode = "MODE_3_RECOVERY_EXECUTE"
+        state["last_fusion_alpha"] = None  # recovery is not obs/prior interpolation
         state["exited_blackout"] = False
         state["prior_streak"] = 0
         state["prior_drift_score"] = 0.0
@@ -3931,8 +3709,8 @@ def b5_transition(
         state["blackout_reference_frame_id"] = None
 
     else:
-        PRIOR_DRIFT_DECAY = 0.90
-        PRIOR_DRIFT_INCREMENT = 0.08
+        PRIOR_DRIFT_DECAY = B5_POLICY_CONFIG["prior_drift_decay"]
+        PRIOR_DRIFT_INCREMENT = B5_POLICY_CONFIG["prior_drift_increment"]
         prior_streak = int(state.get("prior_streak", 0))
         prior_drift_score = float(state.get("prior_drift_score", 0.0))
         drift_penalty = max(0.0, 1.0 - prior_drift_score)
@@ -3942,6 +3720,7 @@ def b5_transition(
         if prior_streak < int(max_prior_streak) and p_obs_risk <= p_risk_threshold:
             current_mode = "MODE_1_ACCEPT"
             T_final = T_obs
+            state["last_fusion_alpha"] = 0.0
             state["prior_streak"] = 0
             state["prior_drift_score"] = PRIOR_DRIFT_DECAY * prior_drift_score
 
@@ -3951,12 +3730,8 @@ def b5_transition(
         ):
             current_mode = "MODE_2_UNCERTAINTY_FUSION"
             T_delta = np.linalg.inv(T_obs) @ T_prior
-            prior_confidence = float(np.clip(1.0 - p_prior_risk, 0.0, 1.0))
-            alpha = np.clip(
-                0.35 * prior_confidence * drift_penalty,
-                0.05,
-                0.35,
-            )
+            alpha = relative_alpha(E_obs_hat_cm, E_prior_hat_cm, mode=2)
+            state["last_fusion_alpha"] = float(alpha)
             T_final = T_obs @ se3_exp_map(alpha * se3_log_map(T_delta))
             state["prior_streak"] = prior_streak + 1
             state["prior_drift_score"] = min(
@@ -3966,17 +3741,18 @@ def b5_transition(
         else:
             current_mode = "MODE_3_UNCERTAIN_FUSION"
             T_delta = np.linalg.inv(T_obs) @ T_prior
-            raw_advantage_cm = max(0.0, E_obs_hat_cm - E_prior_hat_cm)
-            advantage_ratio = raw_advantage_cm / max(E_obs_hat_cm, 1e-6)
-            prior_confidence = float(np.clip(1.0 - p_prior_risk, 0.0, 1.0))
-            alpha = np.clip(
-                0.15
-                * min(1.0, advantage_ratio)
-                * prior_confidence
-                * drift_penalty,
-                0.0,
-                0.15,
-            )
+            if prior_streak >= int(max_prior_streak):
+                # User-requested exception: retain the original weak-fusion
+                # brake after five consecutive MODE2 frames. No recovery call.
+                advantage_ratio = max(0.0, E_obs_hat_cm-E_prior_hat_cm)/max(E_obs_hat_cm, 1e-6)
+                # Preserve the legacy formula's scale; change only its clipping bounds.
+                alpha = float(np.clip(B5_POLICY_CONFIG["legacy_weak_scale"] * min(1.0, advantage_ratio)
+                    * (1.0-p_prior_risk) * drift_penalty,
+                    B5_POLICY_CONFIG["legacy_weak_min_alpha"], B5_POLICY_CONFIG["legacy_weak_max_alpha"]))
+                state["last_forced_streak_reset"] = True
+            else:
+                alpha = relative_alpha(E_obs_hat_cm, E_prior_hat_cm, mode=3)
+            state["last_fusion_alpha"] = float(alpha)
             T_final = T_obs @ se3_exp_map(alpha * se3_log_map(T_delta))
             state["prior_streak"] = 0
             state["prior_drift_score"] = PRIOR_DRIFT_DECAY * prior_drift_score

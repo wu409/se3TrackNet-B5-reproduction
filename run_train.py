@@ -23,7 +23,7 @@ import sys
 import uuid
 
 REPO = Path(__file__).resolve().parent
-TRAIN_BASES = ("mustard0", "bleach0", "bleach_hard_00_03_chaitanya")
+TRAIN_BASES = ("mustard_easy_00_02","mustard0", "bleach0", "bleach_hard_00_03_chaitanya")
 CONDITIONS = ("_clean", "_black10", "_black10_2", "_black10_3", "_black10_4",
               "_black10_5", "_occ40", "_occ60", "_drop60")
 SEQUENCE_OBJECTS = {
@@ -115,8 +115,7 @@ def sequence_inventory(gt_root):
             "sequences": rows,
             "unlisted_directories": sorted(p.name for p in gt_root.iterdir()
                                            if p.is_dir() and p.name not in SEQUENCE_OBJECTS),
-            "note": "Reserved means excluded here, not certification of an untouched test set. "
-                    "mustard_easy_00_02 shares the mustard training object; confirm its prior use separately."}
+            "note": "Reserved means excluded here, not certification of an untouched test set. "}
 
 
 def preflight_frames(dataset_root, gt_root, result_root):

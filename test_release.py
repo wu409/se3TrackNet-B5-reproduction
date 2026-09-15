@@ -4,6 +4,7 @@ The shell is the user entry point. Five confirmed untouched sequences are the
 default test population. No inference is run by --check-only.
 """
 import argparse
+import ast
 import csv
 from datetime import datetime, timezone
 import hashlib
@@ -65,6 +66,10 @@ def verify_release(release):
         raise ValueError("Release checksum list lacks required files: " + str(sorted(required - checked)))
     cfg = read_json(release / "artifacts/shared_quality_config.json")
     effective = read_json(release / "effective_config.json")
+    if cfg.get("recovery_gate_config") and "source/recovery_gate.py" not in checked:
+        raise ValueError("Frozen release lacks checksummed recovery_gate.py")
+    if cfg.get("b5_policy_config") and "source/b5_revision.py" not in checked:
+        raise ValueError("Frozen release lacks checksummed b5_revision.py")
     if (cfg.get("training_mode") != "final_development_fit" or cfg.get("held_out_base") is not None
             or set(cfg.get("train_bases", [])) != TRAIN or set(cfg.get("fit_conditions", [])) != set(CONDITIONS)):
         raise ValueError("Unexpected final-training population/conditions")
@@ -266,8 +271,14 @@ def main(argv=None):
     p.add_argument("--release", required=True, help="Exact completed training release; never auto-select latest")
     p.add_argument("--output", help="New output directory outside the frozen release")
     p.add_argument("--check-only", action="store_true")
+    p.add_argument("--recovery-gate-revision", choices=["frozen", "occlusion-aware-dev"], default="frozen",
+                   help="Explicit post-test diagnostic gate revision; never presented as untouched testing")
+    p.add_argument("--b5-policy-revision", choices=["frozen", "relative-quality-dev"], default="frozen",
+                   help="New fusion + accepted recovery history reset; includes occlusion-aware gate; diagnostic only")
     p.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(VARIANTS))
     args = p.parse_args(argv)
+    if args.b5_policy_revision != "frozen":
+        args.recovery_gate_revision = "occlusion-aware-dev"
     if len(args.variants) != len(set(args.variants)):
         raise ValueError("Duplicate variants")
     release = Path(args.release).expanduser().resolve()
@@ -288,12 +299,63 @@ def main(argv=None):
     shutil.copy2(ROOT / "3-train_evaluation.py", output / "source/3-train_evaluation.py")
     shutil.copy2(Path(__file__), output / "source/test_release.py")
     shutil.copy2(ROOT / "run_test.sh", output / "source/run_test.sh")
+    gate_config = cfg.get("recovery_gate_config", {"version": "legacy_frozen"})
+    policy_config = cfg.get("b5_policy_config", {"version": "legacy_frozen"})
+    if args.recovery_gate_revision != "frozen":
+        # Change ONLY the gate definition in the copied frozen B5. Do not adopt
+        # unrelated local tracking changes or alter the original release.
+        target = output / "source/b5_policy.py"
+        original = target.read_text(encoding="utf-8-sig")
+        local = (ROOT / "b5_policy.py").read_text(encoding="utf-8-sig")
+        def gate_node(source):
+            found = [n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)
+                     and n.name == "evaluate_recovery_pose_validity"]
+            if len(found) != 1:
+                raise ValueError("Expected exactly one recovery gate definition")
+            return found[0]
+        a, b = gate_node(original), gate_node(local)
+        lines, replacement = original.splitlines(True), local.splitlines(True)
+        revised = "".join(lines[:a.lineno-1] + replacement[b.lineno-1:b.end_lineno] + lines[a.end_lineno:])
+        ast.parse(revised)
+        target.write_text(revised, encoding="utf-8")
+        shutil.copy2(ROOT / "recovery_gate.py", output / "source/recovery_gate.py")
+        from recovery_gate import CONFIG
+        gate_config = dict(CONFIG)
+        print("POST-TEST DIAGNOSTIC: unvalidated occlusion-aware gate; model unchanged", flush=True)
+    if args.b5_policy_revision != "frozen":
+        # Replace the transition only; preserve frozen perception/recovery code.
+        target = output / "source/b5_policy.py"
+        original = target.read_text(encoding="utf-8-sig")
+        local = (ROOT / "b5_policy.py").read_text(encoding="utf-8-sig")
+        def transition_node(source):
+            found = [n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)
+                     and n.name == "b5_transition"]
+            if len(found) != 1:
+                raise ValueError("Expected exactly one B5 transition")
+            return found[0]
+        a, b = transition_node(original), transition_node(local)
+        lines, replacement = original.splitlines(True), local.splitlines(True)
+        revised = "".join(lines[:a.lineno-1] + replacement[b.lineno-1:b.end_lineno] + lines[a.end_lineno:])
+        revised += "\nfrom b5_revision import CONFIG as B5_POLICY_CONFIG\n"
+        ast.parse(revised)
+        target.write_text(revised, encoding="utf-8")
+        shutil.copy2(ROOT / "b5_revision.py", output / "source/b5_revision.py")
+        from b5_revision import CONFIG as POLICY_CONFIG
+        policy_config = dict(POLICY_CONFIG)
+        print("POST-TEST DIAGNOSTIC: revised fusion/history; original quality model not refitted", flush=True)
     sources = {str(x.resolve()): sha(x) for x in (output / "source").rglob("*") if x.is_file()}
     dump(output / "test_input_hashes.json", inputs)
     dump(output / "test_source_hashes.json", sources)
     git = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True) if shutil.which("git") else None
     status = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"], capture_output=True, text=True) if git and git.returncode == 0 else None
     protocol = dict(created_utc=datetime.now(timezone.utc).isoformat(), training_release=str(release),
+        recovery_gate_revision=args.recovery_gate_revision, recovery_gate_config=gate_config,
+        b5_policy_revision=args.b5_policy_revision, b5_policy_config=policy_config,
+        model_policy_training_match=("diagnostic_policy_override_no_refit" if args.b5_policy_revision != "frozen"
+                                     else "release_policy"),
+        evaluation_status=("post_test_diagnostic_not_untouched" if args.recovery_gate_revision != "frozen"
+                           or gate_config.get("status") == "development_unvalidated"
+                           or policy_config.get("status") == "development_unvalidated" else "frozen_protocol"),
         reference_manifest_sha256=sha(release / "reference_manifest.csv"), test_sequences=TEST,
         conditions=list(CONDITIONS), variants=args.variants, frames_per_variant=nframes,
         p_risk_threshold=cfg["p_risk_threshold"], risk_threshold_cm=cfg["risk_threshold_cm"],
@@ -337,7 +399,10 @@ def main(argv=None):
             raise ValueError("Test input/source changed during evaluation: " + path)
     verify_release(release)
     summarize(output, args.variants, cfg["seed"])
-    dump(output / "COMPLETE.json", {"status": "frozen_test_complete", "training_release": str(release),
+    dump(output / "COMPLETE.json", {"status": ("post_test_diagnostic_complete"
+                                   if protocol["evaluation_status"] != "frozen_protocol" else "frozen_test_complete"),
+                                   "recovery_gate_config": gate_config, "training_release": str(release),
+                                   "b5_policy_config": policy_config,
                                    "variants": args.variants, "test_sequences": list(TEST)})
     print("Frozen testing complete:", output)
     return output
