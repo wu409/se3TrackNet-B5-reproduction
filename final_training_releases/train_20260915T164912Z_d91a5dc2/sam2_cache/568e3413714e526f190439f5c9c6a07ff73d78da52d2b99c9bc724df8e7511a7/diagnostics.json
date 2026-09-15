@@ -1,0 +1,10 @@
+{
+  "sam2_called": true,
+  "sam2_subprocess_started": true,
+  "sam2_error": null,
+  "sam2_mask_pixels": 2667,
+  "sam2_frames_supplied": 101,
+  "sam2_target_index": 100,
+  "sam2_propagated_frames": 101,
+  "sam2_logit_median_foreground": 7.819857597351074
+}

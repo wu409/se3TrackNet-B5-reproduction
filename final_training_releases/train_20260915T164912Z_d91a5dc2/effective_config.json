@@ -1,0 +1,345 @@
+{
+  "status": "prepared_not_frozen",
+  "created_utc": "2026-09-15T16:50:23.367826+00:00",
+  "training_manifest": "/root/autodl-tmp/se3TrackNet-B5-reproduction/final_training_releases/train_20260915T164912Z_d91a5dc2/reference_manifest.csv",
+  "manifest_mode": "single_reference",
+  "training_selection": [
+    {
+      "sequence": "bleach0_black10",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_black10_2",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_black10_3",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_black10_4",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_black10_5",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_clean",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_drop60",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_occ40",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach0_occ60",
+      "frames": 663,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 464,
+      "cal_index_start": 464,
+      "cal_index_stop_exclusive": 663
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_2",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_3",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_4",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_5",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_clean",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_drop60",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_occ40",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_occ60",
+      "frames": 441,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 308,
+      "cal_index_start": 308,
+      "cal_index_stop_exclusive": 441
+    },
+    {
+      "sequence": "mustard0_black10",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_black10_2",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_black10_3",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_black10_4",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_black10_5",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_clean",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_drop60",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_occ40",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard0_occ60",
+      "frames": 737,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 515,
+      "cal_index_start": 515,
+      "cal_index_stop_exclusive": 737
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_2",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_3",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_4",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_5",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_clean",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_drop60",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_occ40",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    },
+    {
+      "sequence": "mustard_easy_00_02_occ60",
+      "frames": 689,
+      "train_index_start": 0,
+      "train_index_stop_exclusive": 482,
+      "cal_index_start": 482,
+      "cal_index_stop_exclusive": 689
+    }
+  ],
+  "train_bases": [
+    "mustard_easy_00_02",
+    "mustard0",
+    "bleach0",
+    "bleach_hard_00_03_chaitanya"
+  ],
+  "conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "held_out_base": null,
+  "train_fraction": 0.7,
+  "on_policy_refine_rounds": 1,
+  "seed": 42,
+  "risk_threshold_cm": 1.0,
+  "prior_advantage_margin_cm": 0.1,
+  "blackout_min_frames": 10,
+  "foundationpose_refine_iter": 5,
+  "test_data_used": false,
+  "test_data_used_for_fitting": false,
+  "manifest_contains_reserved_sequences": true,
+  "backbone_retrained": false,
+  "backbone_observations": "existing per-frame predictions, content-hashed",
+  "bitwise_determinism_guaranteed": false,
+  "paths": {
+    "TRAIN_PYTHON": "/root/autodl-tmp/conda-envs/b5-main/bin/python3.8",
+    "DATASET_ROOT": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT_Corrupted",
+    "GT_ROOT": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT",
+    "RESULT_ROOT": "/root/autodl-tmp/se3TrackNet-B5-reproduction/results_collection",
+    "CAD_MODEL_ROOT": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels",
+    "FOUNDATIONPOSE_PYTHON": "/root/autodl-tmp/conda-envs/foundationpose/bin/python3.10",
+    "FOUNDATIONPOSE_DIR": "/root/autodl-tmp/FoundationPose",
+    "FOUNDATIONPOSE_REFINER_WEIGHT": "/root/autodl-tmp/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth",
+    "FOUNDATIONPOSE_SCORER_WEIGHT": "/root/autodl-tmp/FoundationPose/weights/2024-01-11-20-02-45/model_best.pth",
+    "SAM2_PYTHON": "/root/autodl-tmp/conda-envs/sam2/bin/python3.10",
+    "SAM2_DIR": "/root/autodl-tmp/sam2",
+    "SAM2_CONFIG": "configs/sam2.1/sam2.1_hiera_l.yaml",
+    "SAM2_CHECKPOINT": "/root/autodl-tmp/sam2/checkpoints/sam2.1_hiera_large.pt",
+    "PYOPENGL_PLATFORM": "egl",
+    "PYTHONHASHSEED": "42",
+    "TRAIN_CONDITIONS_JSON": "[\"_clean\", \"_black10\", \"_black10_2\", \"_black10_3\", \"_black10_4\", \"_black10_5\", \"_occ40\", \"_occ60\", \"_drop60\"]"
+  }
+}
