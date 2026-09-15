@@ -17,7 +17,7 @@ import sys
 import uuid
 
 ROOT = Path(__file__).resolve().parent
-TRAIN = {"mustard0", "bleach0", "bleach_hard_00_03_chaitanya"}
+TRAIN = {"mustard_easy_00_02","mustard0", "bleach0", "bleach_hard_00_03_chaitanya"}
 TEST = {
     "cracker_box_reorient": "003_cracker_box",
     "cracker_box_yalehand0": "003_cracker_box",
@@ -27,7 +27,8 @@ TEST = {
 }
 CONDITIONS = ("_clean", "_black10", "_black10_2", "_black10_3", "_black10_4",
               "_black10_5", "_occ40", "_occ60", "_drop60")
-VARIANTS = ("full", "simple", "no_absolute_gate", "no_relative_advantage")
+DEFAULT_VARIANTS = ("full", "simple", "no_absolute_gate", "no_relative_advantage")
+VARIANTS = DEFAULT_VARIANTS + ("no_quality", "no_rollout", "no_recovery_admission")
 
 
 def sha(path):
@@ -164,7 +165,7 @@ def command_for(release, output, cfg, effective, base, variant):
     cmd = [sys.executable, "-u", "-B", str(output / "source/3-train_evaluation.py"),
            "--frozen_test", "--policy_variant", variant,
            "--manifest_path", str(release / "reference_manifest.csv"),
-           "--train_seqs", "mustard0", "bleach0", "bleach_hard_00_03_chaitanya",
+           "--train_seqs", "mustard_easy_00_02", "mustard0", "bleach0", "bleach_hard_00_03_chaitanya",
            "--test_base_seq", base, "--result_dir",
            *(str(Path(paths["RESULT_ROOT"]) / base / (base+c)) for c in CONDITIONS),
            "--gt_dir", str(Path(paths["GT_ROOT"]) / base / "annotated_poses"),
@@ -275,7 +276,7 @@ def main(argv=None):
                    help="Explicit post-test diagnostic gate revision; never presented as untouched testing")
     p.add_argument("--b5-policy-revision", choices=["frozen", "relative-quality-dev"], default="frozen",
                    help="New fusion + accepted recovery history reset; includes occlusion-aware gate; diagnostic only")
-    p.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(VARIANTS))
+    p.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(DEFAULT_VARIANTS))
     args = p.parse_args(argv)
     if args.b5_policy_revision != "frozen":
         args.recovery_gate_revision = "occlusion-aware-dev"
@@ -288,6 +289,9 @@ def main(argv=None):
         raise ValueError("Output must be new and outside the frozen training release")
     print("Verifying frozen model/source/component/input hashes...", flush=True)
     cfg, effective = verify_release(release)
+    if "no_rollout" in args.variants and (cfg.get("on_policy_refine_rounds") != 0
+                                         or effective.get("on_policy_refine_rounds") != 0):
+        raise ValueError("no_rollout requires its separately trained and frozen q0 release")
     paths = effective["paths"]
     if Path(sys.executable).resolve() != Path(paths["TRAIN_PYTHON"]).resolve():
         raise ValueError("Use the frozen training Python via TEST_PYTHON=" + paths["TRAIN_PYTHON"])
@@ -299,6 +303,8 @@ def main(argv=None):
     shutil.copy2(ROOT / "3-train_evaluation.py", output / "source/3-train_evaluation.py")
     shutil.copy2(Path(__file__), output / "source/test_release.py")
     shutil.copy2(ROOT / "run_test.sh", output / "source/run_test.sh")
+    if "no_recovery_admission" in args.variants:
+        shutil.copy2(ROOT / "ablation_policy.py", output / "source/ablation_policy.py")
     gate_config = cfg.get("recovery_gate_config", {"version": "legacy_frozen"})
     policy_config = cfg.get("b5_policy_config", {"version": "legacy_frozen"})
     if args.recovery_gate_revision != "frozen":
@@ -370,7 +376,12 @@ def main(argv=None):
         timing_simple="quality is computed for diagnostics but excluded from simple-policy time; no learned score affects simple decisions",
         test_gt="offline scoring only; first-frame init_mask is an allowed input",
         uncertainty="sequence/object clustered, never independent-frame CI; primary object bootstrap has only n=3",
-        additional_ablations_pending=["stateful drift penalty/streak limit", "recovery admission gate"],
+        ablation_definitions={"no_quality": "exact alias of simple; scores computed only for diagnostics",
+            "no_rollout": "q0 obs-only bootstrap; zero policy-induced refits; own development calibration",
+            "no_recovery_admission": "same raw generator/triggers; SE3 matrix safety only",
+            "no_absolute_gate": "disable low-risk observation acceptance; retain quality prediction",
+            "no_relative_advantage": "equalize predicted errors; retain absolute observation risk"},
+        additional_ablations_pending=["stateful drift penalty/streak limit"],
         environment={k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "PYOPENGL_PLATFORM")})
     dump(output / "test_protocol.json", protocol)
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONDONTWRITEBYTECODE="1",

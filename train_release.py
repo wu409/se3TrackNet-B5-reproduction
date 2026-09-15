@@ -9,10 +9,10 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-BASES = ["mustard0", "bleach0", "bleach_hard_00_03_chaitanya"]
+BASES = ["mustard_easy_00_02","mustard0", "bleach0", "bleach_hard_00_03_chaitanya"]
 CONDITIONS = ["_clean", "_black10", "_occ40", "_occ60", "_drop60"]
 EXTENDED_CONDITIONS = CONDITIONS + ["_black10_2", "_black10_3", "_black10_4", "_black10_5"]
-CAD = {"mustard0": "006_mustard_bottle", "bleach0": "021_bleach_cleanser",
+CAD = {"mustard_easy_00_02": "006_mustard_bottle", "mustard0": "006_mustard_bottle", "bleach0": "021_bleach_cleanser",
        "bleach_hard_00_03_chaitanya": "021_bleach_cleanser"}
 FIELDS = ("rgb", "depth", "gt", "pred")
 
