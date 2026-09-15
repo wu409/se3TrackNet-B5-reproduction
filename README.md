@@ -5,30 +5,30 @@ python 0-corruption.py --dataset_base ./datasets/YCBInEOAT --out_dir ./datasets/
 
 Step2: Run SE(3)TrackNet predition.py to generates predictions in ./results/bleach0/, using the datasets you want to predict:
 '''
-python predict.py ^ --mode ycbineoat --YCBInEOAT_dir datasets\YCBInEOAT\bleach_hard_00_03_chaitanya --train_data_path datasets\YCBInEOAT_data\bleach_cleanser\train_data_blender_DR --ckpt_dir YCBInEOAT_weights\bleach_cleanser\model_best_val.pth.tar --mean_std_path YCBInEOAT_weights\bleach_cleanser --class_id 12 --model_path datasets\YCB_Video_Models\CADmodels\021_bleach_cleanser\textured.obj --outdir results/bleach_hard_00_03_chaitanya_black10
+python predict.py ^
+--mode ycbineoat ^
+--YCBInEOAT_dir datasets\YCBInEOAT\mustard0 ^
+--train_data_path datasets\YCBInEOAT_data\mustard_bottle\train_data_blender_DR ^
+--ckpt_dir YCBInEOAT_weights\mustard_bottle\model_best_val.pth.tar ^
+--mean_std_path YCBInEOAT_weights\mustard_bottle ^
+--class_id 5 ^
+--model_path datasets\YCB_Video_Models\CADmodels\006_mustard_bottle\textured.obj ^
+--outdir results_collection/mustard0/mustard0_clean
 '''
 
-Step 3: Evaluating ADD / ADD-S AUC metrics on prediction 
+
+Step 3：Check and Train with optional sequences:
 '''
-python eval_ycbineoat.py --YCBInEOAT_dir ./datasets/YCBInEOAT --class_id 12 --ycb_dir ./datasets/YCB_Video_Models/ --res_dir ./results/
-'''
+export OMP_NUM_THREADS=1
 
-Step 4: Modifying the config file: ''manifest_config.json''
-
-
-Step5:  One-Step running
-## Reference manifest generation
-
-The first execution of run.sh automatically creates
-reference_manifest.csv using the official YCBInEOAT sorted-index protocol.
-
-If reference_manifest.csv already exists, it is treated as frozen and
-will not be regenerated.
-
-Every subsequent run verifies runtime inputs against the frozen manifest
-using SHA-256 hashes before evaluation.
-
-'''
-bash run.sh
+bash run_train.sh
 '''
 
+Step 4: Test with ''full'' mode or ''simple'' mode or  together
+'''
+export OMP_NUM_THREADS=4
+
+bash run_test.sh --release /root/autodl-tmp/se3TrackNet-B5-reproduction/final_training_releases/train_20260914T125211Z_5a329d44  --variants full simple --check-only
+
+bash run_test.sh --release /root/autodl-tmp/se3TrackNet-B5-reproduction/final_training_releases/train_20260914T125211Z_5a329d44  --variants full simple 
+'''
