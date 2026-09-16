@@ -1,8 +1,0 @@
-
-[Frozen shared pose-quality model]
-held-out base       : None
-train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
-p_risk_threshold    : 0.6
-risk threshold (cm) : 1.0
-advantage margin cm : 0.1
-Frozen feature implementation and model imports validated; no inference executed.
