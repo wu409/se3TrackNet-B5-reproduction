@@ -63,7 +63,7 @@ def assert_matched(full, q0):
         raise ValueError("No-rollout release must have zero refits")
     for key in ("seed", "train_fraction", "risk_threshold_cm", "prior_advantage_margin_cm",
                 "train_bases", "fit_conditions", "feature_columns", "target", "manifest_sha256",
-                "b5_policy_config", "recovery_gate_config"):
+                "b5_policy_config", "recovery_gate_config", "observer_config_sha256"):
         if fc.get(key) != qc.get(key):
             raise ValueError("Full/q0 settings differ: " + key)
     for key in ("paths", "training_selection", "blackout_min_frames", "foundationpose_refine_iter"):
@@ -148,7 +148,7 @@ def train_no_rollout(args):
         evaluation_status="post_test_diagnostic_not_untouched", command=command))
     subprocess.run([env["TRAIN_PYTHON"], "-B", str(stage / "train_release.py"),
                     "prepare-generated"], env=env, cwd=stage, check=True)
-    for name in ("training_pip_freeze.txt", "sam2_pip_freeze.txt", "foundationpose_pip_freeze.txt"):
+    for name in ("training_pip_freeze.txt", "sam2_pip_freeze.txt", "foundationpose_pip_freeze.txt", "se3_pip_freeze.txt"):
         if (parent / name).read_text().splitlines() != (release / name).read_text().splitlines():
             raise ValueError("Environment differs from full training: " + name)
     # Bind provenance into the child freeze, without touching the original release.
@@ -159,6 +159,8 @@ def train_no_rollout(args):
         return output
     subprocess.run([env["TRAIN_PYTHON"], "-B", "-c",
                     "import torch; assert torch.cuda.is_available(), 'GPU unavailable'"], env=env, check=True)
+    subprocess.run([env['SE3_PYTHON'], '-B', '-c',
+                    "import torch; assert torch.cuda.is_available(), 'SE3 observer Python has no usable CUDA'"], env=env, check=True)
     (release / "artifacts").mkdir()
     runner.run(command, env, release, release / "training.log")
     subprocess.run([env["TRAIN_PYTHON"], "-B", str(release / "source/train_release.py"), "seal"],
@@ -173,13 +175,17 @@ def verify_result(run, parent, required):
     run = Path(run).expanduser().resolve()
     done = evaluation.read_json(run / "COMPLETE.json")
     protocol = evaluation.read_json(run / "test_protocol.json")
+    if protocol.get('b5_policy_config', {}).get('version') != 'four_mode_relocalization_v2':
+        raise ValueError('Old full/simple results are not matching four-mode v2 controls')
+    if protocol.get('training_freeze_sha256') != evaluation.sha(parent/'freeze.sha256'):
+        raise ValueError('Full-result training freeze identity mismatch')
     if Path(protocol["training_release"]).resolve() != parent or not set(required) <= set(done["variants"]):
         raise ValueError("Existing full results do not belong to this release/variants")
     if protocol.get("b5_policy_revision", "frozen") != "frozen" or protocol.get("recovery_gate_revision", "frozen") != "frozen":
         raise ValueError("Existing results override the parent policy; not a matched control")
     if protocol["test_sequences"] != evaluation.TEST or tuple(protocol["conditions"]) != evaluation.CONDITIONS:
         raise ValueError("Existing result population mismatch")
-    for name in ("test_source_hashes.json", "test_input_hashes.json"):
+    for name in ("test_source_hashes.json", "test_input_hashes.json", "result_hashes.json"):
         for path, digest in evaluation.read_json(run / name).items():
             if evaluation.sha(path) != digest:
                 raise ValueError("Existing run source/input changed: " + path)
@@ -196,13 +202,11 @@ def evaluate(args):
     if (Path(provenance["parent_release"]).resolve() != parent
             or provenance["parent_freeze_sha256"] != evaluation.sha(parent / "freeze.sha256")):
         raise ValueError("q0 was not derived from this exact full release")
-    for name in ("b5_policy.py", "b5_revision.py", "recovery_gate.py"):
+    for name in ("b5_policy.py", "b5_revision.py", "recovery_gate.py", "online_observer.py", "pose_safety.py", "predict.py"):
         if evaluation.sha(parent / "source" / name) != evaluation.sha(q0 / "source" / name):
             raise ValueError("Full/q0 policy source mismatch: " + name)
     existing = verify_result(args.full_results, parent, ["full"]) if args.full_results else None
     variants = ["no_recovery_admission"]
-    if args.with_decision_subablations:
-        variants += ["no_absolute_gate", "no_relative_advantage"]
     reuse_simple = bool(existing and "simple" in evaluation.read_json(existing / "COMPLETE.json")["variants"])
     if not reuse_simple:
         variants.append("no_quality")
@@ -221,7 +225,8 @@ def evaluate(args):
         variants=variants, evaluation_status="post_test_diagnostic_not_untouched"))
     extra = ["--check-only"] if args.check_only else []
     controls = evaluation.main(["--release", str(parent), "--output", str(output / "controls"),
-                                "--variants", *variants, *extra])
+                                "--variants", *variants, *extra,
+                                *(["--reference-full-results", str(existing)] if existing else [])])
     q0_run = evaluation.main(["--release", str(q0), "--output", str(output / "no_rollout"),
                               "--variants", "no_rollout", *extra])
     if args.check_only:
@@ -242,8 +247,6 @@ def main(argv=None):
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--no-rollout-release")
     parser.add_argument("--full-results", help="Optional completed full/simple run from this exact release")
-    parser.add_argument("--with-decision-subablations", action="store_true",
-                        help="Also run no_absolute_gate/no_relative_advantage; optional, not default")
     args = parser.parse_args(argv)
     if args.action == "evaluate" and not args.no_rollout_release:
         parser.error("evaluate requires --no-rollout-release (train it first)")

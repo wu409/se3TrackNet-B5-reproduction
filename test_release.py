@@ -31,7 +31,7 @@ TEST = {
 }
 CONDITIONS = ("_clean", "_black10", "_black10_2", "_black10_3", "_black10_4",
               "_black10_5", "_occ40", "_occ60", "_drop60")
-DEFAULT_VARIANTS = ("full", "simple", "no_absolute_gate", "no_relative_advantage")
+DEFAULT_VARIANTS = ("full", "simple")
 VARIANTS = DEFAULT_VARIANTS + ("no_quality", "no_rollout", "no_recovery_admission")
 
 
@@ -70,7 +70,18 @@ def verify_release(release):
     if not required <= checked:
         raise ValueError("Release checksum list lacks required files: " + str(sorted(required - checked)))
     cfg = read_json(release / "artifacts/shared_quality_config.json")
+    from b5_revision import CONFIG
+    if cfg.get('b5_policy_config') != CONFIG:
+        raise ValueError('Use a newly trained four-mode v2 release; old releases cannot be retrofitted')
+    required_v2 = {'observer_config.json', 'source/online_observer.py', 'source/pose_safety.py',
+                   'source/predict.py', 'source/matched_schedule.py', 'source/b5_revision.py'}
+    if not required_v2 <= checked:
+        raise ValueError('Missing frozen restart implementation/config: ' + str(required_v2 - checked))
+    if cfg.get('observer_config_sha256') != sha(release/'observer_config.json'):
+        raise ValueError('Wrong frozen observer configuration')
     effective = read_json(release / "effective_config.json")
+    if effective.get('observer_config_sha256') != cfg['observer_config_sha256']:
+        raise ValueError('Effective/model observer configurations disagree')
     if cfg.get("recovery_gate_config") and "source/recovery_gate.py" not in checked:
         raise ValueError("Frozen release lacks checksummed recovery_gate.py")
     if cfg.get("b5_policy_config") and "source/b5_revision.py" not in checked:
@@ -165,11 +176,48 @@ def audit_test_inputs(release, paths):
     return inventory, len(selected)
 
 
-def command_for(release, output, cfg, effective, base, variant):
+def scan_test_images(manifest, paths):
+    """Decode, don't merely hash: a frozen truncated PNG still has a valid hash."""
+    import cv2
+    from PIL import Image, ImageFile
+    with Path(manifest).open(encoding='utf-8-sig', newline='') as stream:
+        rows = list(csv.DictReader(stream))
+    images = {}
+    for row in rows:
+        if not any(row['sequence'] == b+c for b in TEST for c in CONDITIONS):
+            continue
+        for kind in ('rgb', 'depth'):
+            p = Path(row[kind+'_path'].replace('\\', '/'))
+            p = p if p.is_absolute() else Path(paths['DATASET_ROOT'])/p
+            images[str(p.resolve())] = kind
+    for base in TEST:
+        images[str((Path(paths['GT_ROOT'])/base/'init_mask.png').resolve())] = 'mask'
+    errors = []
+    previous = ImageFile.LOAD_TRUNCATED_IMAGES
+    ImageFile.LOAD_TRUNCATED_IMAGES = False
+    try:
+        for path, kind in images.items():
+            try:
+                with Image.open(path) as im:
+                    im.verify()
+                with Image.open(path) as im:
+                    im.load()
+                decoded = cv2.imread(path, cv2.IMREAD_COLOR if kind == 'rgb' else cv2.IMREAD_UNCHANGED)
+                if decoded is None or decoded.size == 0:
+                    raise ValueError('OpenCV cannot decode image')
+            except Exception as exc:
+                errors.append(dict(path=path, kind=kind, error=str(exc)))
+    finally:
+        ImageFile.LOAD_TRUNCATED_IMAGES = previous
+    return dict(passed=not errors, checked_images=len(images), errors=errors)
+
+
+def command_for(release, output, cfg, effective, base, variant, reference_full=None):
     paths = effective["paths"]
     work = output / variant / base
     cmd = [sys.executable, "-u", "-B", str(output / "source/3-train_evaluation.py"),
            "--frozen_test", "--policy_variant", variant,
+           "--observer_config", str(release / "observer_config.json"),
            "--manifest_path", str(release / "reference_manifest.csv"),
            "--train_seqs", *cfg["train_bases"],
            "--test_base_seq", base, "--result_dir",
@@ -193,6 +241,9 @@ def command_for(release, output, cfg, effective, base, variant):
     for kind, name in (("model", "shared_pose_quality_model.joblib"), ("scaler", "shared_pose_quality_scaler.joblib"),
                        ("calibrator", "shared_risk_calibrator.joblib"), ("config", "shared_quality_config.json")):
         cmd += ["--shared_" + kind + "_path", str(release / "artifacts" / name)]
+    if variant in ('simple', 'no_quality'):
+        reference = Path(reference_full) if reference_full else output
+        cmd += ['--reference_full_dir', str(reference/'full'/base)]
     return cmd, work
 
 
@@ -212,7 +263,7 @@ def run_logged(command, work, env):
 def summarize(output, variants, seed):
     import numpy as np
     import pandas as pd
-    episode_rows, recoveries, calibrations = [], [], []
+    episode_rows, recoveries, calibrations, relocalizations = [], [], [], []
     for variant in variants:
         for base, obj in TEST.items():
             work = output / variant / base
@@ -222,7 +273,10 @@ def summarize(output, variants, seed):
                 if len(files) != 1:
                     raise ValueError("Missing/ambiguous episode output: " + seq)
                 df = pd.read_csv(files[0])
-                normal = df["recovery_attempted"] == 0
+                normal = (df["recovery_attempted"] == 0) & (df["relocalization_attempted"] == 0)
+                reloc = pd.read_csv(work / ("checkpoint2_relocalization_" + seq + ".csv"))
+                reloc["variant"], reloc["base_sequence"], reloc["object_id"] = variant, base, obj
+                relocalizations.append(reloc)
                 def auc10(values):
                     thresholds = np.linspace(0, 10, 1000)
                     acc = [np.mean(np.asarray(values) <= t) for t in thresholds]
@@ -235,8 +289,16 @@ def summarize(output, variants, seed):
                     failure_2cm_percent=float(np.mean(df["error_b5_ours_cm"] > 2.0)*100),
                     both_candidates_bad_percent=float(df["both_candidates_bad"].mean()*100),
                     ordinary_policy_ms=float(df.loc[normal, "policy_wall_ms"].mean()),
+                    measured_online_path_ms=float(df["policy_wall_ms"].mean()),
+                    observer_ms=float(df["observer_wall_ms"].mean()),
+                    observer_restarts=int(df["observer_restart"].sum()),
+                    relocalization_calls=int(df["relocalization_attempted"].sum()),
+                    relocalization_generated=int(df["relocalization_generated"].sum()),
+                    relocalization_used=int(df["relocalization_used"].sum()),
+                    relocalization_total_ms=float(df["relocalization_wall_ms"].sum()),
+                    uncertain_percent=float(df["output_uncertain"].mean()*100),
                     quality_diagnostic_ms=float(df["quality_wall_ms"].mean()),
-                    recovery_transition_ms=float(df.loc[~normal, "transition_wall_ms"].mean()),
+                    recovery_transition_ms=float(df.loc[df.recovery_attempted == 1, "transition_wall_ms"].mean()),
                     sam2_cache_hits=int(df["sam2_cache_hit"].sum())))
             rec = pd.read_csv(next(work.glob("checkpoint2_recovery_decomposition_*.csv")))
             rec = rec[rec.row_type == "event"].copy()
@@ -250,6 +312,7 @@ def summarize(output, variants, seed):
     numeric = [c for c in episodes.select_dtypes(include=[np.number]).columns if c != "frames"]
     seqs = episodes.groupby(["variant", "base_sequence", "object_id"], as_index=False)[numeric].mean()
     seqs.to_csv(output / "sequence_metrics.csv", index=False)
+    pd.concat(relocalizations, ignore_index=True).to_csv(output / "relocalization_events.csv", index=False)
     pd.concat(recoveries, ignore_index=True).to_csv(output / "recovery_events.csv", index=False)
     pd.concat(calibrations, ignore_index=True).to_csv(output / "calibration_metrics.csv", index=False)
     paired = []
@@ -278,14 +341,16 @@ def main(argv=None):
     p.add_argument("--release", required=True, help="Exact completed training release; never auto-select latest")
     p.add_argument("--output", help="New output directory outside the frozen release")
     p.add_argument("--check-only", action="store_true")
-    p.add_argument("--recovery-gate-revision", choices=["frozen", "occlusion-aware-dev"], default="frozen",
-                   help="Explicit post-test diagnostic gate revision; never presented as untouched testing")
-    p.add_argument("--b5-policy-revision", choices=["frozen", "relative-quality-dev"], default="frozen",
-                   help="New fusion + accepted recovery history reset; includes occlusion-aware gate; diagnostic only")
+    p.add_argument("--reference-full-results", help="Completed matching v2 full run for simple trigger replay")
     p.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(DEFAULT_VARIANTS))
     args = p.parse_args(argv)
-    if args.b5_policy_revision != "frozen":
-        args.recovery_gate_revision = "occlusion-aware-dev"
+    args.b5_policy_revision = args.recovery_gate_revision = 'frozen'
+    if len(args.variants) != len(set(args.variants)):
+        raise ValueError("Duplicate variants")
+    if 'full' in args.variants:
+        args.variants = ['full'] + [v for v in args.variants if v != 'full']
+    if any(v in args.variants for v in ('simple', 'no_quality')) and 'full' not in args.variants and not args.reference_full_results:
+        raise ValueError('simple/no_quality requires full in this run or --reference-full-results from the same v2 release')
     if len(args.variants) != len(set(args.variants)):
         raise ValueError("Duplicate variants")
     release = Path(args.release).expanduser().resolve()
@@ -298,12 +363,26 @@ def main(argv=None):
     if "no_rollout" in args.variants and (cfg.get("on_policy_refine_rounds") != 0
                                          or effective.get("on_policy_refine_rounds") != 0):
         raise ValueError("no_rollout requires its separately trained and frozen q0 release")
+    if cfg.get("on_policy_refine_rounds") == 0 and args.variants != ["no_rollout"]:
+        raise ValueError("A q0 release must be evaluated as no_rollout, never relabelled full/simple")
+    reference_full = None
+    reference_hashes = {}
+    if args.reference_full_results:
+        from ablation_release import verify_result
+        reference_full = verify_result(args.reference_full_results, release, ['full'])
+        for path in (reference_full/'full').rglob('checkpoint2_per_frame_*.csv'):
+            reference_hashes[str(path.resolve())] = sha(path)
     paths = effective["paths"]
     if Path(sys.executable).resolve() != Path(paths["TRAIN_PYTHON"]).resolve():
         raise ValueError("Use the frozen training Python via TEST_PYTHON=" + paths["TRAIN_PYTHON"])
     print("Auditing 5 test sequences x 9 conditions without inference...", flush=True)
     inputs, nframes = audit_test_inputs(release, paths)
     output.mkdir(parents=True, exist_ok=False)
+    print("Decoding frozen RGB/depth/initial masks (no model inference)...", flush=True)
+    decode_audit = scan_test_images(release/'reference_manifest.csv', paths)
+    dump(output/'image_decode_audit.json', decode_audit)
+    if not decode_audit['passed']:
+        raise ValueError('Image decode audit failed; inspect image_decode_audit.json. No silent repair or manifest rebuild.')
     shutil.copytree(release / "source", output / "source")
     # Adapt only evaluation; B5 and training-feature implementation stay byte-identical.
     shutil.copy2(ROOT / "3-train_evaluation.py", output / "source/3-train_evaluation.py")
@@ -313,54 +392,17 @@ def main(argv=None):
         shutil.copy2(ROOT / "ablation_policy.py", output / "source/ablation_policy.py")
     gate_config = cfg.get("recovery_gate_config", {"version": "legacy_frozen"})
     policy_config = cfg.get("b5_policy_config", {"version": "legacy_frozen"})
-    if args.recovery_gate_revision != "frozen":
-        # Change ONLY the gate definition in the copied frozen B5. Do not adopt
-        # unrelated local tracking changes or alter the original release.
-        target = output / "source/b5_policy.py"
-        original = target.read_text(encoding="utf-8-sig")
-        local = (ROOT / "b5_policy.py").read_text(encoding="utf-8-sig")
-        def gate_node(source):
-            found = [n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)
-                     and n.name == "evaluate_recovery_pose_validity"]
-            if len(found) != 1:
-                raise ValueError("Expected exactly one recovery gate definition")
-            return found[0]
-        a, b = gate_node(original), gate_node(local)
-        lines, replacement = original.splitlines(True), local.splitlines(True)
-        revised = "".join(lines[:a.lineno-1] + replacement[b.lineno-1:b.end_lineno] + lines[a.end_lineno:])
-        ast.parse(revised)
-        target.write_text(revised, encoding="utf-8")
-        shutil.copy2(ROOT / "recovery_gate.py", output / "source/recovery_gate.py")
-        from recovery_gate import CONFIG
-        gate_config = dict(CONFIG)
-        print("POST-TEST DIAGNOSTIC: unvalidated occlusion-aware gate; model unchanged", flush=True)
-    if args.b5_policy_revision != "frozen":
-        # Replace the transition only; preserve frozen perception/recovery code.
-        target = output / "source/b5_policy.py"
-        original = target.read_text(encoding="utf-8-sig")
-        local = (ROOT / "b5_policy.py").read_text(encoding="utf-8-sig")
-        def transition_node(source):
-            found = [n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)
-                     and n.name == "b5_transition"]
-            if len(found) != 1:
-                raise ValueError("Expected exactly one B5 transition")
-            return found[0]
-        a, b = transition_node(original), transition_node(local)
-        lines, replacement = original.splitlines(True), local.splitlines(True)
-        revised = "".join(lines[:a.lineno-1] + replacement[b.lineno-1:b.end_lineno] + lines[a.end_lineno:])
-        revised += "\nfrom b5_revision import CONFIG as B5_POLICY_CONFIG\n"
-        ast.parse(revised)
-        target.write_text(revised, encoding="utf-8")
-        shutil.copy2(ROOT / "b5_revision.py", output / "source/b5_revision.py")
-        from b5_revision import CONFIG as POLICY_CONFIG
-        policy_config = dict(POLICY_CONFIG)
-        print("POST-TEST DIAGNOSTIC: revised fusion/history; original quality model not refitted", flush=True)
     sources = {str(x.resolve()): sha(x) for x in (output / "source").rglob("*") if x.is_file()}
+    inputs.update(reference_hashes)
     dump(output / "test_input_hashes.json", inputs)
     dump(output / "test_source_hashes.json", sources)
     git = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True) if shutil.which("git") else None
     status = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"], capture_output=True, text=True) if git and git.returncode == 0 else None
     protocol = dict(created_utc=datetime.now(timezone.utc).isoformat(), training_release=str(release),
+        reference_full_results=str(reference_full) if reference_full else None,
+        training_freeze_sha256=sha(release / "freeze.sha256"),
+        observer_config_sha256=cfg["observer_config_sha256"],
+        simple_control="observation fallback with full MODE3 trigger replay; conditional control, not wholly nonlearned",
         recovery_gate_revision=args.recovery_gate_revision, recovery_gate_config=gate_config,
         b5_policy_revision=args.b5_policy_revision, b5_policy_config=policy_config,
         model_policy_training_match=("diagnostic_policy_override_no_refit" if args.b5_policy_revision != "frozen"
@@ -379,24 +421,27 @@ def main(argv=None):
         recovery_window="60 frames including first valid-depth frame after >=10-frame blackout",
         latency="confirm five consecutive errors <= risk threshold; unsuccessful events censored at window/sequence end",
         rejection_denominator="raw proposals generated; also report not-generated / all blackout exits",
-        timing="measured quality + transition wall time; excludes offline GT scoring, backbone inference and data I/O; not end-to-end FPS",
-        timing_simple="quality is computed for diagnostics but excluded from simple-policy time; no learned score affects simple decisions",
+        timing="observer worker wall time + quality + transition; includes lazy startup and registration; excludes initial offline backbone pass, GT and outer I/O; not end-to-end FPS",
+        timing_simple="diagnostic quality excluded; trigger schedule creation cost reported in full, not free deployment claim",
         test_gt="offline scoring only; first-frame init_mask is an allowed input",
         uncertainty="sequence/object clustered, never independent-frame CI; primary object bootstrap has only n=3",
-        ablation_definitions={"no_quality": "exact alias of simple; scores computed only for diagnostics",
-            "no_rollout": "q0 obs-only bootstrap; zero policy-induced refits; own development calibration",
-            "no_recovery_admission": "same raw generator/triggers; SE3 matrix safety only",
-            "no_absolute_gate": "disable low-risk observation acceptance; retain quality prediction",
-            "no_relative_advantage": "equalize predicted errors; retain absolute observation risk"},
-        additional_ablations_pending=["stateful drift penalty/streak limit"],
+        ablation_definitions={"no_quality": "simple alias: full trigger replay, observation fallback; conditional decision-quality ablation",
+            "no_rollout": "q0 bootstrap, own calibration and endogenous triggers; measure changed call counts",
+            "no_recovery_admission": "remove BLACKOUT geometric admission only; MODE3 remains SE3-only"},
+        additional_ablations_pending=[],
         environment={k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "PYOPENGL_PLATFORM")})
     dump(output / "test_protocol.json", protocol)
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONDONTWRITEBYTECODE="1",
                PYTHONHASHSEED=str(cfg["seed"]), PYOPENGL_PLATFORM=paths.get("PYOPENGL_PLATFORM") or "egl")
     env.setdefault("OMP_NUM_THREADS", "1")
-    for name, key in (("test", "TRAIN_PYTHON"), ("sam2", "SAM2_PYTHON"), ("foundationpose", "FOUNDATIONPOSE_PYTHON")):
+    for name, key in (("test", "TRAIN_PYTHON"), ("sam2", "SAM2_PYTHON"), ("foundationpose", "FOUNDATIONPOSE_PYTHON"), ("se3", "SE3_PYTHON")):
         pip = subprocess.run([paths[key], "-m", "pip", "freeze"], check=True, capture_output=True, text=True, env=env)
         (output / (name+"_pip_freeze.txt")).write_text(pip.stdout, encoding="utf-8")
+    from online_observer import read_config
+    ocfg = read_config(release/'observer_config.json')
+    for base in TEST:
+        subprocess.run([paths['SE3_PYTHON'], '-B', str(output/'source/online_observer.py'),
+                        '--check', str(release/'observer_config.json'), base], check=True, env=env)
     preflight, _ = command_for(release, output, cfg, effective, next(iter(TEST)), "full")
     preflight.append("--preflight_only")
     run_logged(preflight, output, env)
@@ -405,18 +450,27 @@ def main(argv=None):
         print("Checks passed; no testing/training executed. Output:", output)
         return output
     subprocess.run([sys.executable, "-c", "import torch; assert torch.cuda.is_available(), 'GPU unavailable'"], check=True, env=env)
+    subprocess.run([paths['SE3_PYTHON'], '-c',
+                    "import torch; assert torch.cuda.is_available(), 'SE3 observer Python has no usable CUDA'"], check=True, env=env)
     for variant in args.variants:
         for base in TEST:
-            cmd, work = command_for(release, output, cfg, effective, base, variant)
+            cmd, work = command_for(release, output, cfg, effective, base, variant, reference_full)
             work.mkdir(parents=True, exist_ok=False)
             dump(work / "command.json", cmd)
             print("Evaluating", variant, base, flush=True)
             run_logged(cmd, work, env)
+        if variant == 'full':
+            # Freeze the generated schedule BEFORE a control can consume it.
+            generated_schedule = {str(p.resolve()): sha(p) for p in
+                                  (output/'full').rglob('checkpoint2_per_frame_*.csv')}
+            dump(output/'trigger_reference_hashes.json', generated_schedule)
+            inputs.update(generated_schedule)
     for path, digest in dict(inputs, **sources).items():
         if sha(path) != digest:
             raise ValueError("Test input/source changed during evaluation: " + path)
     verify_release(release)
     summarize(output, args.variants, cfg["seed"])
+    dump(output / "result_hashes.json", {str(p.resolve()): sha(p) for p in output.rglob("*.csv")})
     dump(output / "COMPLETE.json", {"status": ("post_test_diagnostic_complete"
                                    if protocol["evaluation_status"] != "frozen_protocol" else "frozen_test_complete"),
                                    "recovery_gate_config": gate_config, "training_release": str(release),

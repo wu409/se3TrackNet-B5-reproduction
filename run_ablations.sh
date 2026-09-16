@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Four-mode v2: no_quality is a conditional full-trigger-replay control;
+# no_recovery_admission removes BLACKOUT admission only, never a MODE3 gate.
 # Evaluate controls and q0; optionally reuse a completed matched full/simple run.
 # bash run_ablations.sh --release /full/release --no-rollout-release /q0/release \
 #   --full-results /completed/full-simple/run [--check-only]

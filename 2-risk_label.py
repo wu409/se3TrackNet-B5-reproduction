@@ -1,3 +1,4 @@
+from online_observer import RestartableObserver, close_episode_observers
 import os
 import json
 import hashlib
@@ -782,6 +783,7 @@ def load_initial_template_inputs(
     )
 
 
+@close_episode_observers
 def rollout_episode(
     episode_df,
     seq,
@@ -810,6 +812,7 @@ def rollout_episode(
     init_mask_path = resolve_initial_mask_file_for_episode(episode_df, args)
     mesh_file = resolve_foundationpose_mesh_file(args, obj_idx)
     base_sequence = str(episode_df.iloc[0]["base_sequence"])
+    observer = RestartableObserver(args.observer_config, base_sequence, "observer_" + seq + ".log")
 
     for frame_index, (_, row) in enumerate(episode_df.iterrows()):
         frame_id = int(row["frame_id"])
@@ -817,6 +820,7 @@ def rollout_episode(
         # Keep the exact resolved manifest path as well as the existing RGB
         # array. SAM2 consumes these same artifacts in the same frame order.
         rgb_real, rgb_path = load_foundationpose_recovery_rgb(seq, row, args)
+        T_obs = observer.observe(T_obs, rgb_path, resolve_path(row["depth_path"], args.data_dir))
 
         T_prior = make_prior(T_B5_history, T_obs, b5_state, compute_se3_prior)
 
@@ -884,6 +888,8 @@ def rollout_episode(
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
         )
         T_B5_history = advance_history(T_B5_history, T_final_B5, b5_state)
+        if b5_state.get("restart_observer"):
+            observer.restart(T_final_B5)
 
         rows.append(build_label_row(
             seq=seq,
@@ -905,7 +911,12 @@ def rollout_episode(
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
             policy_model_stage=policy_model_stage,
         ))
-        rows[-1].update(policy_version=b5_state.get("policy_version"),
+        rows[-1].update(observer_source=observer.source, observer_wall_ms=observer.wall_ms,
+            observer_restarted=bool(b5_state.get("restart_observer")),
+            relocalization_attempted=bool(b5_state.get("relocalization_attempted")),
+            relocalization_used=bool(b5_state.get("relocalization_used")),
+            output_quality_unverified=bool(b5_state.get("output_quality_unverified")),
+            policy_version=b5_state.get("policy_version"),
             fusion_alpha=b5_state.get("last_fusion_alpha"),
             forced_streak_reset=bool(b5_state.get("last_forced_streak_reset")),
             motion_history_reset=bool(b5_state.get("reset_motion_history")),
@@ -984,6 +995,7 @@ def save_shared_artifacts(
     joblib.dump(risk_calibrator, paths["calibrator"])
     cfg = {
         "version": "shared_pose_quality_v1",
+        "observer_config_sha256": __import__("online_observer").digest(args.observer_config),
         "recovery_gate_config": __import__("recovery_gate").CONFIG.copy(),
         "b5_policy_config": __import__("b5_revision").CONFIG.copy(),
         "training_mode": "final_development_fit" if getattr(args, "final_fit", False) else "leave_one_sequence_out",
@@ -1239,14 +1251,14 @@ if __name__ == "__main__":
     parser.add_argument('--target_seqs', nargs='+', default=["mustard_easy_00_02", "mustard0", "bleach_hard_00_03_chaitanya", "bleach0"])
     parser.add_argument('--corruption_lists', nargs='+', default=["_occ40", "_black10", "_clean", "_drop60", "_occ60"])
     parser.add_argument('--ci_object', type=str, default="bleach0", help="Held-out base object for this fold")
-    parser.add_argument('--final_fit', action='store_true', help="Fit all three development bases; no held-out fold or extra CI episodes")
+    parser.add_argument('--final_fit', action='store_true', help="Fit all four development sequences; no held-out fold or extra CI episodes")
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--ci_episode', nargs='+', default=["_black10_2", "_black10_3", "_black10_4", "_black10_5"])
-    parser.add_argument('--cad_models_seq', nargs='+', default=["006_mustard_bottle", "021_bleach_cleanser", "021_bleach_cleanser"])
+    parser.add_argument('--cad_models_seq', nargs='+', default=["006_mustard_bottle", "006_mustard_bottle", "021_bleach_cleanser", "021_bleach_cleanser"])
     parser.add_argument('--risk_threshold', type=float, default=1.0, help="Absolute ADD-S risk threshold in cm")
     parser.add_argument(
         '--prior_advantage_margin_cm', type=float, default=0.1,
-        help='B5 decision margin: prior is meaningful only if Ehat_prior + margin < Ehat_obs'
+        help='Offline pair-label margin only; v2 mode routing uses both absolute risks'
     )
     parser.add_argument('--train_fraction', type=float, default=0.7)
     parser.add_argument('--on_policy_refine_rounds', type=int, default=1)
@@ -1268,7 +1280,9 @@ if __name__ == "__main__":
     parser.add_argument('--shared_calibrator_out', type=str, default="./shared_risk_calibrator.joblib")
     parser.add_argument('--shared_config_out', type=str, default="./shared_quality_config.json")
 
+    parser.add_argument("--observer_config", required=True, help="Frozen restartable SE3 config")
     args = parser.parse_args()
+    __import__("online_observer").validate_config(args.observer_config)
     if not (0.0 < args.train_fraction < 1.0):
         raise ValueError("train_fraction must be in (0,1)")
     if args.on_policy_refine_rounds < 1:

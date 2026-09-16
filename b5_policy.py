@@ -51,8 +51,8 @@ DEPTH_BLACKOUT_VALID_MAX_M = 5.0
 # will not trigger blackout as long as the rest of the scene still has depth.
 DEPTH_BLACKOUT_VALID_RATIO_THRESHOLD = 0.01
 
-# Bound repeated reliance on the recursive temporal prior.
-MAX_PRIOR_STREAK = 5
+# Deprecated compatibility argument default; v2 never limits prior runs.
+MAX_PRIOR_STREAK = None
 
 
 def detect_depth_blackout(
@@ -139,7 +139,8 @@ def b5_recovery_needed(
       - current full-depth frame decides blackout/non-blackout
       - recovery is needed on:
           A) first non-blackout frame after a long blackout
-          B) after MAX_PRIOR_STREAK consecutive prior-reliance frames
+      This legacy helper covers blackout only; RGB is loaded on every frame for
+      four-mode v2, whose MODE3 request also depends on both risk estimates.
     """
     is_blackout, depth_diag = detect_depth_blackout(
         depth_real,
@@ -154,22 +155,16 @@ def b5_recovery_needed(
     consecutive_blackout = int(
         state.get("consecutive_blackout", 0)
     )
-    prior_streak = int(
-        state.get("prior_streak", 0)
-    )
 
     if consecutive_blackout >= int(blackout_min_frames):
         return True, "blackout_exit", depth_diag
-
-    if prior_streak >= int(max_prior_streak):
-        return True, "prior_streak", depth_diag
 
     return False, None, depth_diag
 
 
 def init_b5_state():
     return {
-        # Exact manifest RGB paths, collected only until the first recovery.
+        # Complete manifest prefix retained for every relocalization/recovery.
         "sam2_rgb_paths": [],
         "sam2_segmentation_finished": False,
         "sam2_path_error": None,
@@ -3313,6 +3308,7 @@ def _execute_sam2_recovery(
     sam2_config=None,
     sam2_checkpoint=None,
     sam2_cache_root=None,
+    admission_fn=None,
 ):
     diagnostics = {
         "recovery_mask_source": "sam2.1_video_from_official_initial_mask",
@@ -3386,7 +3382,7 @@ def _execute_sam2_recovery(
         raw_generated = bool(fp_ok and T_recovery is not None)
         diagnostics["raw_recovery_generated"] = raw_generated
         if raw_generated:
-            validity = evaluate_recovery_pose_validity(
+            validity = (admission_fn or evaluate_recovery_pose_validity)(
                 T_recovery=T_recovery,
                 model_pts_3d=model_pts,
                 K=K,
@@ -3484,6 +3480,8 @@ def b5_transition(
     sam2_config=None,
     sam2_checkpoint=None,
     sam2_cache_root=None,
+    policy_variant="full",
+    scheduled_relocalization=None,
 ):
     """
     Final shared B5 transition used by BOTH label rollout and deployment.
@@ -3496,17 +3494,16 @@ def b5_transition(
     Observation and prior are evaluated by the SAME estimator/calibrator, so
     larger values always mean worse / riskier for both hypotheses.
 
-    Mode decision:
-      MODE 1: observation absolute risk is low.
-      MODE 2: observation is risky AND
-              E_prior_hat + margin < E_obs_hat.
-      MODE 3: otherwise use bounded relative-quality fusion. At the streak
-              limit only, preserve one LEGACY weak-fusion step and reset.
+    Four-mode v2: obs-only / prior-only / ungated relocalization / fusion.
+    Blackout recovery is a separate event with its own admission and history reset.
+    Simple/no_quality replay a reference trigger schedule and otherwise accept obs.
 
     Ground truth is never an input to this function.
     """
     _ = support  # support is a learned feature, never a blackout detector.
     from b5_revision import relative_alpha
+    if policy_variant not in ("full", "simple", "no_quality", "no_rollout", "no_recovery_admission"):
+        raise ValueError("Unsupported four-mode policy variant: " + str(policy_variant))
 
     required_values = np.asarray([
         E_obs_hat_cm,
@@ -3536,6 +3533,11 @@ def b5_transition(
 
     state = dict(state)
     state["reset_motion_history"] = False
+    state["restart_observer"] = False
+    state["relocalization_info"] = None
+    state["relocalization_attempted"] = False
+    state["relocalization_used"] = False
+    state["output_quality_unverified"] = False
     state["last_fusion_alpha"] = None
     state["last_forced_streak_reset"] = False
     state["policy_version"] = B5_POLICY_CONFIG["version"]
@@ -3554,7 +3556,7 @@ def b5_transition(
     state.setdefault("sam2_rgb_paths", [])
     state.setdefault("sam2_segmentation_finished", False)
     state.setdefault("sam2_path_error", None)
-    if not state["sam2_segmentation_finished"]:
+    if True:  # retain complete RGB prefix for every MODE3 and blackout event
         if rgb_path is None:
             state["sam2_path_error"] = "rgb_path_not_supplied"
         else:
@@ -3632,14 +3634,14 @@ def b5_transition(
             })
         state["consecutive_blackout"] = 0
 
-    # B. Only blackout exit triggers recovery; a prior-streak limit uses weak fusion.
+    # B. Blackout recovery and ordinary MODE3 relocalization are separate.
     recovery_trigger = None
     if not is_blackout and state.get("exited_blackout", False):
         recovery_trigger = "blackout_exit"
 
     # C. State machine.
     if is_blackout:
-        current_mode = "MODE_3_BLACKOUT_WAITING"
+        current_mode = "BLACKOUT_WAITING"
         T_final = T_prior
         state["last_fusion_alpha"] = 1.0
         state["output_uncertain"] = True
@@ -3673,6 +3675,7 @@ def b5_transition(
             recovery_decision = "accept_valid_recovery"
             recovery_used = True
             state["reset_motion_history"] = True
+            state["restart_observer"] = True
             state["motion_history_restarted"] = True
             state["output_uncertain"] = False
         else:
@@ -3689,15 +3692,15 @@ def b5_transition(
             recovery_info["recovery_used"] = bool(recovery_used)
             recovery_info["recovery_direct_accept"] = bool(recovery_used)
             recovery_info["T_operational_b5"] = np.asarray(T_final, dtype=np.float64).copy()
-            recovery_info["operational_mode"] = "MODE_3_RECOVERY_EXECUTE"
-        current_mode = "MODE_3_RECOVERY_EXECUTE"
+            recovery_info["operational_mode"] = "BLACKOUT_RECOVERY"
+        current_mode = "BLACKOUT_RECOVERY"
         state["last_fusion_alpha"] = None  # recovery is not obs/prior interpolation
         state["exited_blackout"] = False
         state["prior_streak"] = 0
         state["prior_drift_score"] = 0.0
         state["last_recovery_frame"] = frame_id
         state["sam2_segmentation_finished"] = True
-        state["sam2_rgb_paths"] = []
+        # Keep the RGB prefix: later relocalizations need the same initial-mask history.
         state["recovery_frame"] = frame_id  # deprecated generic alias
         if recovery_trigger == "blackout_exit":
             state["blackout_recovery_frame"] = frame_id
@@ -3709,53 +3712,55 @@ def b5_transition(
         state["blackout_reference_frame_id"] = None
 
     else:
-        PRIOR_DRIFT_DECAY = B5_POLICY_CONFIG["prior_drift_decay"]
-        PRIOR_DRIFT_INCREMENT = B5_POLICY_CONFIG["prior_drift_increment"]
-        prior_streak = int(state.get("prior_streak", 0))
-        prior_drift_score = float(state.get("prior_drift_score", 0.0))
-        drift_penalty = max(0.0, 1.0 - prior_drift_score)
-
-        # After five consecutive strong fusions, force one weak-fusion frame.
-        # Its existing branch resets prior_streak without calling recovery.
-        if prior_streak < int(max_prior_streak) and p_obs_risk <= p_risk_threshold:
+        simple = policy_variant in ("simple", "no_quality")
+        if simple and scheduled_relocalization is None:
+            raise ValueError("Matched simple/no_quality requires a reference MODE3 schedule")
+        obs_good = p_obs_risk <= p_risk_threshold
+        prior_good = p_prior_risk <= p_risk_threshold
+        request_reloc = (bool(scheduled_relocalization) if simple
+                         else (not obs_good and not prior_good))
+        if request_reloc:
+            from pose_safety import se3_only_admission
+            T_reloc, reloc_ok, info = _execute_sam2_recovery(
+                recovery_trigger="mode3_both_risky", frame_index=frame_index,
+                frame_id=frame_id, state=state, rgb_real=rgb_real, depth_real=depth_real,
+                model_pts=model_pts, K=K, mesh_file=mesh_file,
+                foundationpose_python=foundationpose_python, foundationpose_dir=foundationpose_dir,
+                foundationpose_refiner_weight=foundationpose_refiner_weight,
+                foundationpose_refine_iter=foundationpose_refine_iter, T_prior_current=T_prior,
+                base_sequence=base_sequence, recovery_debug_root=recovery_debug_root,
+                sam2_python=sam2_python, sam2_dir=sam2_dir, sam2_config=sam2_config,
+                sam2_checkpoint=sam2_checkpoint, sam2_cache_root=sam2_cache_root,
+                admission_fn=se3_only_admission)
+            # MODE3 has no geometric gate and NEVER clears B5 motion history.
+            from pose_safety import is_se3
+            used = bool(reloc_ok and is_se3(T_reloc))
+            T_final = np.asarray(T_reloc).copy() if used else T_prior
+            current_mode = "MODE_3_RELOCALIZE"
+            state["relocalization_attempted"] = True
+            state["relocalization_used"] = used
+            state["relocalization_info"] = info
+            state["restart_observer"] = used
+            state["output_uncertain"] = not used
+            # Numerical validity is not evidence that this pose is accurate.
+            state["output_quality_unverified"] = True
+            # Deliberately return no blackout recovery_info for this branch.
+        elif simple or (obs_good and not prior_good):
             current_mode = "MODE_1_ACCEPT"
             T_final = T_obs
             state["last_fusion_alpha"] = 0.0
-            state["prior_streak"] = 0
-            state["prior_drift_score"] = PRIOR_DRIFT_DECAY * prior_drift_score
-
-        elif (
-            E_prior_hat_cm + prior_advantage_margin_cm < E_obs_hat_cm
-            and prior_streak < int(max_prior_streak)
-        ):
-            current_mode = "MODE_2_UNCERTAINTY_FUSION"
-            T_delta = np.linalg.inv(T_obs) @ T_prior
-            alpha = relative_alpha(E_obs_hat_cm, E_prior_hat_cm, mode=2)
-            state["last_fusion_alpha"] = float(alpha)
-            T_final = T_obs @ se3_exp_map(alpha * se3_log_map(T_delta))
-            state["prior_streak"] = prior_streak + 1
-            state["prior_drift_score"] = min(
-                1.0, prior_drift_score + PRIOR_DRIFT_INCREMENT
-            )
-
+        elif prior_good and not obs_good:
+            current_mode = "MODE_2_PRIOR"
+            T_final = T_prior
+            state["last_fusion_alpha"] = 1.0
         else:
-            current_mode = "MODE_3_UNCERTAIN_FUSION"
-            T_delta = np.linalg.inv(T_obs) @ T_prior
-            if prior_streak >= int(max_prior_streak):
-                # User-requested exception: retain the original weak-fusion
-                # brake after five consecutive MODE2 frames. No recovery call.
-                advantage_ratio = max(0.0, E_obs_hat_cm-E_prior_hat_cm)/max(E_obs_hat_cm, 1e-6)
-                # Preserve the legacy formula's scale; change only its clipping bounds.
-                alpha = float(np.clip(B5_POLICY_CONFIG["legacy_weak_scale"] * min(1.0, advantage_ratio)
-                    * (1.0-p_prior_risk) * drift_penalty,
-                    B5_POLICY_CONFIG["legacy_weak_min_alpha"], B5_POLICY_CONFIG["legacy_weak_max_alpha"]))
-                state["last_forced_streak_reset"] = True
-            else:
-                alpha = relative_alpha(E_obs_hat_cm, E_prior_hat_cm, mode=3)
-            state["last_fusion_alpha"] = float(alpha)
-            T_final = T_obs @ se3_exp_map(alpha * se3_log_map(T_delta))
-            state["prior_streak"] = 0
-            state["prior_drift_score"] = PRIOR_DRIFT_DECAY * prior_drift_score
+            current_mode = "MODE_4_TRUSTED_FUSION"
+            alpha = relative_alpha(E_obs_hat_cm, E_prior_hat_cm, mode=4)
+            state["last_fusion_alpha"] = alpha
+            T_final = T_obs @ se3_exp_map(alpha * se3_log_map(np.linalg.inv(T_obs) @ T_prior))
+        # Deprecated counters are inert; no streak-dependent action exists.
+        state["prior_streak"] = 0
+        state["prior_drift_score"] = 0.0
 
     # D1. Cache last NON-BLACKOUT reference for Template2 construction.
     #     This remains frozen throughout blackout.

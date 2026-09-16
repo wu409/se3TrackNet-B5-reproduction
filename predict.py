@@ -283,13 +283,11 @@ class Tracker:
     final_estimate = pred_B_in_cams[0].copy()
     self.prev_rgb = current_rgb
     self.prev_depth = current_depth
-    pred_color, pred_depth = self.render_window(final_estimate)
-    canvas = makeCanvas([rgbBs_backup[0], pred_color], flipBR=True)
-    cv2.imshow('AB',canvas)
-    if self.frame_cnt==0:
-        cv2.waitKey(1)
-    else:
-        cv2.waitKey(1)
+    if debug:
+      pred_color, pred_depth = self.render_window(final_estimate)
+      canvas = makeCanvas([rgbBs_backup[0], pred_color], flipBR=True)
+      cv2.imshow('AB',canvas)
+      cv2.waitKey(1)
     self.frame_cnt += 1
 
     if samples==1:
@@ -560,10 +558,7 @@ def predictSequenceYcb():
     if debug:
       cv2.imwrite(out_dir+'%07d.png'%(i),cur_bgr)
     cur_bgr = cv2.resize(cur_bgr,(W//2,H//2))
-    if i==1:
-      cv2.waitKey(1)
-    else:
-      cv2.waitKey(1)
+    cv2.waitKey(1)
   pred_poses = np.array(pred_poses)
 
   adi_errs = []
@@ -622,10 +617,7 @@ def predictSequenceYcbInEOAT():
       cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,255,255),thickness=-1)
     cv2.putText(cur_bgr,"frame:{}".format(i), (W//2,H-50), cv2.FONT_HERSHEY_SIMPLEX, fontScale=1,thickness=4,color=(255,0,0))
     cv2.imshow('1',cur_bgr)
-    if i==0:
-      cv2.waitKey(0)
-    else:
-      cv2.waitKey(1)
+    cv2.waitKey(1)
     cur_bgr = cv2.resize(cur_bgr,(W//2,H//2))
 
 

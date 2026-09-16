@@ -1,23 +1,23 @@
 """Shared development policy weights/history for training and evaluation.
 
 Initial bounds are engineering defaults, not fitted on frozen test outcomes.
-No GT inputs, no extra registration calls, no change to the pose math helpers.
+No GT inputs. MODE3 adds registration calls, explicitly logged separately.
 """
 import numpy as np
 
-CONFIG = dict(version="relative_quality_restart_v1_1_development", status="development_unvalidated",
-    epsilon_cm=0.01, mode2_min_alpha=0.60, mode2_max_alpha=0.90,
-    mode3_min_alpha=0.25, mode3_max_alpha=0.75, max_prior_streak=5,
-    streak_limit_action="one_legacy_weak_mode3_no_recovery",
-    legacy_weak_scale=0.15, legacy_weak_min_alpha=0.10, legacy_weak_max_alpha=0.30,
-    prior_drift_decay=0.90, prior_drift_increment=0.08,
-    history_reset="accepted_and_used_recovery_only", restart_prediction="one_step_zero_velocity",
-    history_update="every_final_output_after_restart", history_retained_poses=2)
+CONFIG = dict(version="four_mode_relocalization_v2", status="development_unvalidated",
+    epsilon_cm=0.01, mode4_min_alpha=0.25, mode4_max_alpha=0.75,
+    mode2="pure_prior_no_streak_limit", mode3="both_risky_SE3_only_relocalization",
+    mode3_history="append_without_reset", mode3_failure="prior_flagged_uncertain",
+    mode3_budget="every_eligible_frame_no_cooldown",
+    history_reset="accepted_blackout_recovery_only", restart_prediction="one_step_zero_velocity",
+    observation_restart="accepted_blackout_or_mode3_then_tracker_own_predictions",
+    history_update="every_final_output", history_retained_poses=2)
 
 
 def relative_alpha(obs_error_cm, prior_error_cm, mode):
-    if mode not in (2, 3):
-        raise ValueError("Expected fusion mode 2 or 3")
+    if mode != 4:
+        raise ValueError("Only MODE4 fuses in four-mode v2")
     if not np.isfinite([obs_error_cm, prior_error_cm]).all():
         raise ValueError("Nonfinite predicted errors")
     obs, prior = max(float(obs_error_cm), 0.), max(float(prior_error_cm), 0.)

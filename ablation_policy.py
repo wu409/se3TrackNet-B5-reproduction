@@ -19,7 +19,7 @@ def ungated_recovery_validity(T_recovery, *args, **kwargs):
         valid = False
     diag = dict(accepted_recovery=valid, recovery_pose_valid=valid,
                 recovery_rejection_reasons=[] if valid else ["invalid_SE3_matrix"],
-                recovery_gate_version="ablation_no_geometric_admission_v1",
+                recovery_gate_version="ablation_no_blackout_geometric_admission_v2",
                 recovery_admission_rule="SE3_safety_only_no_quality_gate")
     diag["recovery_soft_evidence"] = {"gate": dict(diag)}
     return diag

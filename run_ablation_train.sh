@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Four-mode v2 only: derive q0 with identical observer restart/assets, zero refits.
 # Train and freeze q0 from an exact completed full release; never change that release.
 # bash run_ablation_train.sh --release /absolute/new/full/release [--check-only]
 set -Eeuo pipefail

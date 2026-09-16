@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build one nine-sequence reference manifest, fit three bases, and seal the release.
+"""Build one nine-sequence reference manifest, fit four bases, and seal the release.
 
 Usage (activate b5-main first):
     python run_train.py --manifest-only  # no model environments or GPU required
@@ -57,6 +57,9 @@ def arguments(argv=None):
         ("result-root", "RESULT_ROOT", "results_collection"),
         ("cad-model-root", "CAD_MODEL_ROOT", "datasets/YCB_Video_Models/CADmodels"),
         ("training-python", "TRAIN_PYTHON", sys.executable),
+        ("se3-python", "SE3_PYTHON", sys.executable),
+        ("se3-weight-root", "SE3_WEIGHT_ROOT", "YCBInEOAT_weights"),
+        ("se3-data-root", "SE3_DATA_ROOT", "datasets/YCBInEOAT_data"),
         ("foundationpose-python", "FOUNDATIONPOSE_PYTHON", "/root/autodl-tmp/conda-envs/foundationpose/bin/python"),
         ("foundationpose-dir", "FOUNDATIONPOSE_DIR", "/root/autodl-tmp/FoundationPose"),
         ("sam2-python", "SAM2_PYTHON", "/root/autodl-tmp/conda-envs/sam2/bin/python"),
@@ -81,6 +84,8 @@ def environment(args, release):
         ("training_python", "TRAIN_PYTHON"), ("foundationpose_python", "FOUNDATIONPOSE_PYTHON"),
         ("foundationpose_dir", "FOUNDATIONPOSE_DIR"), ("sam2_python", "SAM2_PYTHON"),
         ("sam2_dir", "SAM2_DIR"),
+        ("se3_python", "SE3_PYTHON"), ("se3_weight_root", "SE3_WEIGHT_ROOT"),
+        ("se3_data_root", "SE3_DATA_ROOT"),
     ):
         env[key] = str(absolute(getattr(args, name)))
     env["SAM2_CONFIG"] = "configs/sam2.1/sam2.1_hiera_l.yaml"
@@ -178,6 +183,7 @@ def run(command, env, cwd, log=None):
 
 def training_command(env, release):
     args = [env["TRAIN_PYTHON"], "-u", "-B", str(release / "source/2-risk_label.py"),
+            "--observer_config", str(release / "observer_config.json"),
             "--final_fit", "--seed", "42", "--manifest_path", env["REFERENCE_MANIFEST"],
             "--ycb_dir", env["GT_ROOT"], "--data_dir", env["DATASET_ROOT"],
             "--res_dir", env["RESULT_ROOT"], "--mesh_path_root", env["CAD_MODEL_ROOT"],
@@ -216,8 +222,8 @@ def main(argv=None):
     preflight_frames(Path(env["DATASET_ROOT"]), Path(env["GT_ROOT"]), Path(env["RESULT_ROOT"]))
     release.mkdir(parents=True, exist_ok=False)
     print("New training release:", release, flush=True)
-    print("Reference: 9 sequences x 9 conditions = 81; training: 3 development sequences x 9 = 27.", flush=True)
-    print("Other six sequences: no quality fitting, rollout, GT labels or evaluation.", flush=True)
+    print("Reference: 9 sequences x 9 conditions = 81; training: 4 development sequences x 9 = 36.", flush=True)
+    print("Other five sequences: no quality fitting, rollout, GT labels or evaluation.", flush=True)
     dump_new(release / "sequence_inventory.json", inventory)
     dump_new(release / "manifest_config.json", {
         "base_sequences": list(SEQUENCE_OBJECTS), "common_conditions": list(CONDITIONS), "extra_conditions": {}})
@@ -243,6 +249,8 @@ def main(argv=None):
         return release
     run([env["TRAIN_PYTHON"], "-B", "-c",
          "import torch; assert torch.cuda.is_available(), 'GPU unavailable: enable GPU mode before training'"], env, release)
+    run([env["SE3_PYTHON"], "-B", "-c",
+         "import torch; assert torch.cuda.is_available(), 'SE3 observer Python has no usable CUDA'"], env, release)
     (release / "artifacts").mkdir()
     run(training_command(env, release), env, release, release / "training.log")
     run([env["TRAIN_PYTHON"], "-B", str(release / "source/train_release.py"), "seal"], env, release)

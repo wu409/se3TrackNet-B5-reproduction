@@ -78,7 +78,7 @@ def summarize(output, full_run, controls_run, q0_run, reuse_simple, seed):
     available = evaluation.read_json(Path(controls_run) / "COMPLETE.json")["variants"]
     specs += [(Path(controls_run), v, v) for v in available if v != "full"]
     specs.append((Path(q0_run), "no_rollout", "no_rollout"))
-    combined = {name: [] for name in ("sequence_metrics", "episode_metrics", "recovery_events", "calibration_metrics")}
+    combined = {name: [] for name in ("sequence_metrics", "episode_metrics", "recovery_events", "relocalization_events", "calibration_metrics")}
     inputs = {}
     for run, original, label in specs:
         for name in combined:

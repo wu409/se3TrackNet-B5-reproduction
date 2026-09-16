@@ -4,10 +4,19 @@ set -Eeuo pipefail
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
 export PYTHONDONTWRITEBYTECODE=1
-export PYOPENGL_PLATFORM=${PYOPENGL_PLATFORM:-egl}
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
+
+# The legacy leave-one-out body below is retained as historical source only.
+# It must not silently launch an uncoupled pre-v2 experiment.
+case "${1:-}" in
+    train) shift; exec bash "$SCRIPT_DIR/run_train.sh" "$@" ;;
+    test) shift; exec bash "$SCRIPT_DIR/run_test.sh" "$@" ;;
+    ablation-train) shift; exec bash "$SCRIPT_DIR/run_ablation_train.sh" "$@" ;;
+    ablations) shift; exec bash "$SCRIPT_DIR/run_ablations.sh" "$@" ;;
+    *) echo 'Four-mode v2: use run.sh {train|test|ablation-train|ablations} [options], or the corresponding run_*.sh. Legacy workflow retired.' >&2; exit 2 ;;
+esac
 
 # ============================================================
 # 0. Global experiment configuration

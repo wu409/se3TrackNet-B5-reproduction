@@ -86,6 +86,8 @@ def prepare(generated_manifest=False):
     for p in repo.glob("*.py"):
         shutil.copy2(p, source / p.name)
     shutil.copy2(repo / "run_train.sh", source / "run_train.sh")
+    if (repo / "scripts").is_dir():
+        shutil.copytree(repo / "scripts", source / "scripts", ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     manifest = Path(env["REFERENCE_MANIFEST"]).resolve()
     with manifest.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
@@ -103,6 +105,15 @@ def prepare(generated_manifest=False):
             inventory[key] = sha(p)
         if expected is not None and inventory[key] != str(expected).lower():
             raise ValueError("Manifest hash mismatch; do not silently rebuild: " + key)
+    from online_observer import build_config, asset_paths, validate_config
+    from run_train import SEQUENCE_OBJECTS
+    observer_path = release / "observer_config.json"
+    observer_cfg = build_config(env, SEQUENCE_OBJECTS)
+    dump(observer_path, observer_cfg)
+    validate_config(observer_path)
+    record(observer_path)
+    for p in asset_paths(observer_cfg):
+        record(p)
     record(manifest)
     if generated_manifest:
         record(release / "manifest_config.json")
@@ -143,7 +154,7 @@ def prepare(generated_manifest=False):
             for p in root.rglob(pattern):
                 if not any(x in p.parts for x in (".git", "__pycache__", ".venv", "datasets")):
                     record(p)
-    for p in source.iterdir():
+    for p in source.rglob("*"):
         if p.is_file():
             record(p)
     training_manifest = manifest
@@ -173,6 +184,7 @@ def prepare(generated_manifest=False):
             "FOUNDATIONPOSE_PYTHON", "FOUNDATIONPOSE_DIR", "FOUNDATIONPOSE_REFINER_WEIGHT",
             "FOUNDATIONPOSE_SCORER_WEIGHT", "SAM2_PYTHON", "SAM2_DIR", "SAM2_CONFIG",
             "SAM2_CHECKPOINT", "PYOPENGL_PLATFORM", "PYTHONHASHSEED", "TRAIN_CONDITIONS_JSON")
+    keys += ("SE3_PYTHON", "SE3_WEIGHT_ROOT", "SE3_DATA_ROOT")
     config = {"status": "prepared_not_frozen", "created_utc": datetime.now(timezone.utc).isoformat(),
               "training_manifest": str(training_manifest.resolve()),
               "manifest_mode": "single_reference" if generated_manifest else "legacy_subset",
@@ -182,19 +194,27 @@ def prepare(generated_manifest=False):
               "risk_threshold_cm": 1.0, "prior_advantage_margin_cm": 0.1,
               "blackout_min_frames": 10, "foundationpose_refine_iter": 5,
               "test_data_used": False, "test_data_used_for_fitting": False,
+              "test_data_used_field_scope": "fitting only; not a claim of untouched method development",
+              "method_revision_informed_by_previous_test_inspection": True,
               "manifest_contains_reserved_sequences": generated_manifest,
               "backbone_retrained": False,
-              "backbone_observations": "existing per-frame predictions, content-hashed",
+              "observer_config_sha256": sha(observer_path),
+              "backbone_observations": "frozen predictions until correction; then restarted SE3 own-observation recursion",
               "bitwise_determinism_guaranteed": False,
               "paths": {k: env.get(k) for k in keys}}
     dump(release / "effective_config.json", config)
     record(release / "effective_config.json")
     dump(release / "input_hashes.json", inventory)
     for label, key in (("training", "TRAIN_PYTHON"), ("sam2", "SAM2_PYTHON"),
-                       ("foundationpose", "FOUNDATIONPOSE_PYTHON")):
+                       ("foundationpose", "FOUNDATIONPOSE_PYTHON"), ("se3", "SE3_PYTHON")):
         result = subprocess.run([env[key], "-m", "pip", "freeze"],
                                 check=True, capture_output=True, text=True)
         (release / (label + "_pip_freeze.txt")).write_text(result.stdout, encoding="utf-8")
+    # Import/config audit only; no model inference. All object cameras must match.
+    for obj in observer_cfg['objects']:
+        base = next(b for b, o in observer_cfg['sequence_objects'].items() if o == obj)
+        subprocess.run([env['SE3_PYTHON'], '-B', str(source/'online_observer.py'),
+                        '--check', str(observer_path), base], check=True)
     print("Preflight passed:", len(rows), "frames across", len(BASES) * len(conditions),
           "instances;", len(inventory), "verified files")
 
@@ -208,6 +228,11 @@ def seal():
             raise ValueError("Input/source changed during training: " + path)
     artifacts = release / "artifacts"
     cfg = json.loads((artifacts / "shared_quality_config.json").read_text(encoding="utf-8"))
+    from b5_revision import CONFIG
+    if cfg.get('b5_policy_config') != CONFIG:
+        raise ValueError('Cannot seal incompatible policy/model configuration')
+    if cfg.get('observer_config_sha256') != sha(release / 'observer_config.json'):
+        raise ValueError('Wrong observer configuration')
     if cfg.get("training_mode") != "final_development_fit" or cfg["held_out_base"] is not None:
         raise ValueError("Refusing to seal a leave-one-out model as the final model")
     if set(cfg["train_bases"]) != set(BASES):
@@ -242,6 +267,7 @@ def seal():
         "training_mode": cfg["training_mode"],
         "recovery_gate_config": cfg.get("recovery_gate_config"),
         "b5_policy_config": cfg.get("b5_policy_config"),
+        "observer_config_sha256": cfg.get("observer_config_sha256"),
         "test_evaluation_completed": False,
         "note": "Model/source/input release only; new-test runner still requires adaptation."}
     files = []

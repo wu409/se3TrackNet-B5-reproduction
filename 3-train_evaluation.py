@@ -1,3 +1,4 @@
+from online_observer import RestartableObserver, close_episode_observers
 import os
 import time
 import importlib.util
@@ -394,6 +395,13 @@ def predict_shared_quality(features, d_obj_cm, scaler, regressor, calibrator):
 def load_shared_artifacts(args):
     with open(args.shared_config_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
+    from b5_revision import CONFIG as policy_config
+    from online_observer import digest, validate_config
+    validate_config(args.observer_config)
+    if cfg.get("b5_policy_config") != policy_config:
+        raise ValueError("Policy/model mismatch: retrain four-mode v2; no old-release retrofit")
+    if cfg.get("observer_config_sha256") != digest(args.observer_config):
+        raise ValueError("Frozen observer configuration differs from training")
     if cfg.get("version") != "shared_pose_quality_v1":
         raise ValueError(f"Unsupported shared-quality config: {cfg.get('version')}")
     if getattr(args, "frozen_test", False):
@@ -495,22 +503,13 @@ def build_eval_renderer(mesh_file):
 
 
 def decision_inputs(variant, obs_error, prior_error, obs_risk, prior_risk):
-    """Predeclared controls; GT never enters these decisions or frozen B5 code.
-
-    simple: accept observations outside blackout, extrapolate own prior during
-    blackout, use the SAME SAM2/FP/gate and prior fallback at blackout exit.
-    Both ablations keep the trained predictor, geometry gate and state machine.
-    """
-    if variant in ("simple", "no_quality"):
-        return 0.0, 0.0, 0.0, 0.0
-    if variant == "no_absolute_gate":
-        return obs_error, prior_error, 1.0, prior_risk
-    if variant == "no_relative_advantage":
-        return obs_error, obs_error, obs_risk, prior_risk
-    if variant not in ("full", "no_rollout", "no_recovery_admission"):
-        raise ValueError("Unknown policy variant: " + variant)
+    """Scores are diagnostic only for simple/no_quality; routing is explicit."""
+    if variant not in ("full", "simple", "no_quality", "no_rollout", "no_recovery_admission"):
+        raise ValueError("Unsupported four-mode variant: " + variant)
     return obs_error, prior_error, obs_risk, prior_risk
 
+
+@close_episode_observers
 
 def evaluate_episode(
     args,
@@ -559,12 +558,18 @@ def evaluate_episode(
     recovery_events = []
     quality_records = []
     label_consistency_failures = []
+    observer = RestartableObserver(args.observer_config, args.test_base_seq, "observer_" + last_name + ".log")
+    schedule = None
+    if args.policy_variant in ("simple", "no_quality"):
+        from matched_schedule import load_schedule
+        schedule = load_schedule(args.reference_full_dir, last_name, df_manifest["frame_idx"])
 
     for row in df_manifest.itertuples():
         i = int(row.seq_idx)
         frame_id = int(row.frame_idx)
         matched_frames.append(frame_id)
         T_obs = np.loadtxt(row.pred_path).reshape(4, 4)
+        T_baseline_obs = T_obs.copy()
         T_gt = np.loadtxt(row.gt_path).reshape(4, 4)
         depth_raw = cv2.imread(row.depth_path, cv2.IMREAD_UNCHANGED)
         if depth_raw is None:
@@ -583,6 +588,8 @@ def evaluate_episode(
             if not revised_history:
                 T_prior5 = compute_se3_prior(T_history5[-1], T_history5[-2])
             T_prior6 = compute_se3_prior(T_history6[-1], T_history6[-2])
+
+        T_obs = observer.observe(T_baseline_obs, rgb_path, row.depth_path)
 
         restart_zero_velocity = bool(revised_history and len(T_history5) == 1
                                      and b5_state.get("motion_history_restarted", False))
@@ -607,24 +614,26 @@ def evaluate_episode(
         # B1: observation only.
         E_obs_gt_cm = U.adi(T_obs, T_gt, open3d_model) * 100.0
         E_prior_gt_cm = U.adi(T_prior5, T_gt, open3d_model) * 100.0
-        b1_errs.append(E_obs_gt_cm)
+        b1_errs.append(U.adi(T_baseline_obs, T_gt, open3d_model) * 100.0)
 
+        baseline_features = extract_pose_conditioned_features(
+            T_baseline_obs, depth_real, model_pts, scene, renderer, mesh_node)
         # B2: fixed alpha.
-        delta = se3_log_map(np.linalg.inv(T_prior2) @ T_obs)
+        delta = se3_log_map(np.linalg.inv(T_prior2) @ T_baseline_obs)
         T_final2 = T_prior2 @ se3_exp_map(args.alpha * delta)
         T_history2.append(T_final2)
         b2_errs.append(U.adi(T_final2, T_gt, open3d_model) * 100.0)
 
         # B3: hard observation-support threshold (legacy baseline only).
-        if obs_features["x4"] < 0.4:
-            T_final3 = T_obs
+        if baseline_features["x4"] < 0.4:
+            T_final3 = T_baseline_obs
         else:
             T_final3 = T_prior3
         T_history3.append(T_final3)
         b3_errs.append(U.adi(T_final3, T_gt, open3d_model) * 100.0)
 
         # B4: Huber innovation weighting.
-        innovation = se3_log_map(np.linalg.inv(T_prior4) @ T_obs)
+        innovation = se3_log_map(np.linalg.inv(T_prior4) @ T_baseline_obs)
         r = np.linalg.norm(innovation)
         huber_delta = 0.1
         huber_alpha = 1.0 if r <= huber_delta else huber_delta / r
@@ -671,8 +680,17 @@ def evaluate_episode(
             p_prior_risk=decision[3],
             p_risk_threshold=p_risk_threshold,
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
+            policy_variant=args.policy_variant,
+            scheduled_relocalization=None if schedule is None else schedule[frame_id],
         )
         transition_wall_ms = (time.perf_counter() - transition_start) * 1000.0
+        if b5_state.get("restart_observer"):
+            observer.restart(T_final)
+        reloc = b5_state.get("relocalization_info") or {}
+        raw_reloc = reloc.get("T_raw_recovery")
+        from pose_safety import is_se3
+        reloc_error = (U.adi(raw_reloc, T_gt, open3d_model) * 100.0
+                       if is_se3(raw_reloc) else np.nan)
         if revised_history:
             T_history5 = advance_history(T_history5, T_final, b5_state)
         else:
@@ -863,9 +881,9 @@ def evaluate_episode(
                 recovery_record = recovery_event
 
         # B6 oracle upper bound with independent recursive history.
-        err_obs = U.adi(T_obs, T_gt, open3d_model)
+        err_obs = U.adi(T_baseline_obs, T_gt, open3d_model)
         err_prior = U.adi(T_prior6, T_gt, open3d_model)
-        T_final6 = T_obs if err_obs < err_prior else T_prior6
+        T_final6 = T_baseline_obs if err_obs < err_prior else T_prior6
         T_history6.append(T_final6)
         b6_errs.append(U.adi(T_final6, T_gt, open3d_model) * 100.0)
 
@@ -890,14 +908,26 @@ def evaluate_episode(
             "motion_history_reset": int(bool(b5_state.get("reset_motion_history"))),
             "restart_zero_velocity_prior": int(restart_zero_velocity),
             "output_uncertain": b5_state.get("output_uncertain"),
+            "output_quality_unverified": int(bool(b5_state.get("output_quality_unverified"))),
             "both_candidates_bad": int(E_obs_gt_cm > args.risk_threshold and E_prior_gt_cm > args.risk_threshold),
             "local_candidate_oracle_cm": float(min(E_obs_gt_cm, E_prior_gt_cm)),
             "is_blackout": int(b5_state.get("is_depth_blackout", False)),
             "recovery_attempted": int(recovery_info is not None),
+            "observer_source": observer.source,
+            "observer_restart": int(bool(b5_state.get("restart_observer"))),
+            "observer_wall_ms": observer.wall_ms,
+            "relocalization_attempted": int(bool(b5_state.get("relocalization_attempted"))),
+            "relocalization_generated": int(bool(reloc.get("raw_recovery_generated"))),
+            "relocalization_used": int(bool(b5_state.get("relocalization_used"))),
+            "relocalization_raw_error_cm": reloc_error,
+            "relocalization_failure_reason": reloc.get("recovery_failure_reason"),
+            "relocalization_cache_hit": int(bool(reloc.get("sam2_cache_hit"))),
+            "relocalization_wall_ms": transition_wall_ms if b5_state.get("relocalization_attempted") else 0.,
+
             "sam2_cache_hit": int(bool(recovery_info and recovery_info.get("sam2_cache_hit", False))),
             "quality_wall_ms": quality_wall_ms,
             "transition_wall_ms": transition_wall_ms,
-            "policy_wall_ms": transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") in ("simple", "no_quality") else quality_wall_ms),
+            "policy_wall_ms": observer.wall_ms + transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") in ("simple", "no_quality") else quality_wall_ms),
         })
 
     if label_consistency_failures:
@@ -933,6 +963,13 @@ def evaluate_episode(
     qdf["error_b6_oracle_cm"] = b6_errs
     log_path = f"./checkpoint2_per_frame_{last_name}_log_threshold{args.risk_threshold}.csv"
     qdf.to_csv(log_path, index=False)
+    # MODE3 calls are NOT blackout recovery events. Include failed generations.
+    columns = ["episode", "frame_id", "relocalization_attempted", "relocalization_generated",
+               "relocalization_used", "relocalization_raw_error_cm", "relocalization_failure_reason",
+               "relocalization_cache_hit", "relocalization_wall_ms", "observer_restart",
+               "motion_history_reset", "error_b5_ours_cm", "output_uncertain", "output_quality_unverified"]
+    qdf.loc[qdf.relocalization_attempted == 1, columns].to_csv(
+        "checkpoint2_relocalization_" + last_name + ".csv", index=False)
 
     if blackout_intervals:
         start = int(blackout_intervals[0]["blackout_start_index"])
@@ -1371,20 +1408,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--frozen_test', action='store_true', help='No test label CSV; final model only; no fitting')
     parser.add_argument('--preflight_only', action='store_true', help='Load frozen features/artifacts only; no rendering or rollout')
-    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_quality', 'no_rollout', 'no_recovery_admission', 'no_absolute_gate', 'no_relative_advantage'], default='full')
-    parser.add_argument('--csv_path', type=str, default="./per_frame_label_threshold1.0.csv")
-    parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv")
+    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_quality', 'no_rollout', 'no_recovery_admission'], default='full')
+    parser.add_argument('--csv_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/per_frame_label_threshold1.0.csv")
+    parser.add_argument('--manifest_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/reference_manifest.csv")
     parser.add_argument('--result_dir', nargs='+', type=str, default=[
-        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10",
-        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_2",
-        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_3",
-        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_4",
-        "./results_collection/bleach_hard_00_03_chaitanya/bleach_hard_00_03_chaitanya_black10_5",
+        "./results_collection/sugar_box1/sugar_box1_black10_4"
     ])
-    parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/bleach_hard_00_03_chaitanya/annotated_poses")
-    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/points.xyz")   #021_bleach_cleanser, 006_mustard_bottle
+    parser.add_argument('--gt_dir', type=str, default="./datasets/YCBInEOAT/sugar_box1/annotated_poses")
+    parser.add_argument('--point_path', type=str, default="./datasets/YCB_Video_Models/CADmodels/004_sugar_box/points.xyz")   #021_bleach_cleanser, 006_mustard_bottle
     parser.add_argument('--train_seqs', nargs='+', default=["mustard0", "bleach0"])
-    parser.add_argument('--test_base_seq', type=str, default="bleach_hard_00_03_chaitanya")
+    parser.add_argument('--test_base_seq', type=str, default="sugar_box1")
     parser.add_argument('--data_dir', type=str, default="./datasets/YCBInEOAT_Corrupted")
     parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--risk_threshold', type=float, default=1.0)
@@ -1394,28 +1427,30 @@ if __name__ == "__main__":
     parser.add_argument('--blackout_min_frames', type=int, default=10)
     parser.add_argument('--ycbineoat_root', type=str, default="./datasets/YCBInEOAT")
 
-    parser.add_argument('--foundationpose_python', type=str, default="/home/wyg/anaconda3/envs/foundationpose/bin/python")
-    parser.add_argument('--foundationpose_dir', type=str, default="/home/wyg/FoundationPose")
-    parser.add_argument('--foundationpose_mesh_file', type=str, default="./datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj")
-    parser.add_argument('--foundationpose_refiner_weight', type=str, default="/home/wyg/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth")
+    parser.add_argument('--foundationpose_python', type=str, default="/root/autodl-tmp/conda-envs/foundationpose/bin/python")
+    parser.add_argument('--foundationpose_dir', type=str, default="/root/autodl-tmp/FoundationPose")
+    parser.add_argument('--foundationpose_mesh_file', type=str, default="./datasets/YCB_Video_Models/CADmodels/004_sugar_box/textured.obj")
+    parser.add_argument('--foundationpose_refiner_weight', type=str, default="/root/autodl-tmp/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth")
     parser.add_argument('--foundationpose_refine_iter', type=int, default=5)
 
-    parser.add_argument('--sam2_python', type=str, default="/home/wyg/anaconda3/envs/sam2/bin/python")
-    parser.add_argument('--sam2_dir', type=str, default="/home/wyg/sam2")
-    parser.add_argument('--sam2_config', type=str, default="configs/sam2.1/sam2.1_hiera_t.yaml")
-    parser.add_argument('--sam2_checkpoint', type=str, default="/home/wyg/sam2/checkpoints/sam2.1_hiera_tiny.pt")
+    parser.add_argument('--sam2_python', type=str, default="/root/autodl-tmp/conda-envs/sam2/bin/python")
+    parser.add_argument('--sam2_dir', type=str, default="/root/autodl-tmp/sam2")
+    parser.add_argument('--sam2_config', type=str, default="configs/sam2.1/sam2.1_hiera_l.yaml")
+    parser.add_argument('--sam2_checkpoint', type=str, default="/root/autodl-tmp/sam2/checkpoints/sam2.1_hiera_large.pt")
     parser.add_argument('--sam2_cache_root', type=str, default="./sam2_recovery_cache")
 
-    parser.add_argument('--shared_model_path', type=str, default="./shared_pose_quality_model.joblib")
-    parser.add_argument('--shared_scaler_path', type=str, default="./shared_pose_quality_scaler.joblib")
-    parser.add_argument('--shared_calibrator_path', type=str, default="./shared_risk_calibrator.joblib")
-    parser.add_argument('--shared_config_path', type=str, default="./shared_quality_config.json")
+    parser.add_argument('--shared_model_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/artifacts/shared_pose_quality_model.joblib")
+    parser.add_argument('--shared_scaler_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/artifacts/shared_pose_quality_scaler.joblib")
+    parser.add_argument('--shared_calibrator_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/artifacts/shared_risk_calibrator.joblib")
+    parser.add_argument('--shared_config_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/artifacts/shared_quality_config.json")
 
     parser.add_argument('--strict_label_rollout_check', action='store_true', default=True)
     parser.add_argument('--label_rollout_rtol', type=float, default=1e-5)
     parser.add_argument('--label_rollout_atol', type=float, default=1e-5)
     parser.add_argument('--bootstrap_samples', type=int, default=10000)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument("--observer_config", required=True)
+    parser.add_argument("--reference_full_dir", help="Verified matching full sequence output directory")
     args = parser.parse_args()
     if args.policy_variant != 'full' and not args.frozen_test:
         parser.error('Policy controls require --frozen_test')

@@ -1,0 +1,100 @@
+{
+  "created_utc": "2026-09-16T08:00:01.243481+00:00",
+  "training_release": "/root/autodl-tmp/se3TrackNet-B5-reproduction/ablation_runs/q0_training_20260916T045758Z_a49f55f6/no_rollout_release",
+  "recovery_gate_revision": "frozen",
+  "recovery_gate_config": {
+    "version": "occlusion_aware_v1_development",
+    "status": "development_unvalidated",
+    "min_support": 50,
+    "min_inliers": 50,
+    "min_depth_m": 0.05,
+    "max_depth_m": 5.0,
+    "depth_tolerance_floor_m": 0.01,
+    "depth_tolerance_diameter_fraction": 0.05,
+    "max_conflict_fraction": 0.1,
+    "min_global_inlier_fraction": 0.1,
+    "min_mask_explained": 0.6,
+    "normal_min_cad_coverage": 0.3,
+    "normal_min_inlier_fraction": 0.6,
+    "normal_min_spatial_bins": 3,
+    "occluded_min_cad_coverage": 0.1,
+    "occluded_min_inlier_fraction": 0.8,
+    "occluded_min_spatial_bins": 4,
+    "min_occlusion_fraction": 0.1,
+    "spatial_grid_size": 4,
+    "rotation_tolerance": 0.001
+  },
+  "b5_policy_revision": "frozen",
+  "b5_policy_config": {
+    "version": "relative_quality_restart_v1_1_development",
+    "status": "development_unvalidated",
+    "epsilon_cm": 0.01,
+    "mode2_min_alpha": 0.6,
+    "mode2_max_alpha": 0.9,
+    "mode3_min_alpha": 0.25,
+    "mode3_max_alpha": 0.75,
+    "max_prior_streak": 5,
+    "streak_limit_action": "one_legacy_weak_mode3_no_recovery",
+    "legacy_weak_scale": 0.15,
+    "legacy_weak_min_alpha": 0.1,
+    "legacy_weak_max_alpha": 0.3,
+    "prior_drift_decay": 0.9,
+    "prior_drift_increment": 0.08,
+    "history_reset": "accepted_and_used_recovery_only",
+    "restart_prediction": "one_step_zero_velocity",
+    "history_update": "every_final_output_after_restart",
+    "history_retained_poses": 2
+  },
+  "model_policy_training_match": "release_policy",
+  "evaluation_status": "post_test_diagnostic_not_untouched",
+  "reference_manifest_sha256": "70061b0e887927ee4732ca96882d876754bac4d60633c3f3ddfd168996b14e56",
+  "test_sequences": {
+    "cracker_box_reorient": "003_cracker_box",
+    "cracker_box_yalehand0": "003_cracker_box",
+    "sugar_box_yalehand0": "004_sugar_box",
+    "sugar_box1": "004_sugar_box",
+    "tomato_soup_can_yalehand0": "005_tomato_soup_can"
+  },
+  "conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "variants": [
+    "no_rollout"
+  ],
+  "frames_per_variant": 44271,
+  "p_risk_threshold": 0.6,
+  "risk_threshold_cm": 1.0,
+  "prior_advantage_margin_cm": 0.1,
+  "evaluation_adapter_commit": "34e117589d90a6c135f73cc6eae4cfb10b45704f",
+  "evaluation_adapter_git_status": "?? ablation_runs/\n",
+  "training_commit": "not recorded by original release; do not infer it from current HEAD",
+  "recovery_window": "60 frames including first valid-depth frame after >=10-frame blackout",
+  "latency": "confirm five consecutive errors <= risk threshold; unsuccessful events censored at window/sequence end",
+  "rejection_denominator": "raw proposals generated; also report not-generated / all blackout exits",
+  "timing": "measured quality + transition wall time; excludes offline GT scoring, backbone inference and data I/O; not end-to-end FPS",
+  "timing_simple": "quality is computed for diagnostics but excluded from simple-policy time; no learned score affects simple decisions",
+  "test_gt": "offline scoring only; first-frame init_mask is an allowed input",
+  "uncertainty": "sequence/object clustered, never independent-frame CI; primary object bootstrap has only n=3",
+  "ablation_definitions": {
+    "no_quality": "exact alias of simple; scores computed only for diagnostics",
+    "no_rollout": "q0 obs-only bootstrap; zero policy-induced refits; own development calibration",
+    "no_recovery_admission": "same raw generator/triggers; SE3 matrix safety only",
+    "no_absolute_gate": "disable low-risk observation acceptance; retain quality prediction",
+    "no_relative_advantage": "equalize predicted errors; retain absolute observation risk"
+  },
+  "additional_ablations_pending": [
+    "stateful drift penalty/streak limit"
+  ],
+  "environment": {
+    "OMP_NUM_THREADS": "4",
+    "PYOPENGL_PLATFORM": "egl"
+  }
+}
