@@ -1,0 +1,13 @@
+comparison,base_sequence,delta_auc_percentage_points,aggregation,ci_low,ci_high,independent_objects
+full-minus-B1,cracker_box_reorient,0.3234493753012302,sequence_macro,,,
+full-minus-B1,cracker_box_yalehand0,0.05337330967407172,sequence_macro,,,
+full-minus-B1,sugar_box1,0.20270178300314967,sequence_macro,,,
+full-minus-B1,sugar_box_yalehand0,0.2932628792021106,sequence_macro,,,
+full-minus-B1,tomato_soup_can_yalehand0,0.2808321403292524,sequence_macro,,,
+full-minus-B1,OBJECT_CLUSTER_MEAN,0.23907527130651118,object_cluster_bootstrap_exploratory_n3,0.18841134248765093,0.2808321403292524,3.0
+full-minus-simple,cracker_box_reorient,0.09587365142920845,sequence_macro,,,
+full-minus-simple,cracker_box_yalehand0,0.021423080955861762,sequence_macro,,,
+full-minus-simple,sugar_box1,0.029988336983322483,sequence_macro,,,
+full-minus-simple,sugar_box_yalehand0,0.01860365577375589,sequence_macro,,,
+full-minus-simple,tomato_soup_can_yalehand0,0.03815827380218195,sequence_macro,,,
+full-minus-simple,OBJECT_CLUSTER_MEAN,0.040367545457752084,object_cluster_bootstrap_exploratory_n3,0.024295996378539186,0.058648366192535106,3.0

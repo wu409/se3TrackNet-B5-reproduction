@@ -399,6 +399,8 @@ def load_shared_artifacts(args):
     if getattr(args, "frozen_test", False):
         if cfg.get("training_mode") != "final_development_fit" or cfg.get("held_out_base") is not None:
             raise ValueError("Frozen test requires a final-development model, not a held-out fold")
+        if getattr(args, "policy_variant", "full") == "no_rollout" and cfg.get("on_policy_refine_rounds") != 0:
+            raise ValueError("no_rollout must load a separately fitted q0 model, not relabel q1")
         if args.test_base_seq in cfg.get("train_bases", []):
             raise ValueError("Development sequence cannot enter frozen new-sequence test")
         if cfg.get("manifest_sha256") != compute_full_sha256(args.manifest_path):
@@ -499,13 +501,13 @@ def decision_inputs(variant, obs_error, prior_error, obs_risk, prior_risk):
     blackout, use the SAME SAM2/FP/gate and prior fallback at blackout exit.
     Both ablations keep the trained predictor, geometry gate and state machine.
     """
-    if variant == "simple":
+    if variant in ("simple", "no_quality"):
         return 0.0, 0.0, 0.0, 0.0
     if variant == "no_absolute_gate":
         return obs_error, prior_error, 1.0, prior_risk
     if variant == "no_relative_advantage":
         return obs_error, obs_error, obs_risk, prior_risk
-    if variant != "full":
+    if variant not in ("full", "no_rollout", "no_recovery_admission"):
         raise ValueError("Unknown policy variant: " + variant)
     return obs_error, prior_error, obs_risk, prior_risk
 
@@ -633,8 +635,12 @@ def evaluate_episode(
         # B5: exact same shared-quality B5 transition as final label rollout.
         decision = decision_inputs(getattr(args, "policy_variant", "full"),
                                    E_obs_hat_cm, E_prior_hat_cm, p_obs_risk, p_prior_risk)
+        transition_fn = b5_transition
+        if getattr(args, "policy_variant", "full") == "no_recovery_admission":
+            from ablation_policy import without_recovery_admission
+            transition_fn = without_recovery_admission(b5_transition)
         transition_start = time.perf_counter()
-        T_final, current_mode, b5_state, recovery_info = b5_transition(
+        T_final, current_mode, b5_state, recovery_info = transition_fn(
             T_obs=T_obs,
             T_prior=T_prior5,
             support=obs_features["x4"],
@@ -891,7 +897,7 @@ def evaluate_episode(
             "sam2_cache_hit": int(bool(recovery_info and recovery_info.get("sam2_cache_hit", False))),
             "quality_wall_ms": quality_wall_ms,
             "transition_wall_ms": transition_wall_ms,
-            "policy_wall_ms": transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") == "simple" else quality_wall_ms),
+            "policy_wall_ms": transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") in ("simple", "no_quality") else quality_wall_ms),
         })
 
     if label_consistency_failures:
@@ -1365,7 +1371,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--frozen_test', action='store_true', help='No test label CSV; final model only; no fitting')
     parser.add_argument('--preflight_only', action='store_true', help='Load frozen features/artifacts only; no rendering or rollout')
-    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_absolute_gate', 'no_relative_advantage'], default='full')
+    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_quality', 'no_rollout', 'no_recovery_admission', 'no_absolute_gate', 'no_relative_advantage'], default='full')
     parser.add_argument('--csv_path', type=str, default="./per_frame_label_threshold1.0.csv")
     parser.add_argument('--manifest_path', type=str, default="./reference_manifest_all27.csv")
     parser.add_argument('--result_dir', nargs='+', type=str, default=[

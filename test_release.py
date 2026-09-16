@@ -18,6 +18,10 @@ import uuid
 
 ROOT = Path(__file__).resolve().parent
 TRAIN = {"mustard_easy_00_02","mustard0", "bleach0", "bleach_hard_00_03_chaitanya"}
+SUPPORTED_TRAIN_POPULATIONS = (
+    {"mustard0", "bleach0", "bleach_hard_00_03_chaitanya"},
+    {"mustard_easy_00_02", "mustard0", "bleach0", "bleach_hard_00_03_chaitanya"},
+)
 TEST = {
     "cracker_box_reorient": "003_cracker_box",
     "cracker_box_yalehand0": "003_cracker_box",
@@ -72,7 +76,9 @@ def verify_release(release):
     if cfg.get("b5_policy_config") and "source/b5_revision.py" not in checked:
         raise ValueError("Frozen release lacks checksummed b5_revision.py")
     if (cfg.get("training_mode") != "final_development_fit" or cfg.get("held_out_base") is not None
-            or set(cfg.get("train_bases", [])) != TRAIN or set(cfg.get("fit_conditions", [])) != set(CONDITIONS)):
+            or set(cfg.get("train_bases", [])) not in SUPPORTED_TRAIN_POPULATIONS
+            or len(cfg.get("train_bases", [])) != len(set(cfg.get("train_bases", [])))
+            or set(cfg.get("fit_conditions", [])) != set(CONDITIONS)):
         raise ValueError("Unexpected final-training population/conditions")
     if cfg.get("manifest_sha256") != sha(release / "reference_manifest.csv"):
         raise ValueError("Release does not use the nine-sequence reference manifest")
@@ -83,7 +89,7 @@ def verify_release(release):
             raise ValueError("Shared artifact/config mismatch: " + key)
     if not 0 < float(cfg["p_risk_threshold"]) < 1:
         raise ValueError("Invalid frozen risk probability threshold")
-    if set(effective.get("train_bases", [])) != TRAIN:
+    if set(effective.get("train_bases", [])) != set(cfg["train_bases"]):
         raise ValueError("Training configuration mismatch")
     for key in ("risk_threshold_cm", "prior_advantage_margin_cm", "seed"):
         if cfg[key] != effective[key]:
@@ -165,7 +171,7 @@ def command_for(release, output, cfg, effective, base, variant):
     cmd = [sys.executable, "-u", "-B", str(output / "source/3-train_evaluation.py"),
            "--frozen_test", "--policy_variant", variant,
            "--manifest_path", str(release / "reference_manifest.csv"),
-           "--train_seqs", "mustard_easy_00_02", "mustard0", "bleach0", "bleach_hard_00_03_chaitanya",
+           "--train_seqs", *cfg["train_bases"],
            "--test_base_seq", base, "--result_dir",
            *(str(Path(paths["RESULT_ROOT"]) / base / (base+c)) for c in CONDITIONS),
            "--gt_dir", str(Path(paths["GT_ROOT"]) / base / "annotated_poses"),
@@ -360,6 +366,7 @@ def main(argv=None):
         model_policy_training_match=("diagnostic_policy_override_no_refit" if args.b5_policy_revision != "frozen"
                                      else "release_policy"),
         evaluation_status=("post_test_diagnostic_not_untouched" if args.recovery_gate_revision != "frozen"
+                           or any(v in args.variants for v in ("no_quality", "no_rollout", "no_recovery_admission"))
                            or gate_config.get("status") == "development_unvalidated"
                            or policy_config.get("status") == "development_unvalidated" else "frozen_protocol"),
         reference_manifest_sha256=sha(release / "reference_manifest.csv"), test_sequences=TEST,

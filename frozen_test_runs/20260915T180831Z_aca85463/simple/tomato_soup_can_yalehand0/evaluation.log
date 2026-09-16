@@ -1,0 +1,1350 @@
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.59
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating tomato_soup_can_yalehand0_clean ===
+[tomato_soup_can_yalehand0_clean] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_black10 ===
+[tomato_soup_can_yalehand0_black10] manifest paths and SHA-256 values verified: 1308 frames
+[Recovery] Template2 mask -> FoundationPose.register() (iteration=5)
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: 'Infinity'
+debug: null
+n_view: 1
+run_id: 3wy8qqex
+use_BN: true
+exp_name: 2024-01-11-20-02-45
+n_epochs: 62
+save_dir: /home/bowenw/debug/2024-01-11-20-02-45/
+use_mask: false
+loss_type: pairwise_valid
+optimizer: adam
+batch_size: 8
+crop_ratio: 1.1
+enable_amp: true
+use_normal: false
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+vis_interval: 1000
+weight_decay: 0
+normalize_xyz: true
+resume_run_id: null
+clip_grad_norm: 'Infinity'
+lr_epoch_decay: 500
+render_backend: nvdiffrast
+train_num_pair: 5
+lr_decay_epochs:
+- 50
+n_epochs_warmup: 1
+make_pair_online: false
+gradient_max_norm: 'Infinity'
+max_step_per_epoch: 10000
+n_rendering_workers: 1
+save_epoch_interval: 100
+n_dataloader_workers: 100
+split_objects_across_gpus: true
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+
+[__init__()] self.h5_file:None
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:151: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[__init__()] welcome
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: .inf
+debug: null
+w_rot: 0.1
+n_view: 1
+run_id: null
+use_BN: true
+rot_rep: axis_angle
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+exp_name: 2023-10-28-18-33-37
+save_dir: /tmp/2023-10-28-18-33-37/
+loss_type: l2
+optimizer: adam
+trans_rep: tracknet
+batch_size: 8
+crop_ratio: 1.2
+use_normal: false
+BN_momentum: 0.1
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+normal_uint8: false
+vis_interval: 1000
+weight_decay: 0
+n_max_objects: null
+normalize_xyz: true
+clip_grad_norm: 'Infinity'
+rot_normalizer: 0.3490658503988659
+trans_normalizer:
+- 0.019999999552965164
+- 0.019999999552965164
+- 0.05000000074505806
+max_step_per_epoch: 25000
+val_epoch_interval: 10
+n_dataloader_workers: 60
+enable_amp: true
+use_mask: false
+
+[__init__()] self.h5_file:
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:138: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[reset_object()] self.diameter:0.1203757887326185, vox_size:0.006018789436630925
+[reset_object()] self.pts:torch.Size([983, 3])
+[reset_object()] reset done
+[make_rotation_grid()] cam_in_obs:(42, 4, 4)
+[make_rotation_grid()] rot_grid:(252, 4, 4)
+[make_rotation_grid()] after cluster, rot_grid:(252, 4, 4)
+[make_rotation_grid()] self.rot_grid: torch.Size([252, 4, 4])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+/root/autodl-tmp/conda-envs/foundationpose/lib/python3.10/site-packages/torch/__init__.py:1144: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:432.)
+  _C._set_default_tensor_type(t)
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:190: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:193: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([ 10, 137, 172,  11,  35,  77, 130,  76, 100, 101, 106, 131, 136,   4,
+          5, 107,  34,  58, 125, 149,  47,  53, 196, 191,  50, 173, 184, 227,
+        233,  59, 202, 203,  94, 244, 178, 226,  64,  71,  22, 197,  70, 251,
+        146, 148, 155, 208, 239,  52, 170, 179, 145, 250,  23, 115,  13, 169,
+        238, 134, 190,  91, 124, 205, 206,   1,  17,  14, 167,  95, 154, 230,
+         97, 104, 119, 185,  86,  92, 209,  74, 229,  73,  67,  98, 128,   8,
+         29,  85, 118, 199,  19,  20, 116, 200, 151,  68, 133, 247, 248, 175,
+          7,  88,  61, 152,  79, 122, 127, 223,   2,  49, 194, 232,  28,  56,
+         89, 193,  16, 103,  82, 221,  80,  83, 224,  55, 245,  65, 121, 176,
+         62, 163,  43, 214, 215, 242, 161,  38, 213,  39,  63,  54, 123, 117,
+        157,  90, 218, 158, 212, 180,  44, 165,  66, 164,  51, 147,  37, 211,
+         84, 217,  41, 219, 174, 201, 234,  24,  81, 198,  21,   3, 153, 207,
+          9,  96, 168,  15,  78, 195,   6, 249,  12, 102, 135, 186,  18,  72,
+         75, 192, 222, 109,   0,  45, 129, 246,  30,  46, 142, 187,  31, 141,
+        166, 220, 110, 138, 171, 159, 228, 241, 225, 235, 240,  27, 108, 243,
+         57, 143, 189,  40, 113, 231, 112, 140,  87,  99, 120, 139,  93, 181,
+         25,  69, 162, 216, 237, 105, 204, 210,  33,  60, 150, 156,  48, 144,
+        160, 177,  42, 132, 126, 183,  36, 114, 236, 111,  32, 182, 188,  26])
+[register()] sorted scores:tensor([107.6055, 107.6055, 107.6055, 107.6016, 107.6016, 107.6016, 107.6016,
+        107.5977, 107.5977, 107.5938, 107.5938, 107.5938, 107.5938, 107.5859,
+        107.5859, 107.5742, 107.5547, 107.4297, 107.4062, 107.4062, 107.3867,
+        107.3867, 107.3828, 107.3438, 107.3398, 107.3320, 107.3320, 107.3281,
+        107.3281, 107.3242, 107.3242, 107.3203, 107.3086, 107.3086, 107.3047,
+        107.2969, 107.2930, 107.2930, 107.2891, 107.2891, 107.2734, 107.2734,
+        107.2695, 107.2695, 107.2695, 107.2695, 107.2695, 107.2656, 107.2617,
+        107.2617, 107.2578, 107.2578, 107.2461, 107.2383, 107.2344, 107.2344,
+        107.2344, 107.2188, 107.2188, 107.2109, 107.2031, 107.2031, 107.2031,
+        107.1992, 107.1992, 107.1953, 107.1953, 107.1914, 107.1875, 107.1875,
+        107.1836, 107.1797, 107.1797, 107.1797, 107.1758, 107.1719, 107.1719,
+        107.1641, 107.1641, 107.1562, 107.1523, 107.1523, 107.1484, 107.1445,
+        107.1445, 107.1445, 107.1445, 107.1445, 107.1406, 107.1406, 107.1406,
+        107.1406, 107.1367, 107.1328, 107.1328, 107.1328, 107.1328, 107.1289,
+        107.1211, 107.1211, 107.1172, 107.1172, 107.1094, 107.1094, 107.1094,
+        107.1094, 107.1055, 107.1055, 107.1055, 107.1055, 107.1016, 107.1016,
+        107.1016, 107.1016, 107.0977, 107.0977, 107.0938, 107.0938, 107.0898,
+        107.0898, 107.0898, 107.0859, 107.0742, 107.0703, 107.0664, 107.0664,
+        107.0430, 106.9922, 106.9766, 106.9648, 106.9375, 106.9062, 106.8555,
+        106.8047, 106.7773, 106.7617, 106.7500, 106.7461, 106.7461, 106.7266,
+        106.7227, 106.7188, 106.6875, 106.6719, 106.6719, 106.6562, 106.6016,
+        106.5898, 106.5820, 106.5781, 106.5586, 106.5508, 106.5430, 106.5156,
+        106.5117, 106.4922, 106.4883, 106.4453, 106.4414, 106.4297, 106.4297,
+        106.4102, 106.4102, 106.3867, 106.3828, 106.3750, 106.3750, 106.3750,
+        106.3711, 106.3711, 106.3633, 106.3594, 106.3594, 106.3594, 106.3555,
+        106.3555, 106.3516, 106.3516, 106.3477, 106.3477, 106.3398, 106.3359,
+        106.3359, 106.3359, 106.3359, 106.3320, 106.3281, 106.3281, 106.3281,
+        106.3203, 106.3125, 106.3125, 106.3047, 106.3047, 106.3008, 106.2969,
+        106.2969, 106.2969, 106.2930, 106.2812, 106.2812, 106.2773, 106.2773,
+        106.2773, 106.2734, 106.2734, 106.2734, 106.2695, 106.2695, 106.2695,
+        106.2656, 106.2656, 106.2656, 106.2617, 106.2617, 106.2617, 106.2539,
+        106.2539, 106.2461, 106.2461, 106.2461, 106.2461, 106.2422, 106.2422,
+        106.2344, 106.2344, 106.2344, 106.2344, 106.2344, 106.2305, 106.2305,
+        106.2305, 106.2266, 106.2266, 106.2266, 106.2266, 106.2227, 106.2227,
+        106.2227, 106.2227, 106.2188, 106.2109, 106.1992, 106.1992, 106.1875,
+        106.1875, 106.1875, 106.1719, 106.1602, 106.1484, 106.1484, 106.1406])
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Module Utils 65dffc6 load on device 'cuda:0' took 0.76 ms  (cached)
+num original candidates = 252
+num of pose after clustering: 252
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10 frame=169
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5749751737835154 0.1705607476635514 0.672514619883041
+positive inliers / visible support / spatial bins: 230 342 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5203862660944206
+coverage: 0.5619930475086906
+center_error_norm: 0.11822867353705735
+depth_residual_m: 0.014866919197887185
+depth_support: 569
+template_score_margin: 0.0
+translation_jump_m: 0.0058350401062672195
+rotation_jump_deg: 4.476481163552177
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_2 ===
+[tomato_soup_can_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1308 frames
+[Recovery] Template2 mask -> FoundationPose.register() (iteration=5)
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: 'Infinity'
+debug: null
+n_view: 1
+run_id: 3wy8qqex
+use_BN: true
+exp_name: 2024-01-11-20-02-45
+n_epochs: 62
+save_dir: /home/bowenw/debug/2024-01-11-20-02-45/
+use_mask: false
+loss_type: pairwise_valid
+optimizer: adam
+batch_size: 8
+crop_ratio: 1.1
+enable_amp: true
+use_normal: false
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+vis_interval: 1000
+weight_decay: 0
+normalize_xyz: true
+resume_run_id: null
+clip_grad_norm: 'Infinity'
+lr_epoch_decay: 500
+render_backend: nvdiffrast
+train_num_pair: 5
+lr_decay_epochs:
+- 50
+n_epochs_warmup: 1
+make_pair_online: false
+gradient_max_norm: 'Infinity'
+max_step_per_epoch: 10000
+n_rendering_workers: 1
+save_epoch_interval: 100
+n_dataloader_workers: 100
+split_objects_across_gpus: true
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+
+[__init__()] self.h5_file:None
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:151: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[__init__()] welcome
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: .inf
+debug: null
+w_rot: 0.1
+n_view: 1
+run_id: null
+use_BN: true
+rot_rep: axis_angle
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+exp_name: 2023-10-28-18-33-37
+save_dir: /tmp/2023-10-28-18-33-37/
+loss_type: l2
+optimizer: adam
+trans_rep: tracknet
+batch_size: 8
+crop_ratio: 1.2
+use_normal: false
+BN_momentum: 0.1
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+normal_uint8: false
+vis_interval: 1000
+weight_decay: 0
+n_max_objects: null
+normalize_xyz: true
+clip_grad_norm: 'Infinity'
+rot_normalizer: 0.3490658503988659
+trans_normalizer:
+- 0.019999999552965164
+- 0.019999999552965164
+- 0.05000000074505806
+max_step_per_epoch: 25000
+val_epoch_interval: 10
+n_dataloader_workers: 60
+enable_amp: true
+use_mask: false
+
+[__init__()] self.h5_file:
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:138: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[reset_object()] self.diameter:0.12025447009570996, vox_size:0.0060127235047854975
+[reset_object()] self.pts:torch.Size([984, 3])
+[reset_object()] reset done
+[make_rotation_grid()] cam_in_obs:(42, 4, 4)
+[make_rotation_grid()] rot_grid:(252, 4, 4)
+[make_rotation_grid()] after cluster, rot_grid:(252, 4, 4)
+[make_rotation_grid()] self.rot_grid: torch.Size([252, 4, 4])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+/root/autodl-tmp/conda-envs/foundationpose/lib/python3.10/site-packages/torch/__init__.py:1144: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:432.)
+  _C._set_default_tensor_type(t)
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:190: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:193: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([149, 173,  10,   5,  76, 137,  11,  35,  77, 101, 107, 131,  47, 130,
+        167, 226, 178,  34,  74, 245,  58, 212, 232, 244,  43, 116, 128, 134,
+        157, 184, 230, 238,  38, 122, 145, 206, 250,  44,  50,  71, 239,   1,
+         14,  28,  73,  86, 158, 163, 191, 211,  20,  80, 136, 164, 194, 217,
+        221,  62,  94, 148, 161, 185, 205, 218,  29, 175,  37, 146, 152, 179,
+        199, 233,  16,  89,  92, 196, 202, 209, 215,  22, 103, 154, 169, 242,
+         17,  83,  95,  97, 119, 190, 200, 251,   4,  32,  53,  67,  91, 125,
+        197, 208, 224,  56,  64, 104, 155, 176, 203, 227,  23,  59, 170,  26,
+         54,  65,  85,  90,  98, 172, 248,   2,  68, 229, 113, 182, 188,   8,
+         39,  66,  41,  88, 123, 174,  96, 117,  63, 135, 153, 236,  55, 124,
+         51, 102, 129, 159, 213, 219,  24,  45,  84, 223, 241, 118, 180, 187,
+        234, 165, 235,  18, 162, 166,  31, 100, 143, 228,  40,  52,   7,  19,
+         46, 214, 207, 220,   0, 139, 160, 240, 156, 195, 111, 186, 216, 138,
+        168,   3,  15,  78, 106, 193, 247,  30,  72,  81, 147, 249,   9,  12,
+         49, 115, 222, 246,   6,  75, 192,  21,  25,  79, 181, 201,  42,  70,
+         82,  33,  60, 108, 121, 127, 133, 183,  61, 109, 151,  57,  87, 140,
+        144, 171, 189,  27, 110, 112, 141, 150, 198, 243,  13,  36,  48, 114,
+        126, 132, 142,  93,  99, 177, 105, 120, 204, 210, 225, 237,  69, 231])
+[register()] sorted scores:tensor([119.2344, 119.2344, 119.2188, 119.1875, 119.1719, 119.1719, 119.1562,
+        119.1562, 119.1562, 119.1562, 119.1562, 119.1562, 119.1406, 119.1406,
+        119.1250, 119.0000, 118.9531, 118.9375, 118.9219, 118.9219, 118.9062,
+        118.9062, 118.9062, 118.9062, 118.8906, 118.8906, 118.8906, 118.8906,
+        118.8906, 118.8906, 118.8906, 118.8906, 118.8750, 118.8750, 118.8750,
+        118.8750, 118.8750, 118.8594, 118.8594, 118.8594, 118.8594, 118.8438,
+        118.8438, 118.8438, 118.8438, 118.8438, 118.8438, 118.8438, 118.8438,
+        118.8438, 118.8281, 118.8281, 118.8281, 118.8281, 118.8281, 118.8281,
+        118.8281, 118.8125, 118.8125, 118.8125, 118.8125, 118.8125, 118.8125,
+        118.8125, 118.7969, 118.7969, 118.7812, 118.7812, 118.7812, 118.7812,
+        118.7812, 118.7812, 118.7656, 118.7656, 118.7656, 118.7656, 118.7656,
+        118.7656, 118.7656, 118.7500, 118.7500, 118.7500, 118.7500, 118.7500,
+        118.7344, 118.7344, 118.7344, 118.7344, 118.7344, 118.7344, 118.7344,
+        118.7344, 118.7188, 118.7188, 118.7188, 118.7188, 118.7188, 118.7188,
+        118.7188, 118.7188, 118.7188, 118.7031, 118.7031, 118.7031, 118.7031,
+        118.7031, 118.7031, 118.7031, 118.6875, 118.6875, 118.6875, 118.6719,
+        118.6719, 118.6719, 118.6719, 118.6719, 118.6719, 118.6719, 118.6719,
+        118.6562, 118.6562, 118.6562, 118.6406, 118.6406, 118.6406, 118.6250,
+        118.6094, 118.6094, 118.5938, 118.5938, 118.5938, 118.5938, 118.5781,
+        118.5781, 118.5625, 118.5625, 118.5625, 118.5625, 118.5469, 118.5469,
+        118.5312, 118.5312, 118.5312, 118.5312, 118.5312, 118.5312, 118.5156,
+        118.5156, 118.5156, 118.5156, 118.5000, 118.4844, 118.4844, 118.4844,
+        118.4844, 118.4688, 118.4688, 118.4531, 118.4531, 118.4531, 118.4375,
+        118.4375, 118.4375, 118.4375, 118.4219, 118.4219, 118.4062, 118.4062,
+        118.4062, 118.4062, 118.3906, 118.3906, 118.3750, 118.3750, 118.3594,
+        118.3594, 118.3125, 118.2969, 118.2812, 118.2812, 118.2812, 118.2656,
+        118.2500, 118.2344, 118.2344, 118.2344, 118.2344, 118.2344, 118.2344,
+        118.2188, 118.2188, 118.2188, 118.2188, 118.2188, 118.2031, 118.2031,
+        118.2031, 118.2031, 118.2031, 118.2031, 118.1875, 118.1875, 118.1875,
+        118.1719, 118.1719, 118.1719, 118.1719, 118.1719, 118.1562, 118.1562,
+        118.1562, 118.1406, 118.1406, 118.1406, 118.1406, 118.1406, 118.1406,
+        118.1406, 118.1250, 118.1250, 118.1250, 118.1094, 118.1094, 118.1094,
+        118.1094, 118.1094, 118.1094, 118.0938, 118.0938, 118.0938, 118.0938,
+        118.0938, 118.0938, 118.0938, 118.0781, 118.0781, 118.0781, 118.0781,
+        118.0781, 118.0781, 118.0781, 118.0625, 118.0625, 118.0625, 118.0469,
+        118.0469, 118.0469, 118.0469, 118.0469, 118.0469, 118.0312, 118.0000])
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Module Utils 65dffc6 load on device 'cuda:0' took 0.83 ms  (cached)
+num original candidates = 252
+num of pose after clustering: 252
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_2 frame=420
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.47746883988494726 0.22568807339449543 0.6022099447513812
+positive inliers / visible support / spatial bins: 218 362 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5456349206349206
+coverage: 0.6024096385542169
+center_error_norm: 0.09891312661705486
+depth_residual_m: 0.021532569868467744
+depth_support: 645
+template_score_margin: 0.0
+translation_jump_m: 0.021635372204233227
+rotation_jump_deg: 8.803329906395588
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_3 ===
+[tomato_soup_can_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1308 frames
+[Recovery] Template2 mask -> FoundationPose.register() (iteration=5)
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: 'Infinity'
+debug: null
+n_view: 1
+run_id: 3wy8qqex
+use_BN: true
+exp_name: 2024-01-11-20-02-45
+n_epochs: 62
+save_dir: /home/bowenw/debug/2024-01-11-20-02-45/
+use_mask: false
+loss_type: pairwise_valid
+optimizer: adam
+batch_size: 8
+crop_ratio: 1.1
+enable_amp: true
+use_normal: false
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+vis_interval: 1000
+weight_decay: 0
+normalize_xyz: true
+resume_run_id: null
+clip_grad_norm: 'Infinity'
+lr_epoch_decay: 500
+render_backend: nvdiffrast
+train_num_pair: 5
+lr_decay_epochs:
+- 50
+n_epochs_warmup: 1
+make_pair_online: false
+gradient_max_norm: 'Infinity'
+max_step_per_epoch: 10000
+n_rendering_workers: 1
+save_epoch_interval: 100
+n_dataloader_workers: 100
+split_objects_across_gpus: true
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+
+[__init__()] self.h5_file:None
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:151: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[__init__()] welcome
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: .inf
+debug: null
+w_rot: 0.1
+n_view: 1
+run_id: null
+use_BN: true
+rot_rep: axis_angle
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+exp_name: 2023-10-28-18-33-37
+save_dir: /tmp/2023-10-28-18-33-37/
+loss_type: l2
+optimizer: adam
+trans_rep: tracknet
+batch_size: 8
+crop_ratio: 1.2
+use_normal: false
+BN_momentum: 0.1
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+normal_uint8: false
+vis_interval: 1000
+weight_decay: 0
+n_max_objects: null
+normalize_xyz: true
+clip_grad_norm: 'Infinity'
+rot_normalizer: 0.3490658503988659
+trans_normalizer:
+- 0.019999999552965164
+- 0.019999999552965164
+- 0.05000000074505806
+max_step_per_epoch: 25000
+val_epoch_interval: 10
+n_dataloader_workers: 60
+enable_amp: true
+use_mask: false
+
+[__init__()] self.h5_file:
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:138: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[reset_object()] self.diameter:0.1203656811969259, vox_size:0.006018284059846295
+[reset_object()] self.pts:torch.Size([983, 3])
+[reset_object()] reset done
+[make_rotation_grid()] cam_in_obs:(42, 4, 4)
+[make_rotation_grid()] rot_grid:(252, 4, 4)
+[make_rotation_grid()] after cluster, rot_grid:(252, 4, 4)
+[make_rotation_grid()] self.rot_grid: torch.Size([252, 4, 4])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+/root/autodl-tmp/conda-envs/foundationpose/lib/python3.10/site-packages/torch/__init__.py:1144: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:432.)
+  _C._set_default_tensor_type(t)
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:190: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:193: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([ 47,  77,   5,  76, 101, 131,  11, 137, 107,  95,  58, 130,  71,  59,
+         89, 122,  50, 116,  62, 128, 233,  70,  86, 146, 134, 200,  14, 239,
+        149, 158, 191,  38, 125,  80, 164, 212,  74, 179, 230, 119, 197, 218,
+          2, 167, 173, 203,  53, 170, 155, 251,  23, 152, 224, 248, 176, 227,
+        209,  17,  68,  83, 206, 194,  29,  92,  20,  26, 196,  98, 102, 110,
+        222,   8,  65, 207,  96, 135, 106, 168, 238, 242, 215, 117, 240,  51,
+        213,  90, 161,  44, 201,  30, 184,  15,  34,  28,   7,  63,  79, 108,
+        129, 103,  35,  64, 112, 169, 221, 171, 174, 216,  31,  85, 151, 182,
+         10,  25, 202, 220,  72, 250,  16, 186, 235,  40,  45,  82,  94, 118,
+        136, 144, 228,  81, 120, 124, 153, 156,  19,  46,  52, 154, 160, 187,
+        208, 219,  39, 104, 109, 166, 234,  91, 114, 185,   1,  36,  48,  93,
+        147, 175, 181,   0,  32,  41,  56,  78, 214,  24,  87,  22,  33,  37,
+         42,  55, 223, 245,   3,   4,  54,  84, 139, 140, 162, 165, 183, 189,
+        199, 236, 113, 159, 180, 188,  27,  97, 123, 237, 244,  12,  13, 148,
+        172, 204, 225, 226, 190,   9,  69, 143, 243, 247,   6,  57, 178, 210,
+         18,  66,  67,  73, 111, 126, 132, 193, 229, 241,  43, 138, 145, 205,
+         21, 100, 133, 150, 198, 231,  61,  75,  60,  88,  99, 142, 177, 163,
+        232, 246, 195, 217, 249, 105, 115, 192, 127, 141, 121,  49, 157, 211])
+[register()] sorted scores:tensor([115.8125, 115.8047, 115.7969, 115.7969, 115.7969, 115.7969, 115.7891,
+        115.7891, 115.7656, 115.6875, 115.6562, 115.6250, 115.6094, 115.6016,
+        115.6016, 115.5938, 115.5781, 115.5625, 115.5547, 115.5547, 115.5547,
+        115.5469, 115.5312, 115.5312, 115.5234, 115.5234, 115.5156, 115.5156,
+        115.5078, 115.5000, 115.5000, 115.4922, 115.4922, 115.4844, 115.4844,
+        115.4844, 115.4766, 115.4766, 115.4766, 115.4688, 115.4688, 115.4688,
+        115.4609, 115.4609, 115.4609, 115.4609, 115.4531, 115.4531, 115.4375,
+        115.4375, 115.4297, 115.4297, 115.4219, 115.4219, 115.4141, 115.4062,
+        115.3906, 115.3828, 115.3828, 115.3828, 115.3828, 115.3750, 115.3438,
+        115.3359, 115.3125, 115.3125, 115.3125, 115.3047, 115.3047, 115.2891,
+        115.2891, 115.2812, 115.2812, 115.2812, 115.2578, 115.2344, 115.2188,
+        115.2109, 115.2031, 115.2031, 115.1953, 115.1641, 115.1641, 115.1406,
+        115.1406, 115.1328, 115.1250, 115.1172, 115.1172, 115.1094, 115.1094,
+        115.0938, 115.0781, 115.0703, 115.0625, 115.0547, 115.0547, 115.0547,
+        115.0469, 115.0391, 115.0312, 115.0312, 115.0312, 115.0312, 115.0312,
+        115.0234, 115.0234, 115.0234, 115.0156, 115.0156, 115.0156, 115.0156,
+        115.0078, 115.0078, 115.0078, 115.0078, 115.0000, 115.0000, 114.9922,
+        114.9922, 114.9922, 114.9844, 114.9844, 114.9844, 114.9844, 114.9844,
+        114.9844, 114.9844, 114.9844, 114.9766, 114.9766, 114.9766, 114.9766,
+        114.9766, 114.9688, 114.9688, 114.9688, 114.9688, 114.9688, 114.9688,
+        114.9688, 114.9688, 114.9609, 114.9609, 114.9609, 114.9609, 114.9609,
+        114.9531, 114.9531, 114.9531, 114.9453, 114.9453, 114.9453, 114.9453,
+        114.9453, 114.9453, 114.9453, 114.9375, 114.9375, 114.9375, 114.9375,
+        114.9375, 114.9375, 114.9297, 114.9297, 114.9219, 114.9219, 114.9219,
+        114.9219, 114.9219, 114.9219, 114.9219, 114.9141, 114.9141, 114.9141,
+        114.9141, 114.9141, 114.9141, 114.9141, 114.9141, 114.9141, 114.9141,
+        114.9141, 114.9141, 114.9062, 114.9062, 114.9062, 114.9062, 114.8984,
+        114.8984, 114.8984, 114.8984, 114.8906, 114.8828, 114.8828, 114.8828,
+        114.8828, 114.8828, 114.8828, 114.8828, 114.8750, 114.8672, 114.8672,
+        114.8672, 114.8672, 114.8672, 114.8594, 114.8594, 114.8594, 114.8594,
+        114.8516, 114.8516, 114.8516, 114.8516, 114.8516, 114.8516, 114.8516,
+        114.8516, 114.8516, 114.8516, 114.8438, 114.8438, 114.8438, 114.8438,
+        114.8359, 114.8359, 114.8359, 114.8359, 114.8359, 114.8359, 114.8281,
+        114.8281, 114.8203, 114.8203, 114.8203, 114.8203, 114.8203, 114.8125,
+        114.8047, 114.8047, 114.7969, 114.7969, 114.7969, 114.7891, 114.7891,
+        114.7891, 114.7812, 114.7812, 114.7734, 114.7656, 114.7500, 114.7344])
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Module Utils 65dffc6 load on device 'cuda:0' took 0.90 ms  (cached)
+num original candidates = 252
+num of pose after clustering: 252
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_3 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5105663567202029 0.3696027633851468 0.4910941475826972
+positive inliers / visible support / spatial bins: 193 393 10
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.551650235747964
+coverage: 0.5903669724770643
+center_error_norm: 0.085930108090879
+depth_residual_m: 0.037633713347097864
+depth_support: 718
+template_score_margin: 0.0078125
+translation_jump_m: 0.03347644752398516
+rotation_jump_deg: 12.5738039193343
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_4 ===
+[tomato_soup_can_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1308 frames
+[Recovery] Template2 mask -> FoundationPose.register() (iteration=5)
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: 'Infinity'
+debug: null
+n_view: 1
+run_id: 3wy8qqex
+use_BN: true
+exp_name: 2024-01-11-20-02-45
+n_epochs: 62
+save_dir: /home/bowenw/debug/2024-01-11-20-02-45/
+use_mask: false
+loss_type: pairwise_valid
+optimizer: adam
+batch_size: 8
+crop_ratio: 1.1
+enable_amp: true
+use_normal: false
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+vis_interval: 1000
+weight_decay: 0
+normalize_xyz: true
+resume_run_id: null
+clip_grad_norm: 'Infinity'
+lr_epoch_decay: 500
+render_backend: nvdiffrast
+train_num_pair: 5
+lr_decay_epochs:
+- 50
+n_epochs_warmup: 1
+make_pair_online: false
+gradient_max_norm: 'Infinity'
+max_step_per_epoch: 10000
+n_rendering_workers: 1
+save_epoch_interval: 100
+n_dataloader_workers: 100
+split_objects_across_gpus: true
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+
+[__init__()] self.h5_file:None
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:151: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[__init__()] welcome
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: .inf
+debug: null
+w_rot: 0.1
+n_view: 1
+run_id: null
+use_BN: true
+rot_rep: axis_angle
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+exp_name: 2023-10-28-18-33-37
+save_dir: /tmp/2023-10-28-18-33-37/
+loss_type: l2
+optimizer: adam
+trans_rep: tracknet
+batch_size: 8
+crop_ratio: 1.2
+use_normal: false
+BN_momentum: 0.1
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+normal_uint8: false
+vis_interval: 1000
+weight_decay: 0
+n_max_objects: null
+normalize_xyz: true
+clip_grad_norm: 'Infinity'
+rot_normalizer: 0.3490658503988659
+trans_normalizer:
+- 0.019999999552965164
+- 0.019999999552965164
+- 0.05000000074505806
+max_step_per_epoch: 25000
+val_epoch_interval: 10
+n_dataloader_workers: 60
+enable_amp: true
+use_mask: false
+
+[__init__()] self.h5_file:
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:138: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[reset_object()] self.diameter:0.12034767298539678, vox_size:0.006017383649269839
+[reset_object()] self.pts:torch.Size([984, 3])
+[reset_object()] reset done
+[make_rotation_grid()] cam_in_obs:(42, 4, 4)
+[make_rotation_grid()] rot_grid:(252, 4, 4)
+[make_rotation_grid()] after cluster, rot_grid:(252, 4, 4)
+[make_rotation_grid()] self.rot_grid: torch.Size([252, 4, 4])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+/root/autodl-tmp/conda-envs/foundationpose/lib/python3.10/site-packages/torch/__init__.py:1144: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:432.)
+  _C._set_default_tensor_type(t)
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:190: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:193: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([  5, 130,  76, 100,  10, 136,  11,  46, 137, 106, 190,  77, 101, 107,
+         34,  94,  22, 155, 154, 149, 127, 160, 220,  53, 238, 196,  73, 197,
+        179,  52,   4,  14, 202,  58,   1, 128, 178,  59, 232,  80,  89, 184,
+         43,  65, 173, 230,  64, 118,  67,  16, 115, 208,   2, 205,  49, 131,
+        175,  91, 217, 148, 203, 119, 227,  23, 250, 200,  13,  17,  19, 164,
+        187, 229, 193, 103, 226,  37, 211, 209, 247,  74,  20,  82,  68, 163,
+         83, 157, 233, 248,  50, 172, 133,  61,  88, 167,  55,  97,   7,  85,
+        121, 223,  79, 169, 145, 170, 151, 251, 214,  56, 124, 199,  35,  70,
+        181, 104,  98, 244, 245,  47, 235,  71, 239, 110, 194, 236, 146, 241,
+        224,  86, 188, 182,  29,  28, 221, 166, 134,  92, 242, 176,  40, 191,
+         15,  95,  44, 152, 158,  33, 122, 120, 195, 201, 249,  60, 198,  25,
+        171,   8,  42, 240,  99,   6, 116,  75, 125, 147, 161,  12,  31,  38,
+        102,  24, 126, 204, 114,  54,  69, 165, 219, 177, 207, 237, 156,  87,
+        132, 206,  84,  62, 117,  66, 144, 150, 109, 215, 135, 140, 185, 246,
+        210,  57, 153,  21, 174,   3, 212, 213, 216,  30, 162, 105,   0,  48,
+         90,  18, 222, 231, 129, 180, 168,  36,  32,  72,  63,  78,   9,  96,
+        192, 225, 218, 111,  39, 228, 123, 189,  41,  51, 159, 186,  27, 113,
+         81,  93,  26, 112, 243, 234, 183, 141,  45, 143, 108, 139, 138, 142])
+[register()] sorted scores:tensor([97.7559, 97.7363, 97.7344, 97.7344, 97.7324, 97.7324, 97.7305, 97.7266,
+        97.7266, 97.7227, 97.7207, 97.7148, 97.7129, 97.7129, 97.5234, 97.4883,
+        97.4824, 97.4434, 97.4395, 97.4375, 97.4121, 97.4023, 97.3984, 97.3945,
+        97.3945, 97.3809, 97.3789, 97.3789, 97.3750, 97.3652, 97.3633, 97.3633,
+        97.3574, 97.3477, 97.3398, 97.3379, 97.3359, 97.3242, 97.3164, 97.3145,
+        97.3125, 97.3047, 97.3027, 97.3027, 97.2930, 97.2871, 97.2852, 97.2832,
+        97.2754, 97.2656, 97.2617, 97.2520, 97.2461, 97.2461, 97.2422, 97.2402,
+        97.2402, 97.2363, 97.2246, 97.2227, 97.2227, 97.2168, 97.2168, 97.2129,
+        97.2129, 97.2090, 97.2051, 97.2012, 97.2012, 97.1973, 97.1973, 97.1934,
+        97.1875, 97.1855, 97.1797, 97.1777, 97.1758, 97.1738, 97.1738, 97.1660,
+        97.1602, 97.1602, 97.1582, 97.1582, 97.1562, 97.1465, 97.1426, 97.1387,
+        97.1348, 97.1289, 97.1211, 97.0938, 97.0938, 97.0820, 97.0801, 97.0781,
+        97.0703, 97.0664, 97.0527, 97.0527, 97.0488, 97.0488, 97.0332, 97.0293,
+        97.0039, 97.0000, 96.9961, 96.9902, 96.9863, 96.9844, 96.9805, 96.9746,
+        96.9746, 96.9570, 96.9531, 96.9453, 96.9414, 96.9395, 96.9375, 96.9297,
+        96.8984, 96.8789, 96.8770, 96.8496, 96.8340, 96.8320, 96.7910, 96.7461,
+        96.7461, 96.7363, 96.7344, 96.7324, 96.7188, 96.6973, 96.6816, 96.6680,
+        96.6582, 96.6387, 96.6348, 96.6250, 96.6172, 96.6035, 96.5996, 96.5996,
+        96.5977, 96.5957, 96.5957, 96.5918, 96.5918, 96.5840, 96.5820, 96.5742,
+        96.5742, 96.5703, 96.5625, 96.5488, 96.5488, 96.5449, 96.5391, 96.5371,
+        96.5371, 96.5352, 96.5332, 96.5332, 96.5332, 96.5312, 96.5215, 96.5195,
+        96.5117, 96.5098, 96.5020, 96.5000, 96.4961, 96.4902, 96.4902, 96.4824,
+        96.4785, 96.4688, 96.4629, 96.4609, 96.4570, 96.4551, 96.4492, 96.4473,
+        96.4453, 96.4414, 96.4395, 96.4375, 96.4355, 96.4297, 96.4277, 96.4277,
+        96.4258, 96.4180, 96.4180, 96.4180, 96.4160, 96.4141, 96.4141, 96.4102,
+        96.4082, 96.4023, 96.3984, 96.3984, 96.3984, 96.3945, 96.3906, 96.3848,
+        96.3828, 96.3789, 96.3770, 96.3750, 96.3730, 96.3730, 96.3691, 96.3691,
+        96.3652, 96.3633, 96.3613, 96.3613, 96.3594, 96.3594, 96.3574, 96.3516,
+        96.3516, 96.3496, 96.3457, 96.3438, 96.3398, 96.3281, 96.3242, 96.3223,
+        96.3184, 96.3164, 96.3125, 96.3086, 96.3008, 96.2969, 96.2930, 96.2891,
+        96.2852, 96.2812, 96.2715, 96.2559, 96.2480, 96.2285, 96.2051, 96.1934,
+        96.1777, 96.1777, 96.1562, 96.1445])
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Module Utils 65dffc6 load on device 'cuda:0' took 0.78 ms  (cached)
+num original candidates = 252
+num of pose after clustering: 252
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_4 frame=669
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6450592885375495 0.0467706013363029 0.9005847953216374
+positive inliers / visible support / spatial bins: 308 342 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5636303847418612
+coverage: 0.5709526982011992
+center_error_norm: 0.11211711608077674
+depth_residual_m: 0.020217088519535964
+depth_support: 794
+template_score_margin: 0.01953125
+translation_jump_m: 0.007675227427763011
+rotation_jump_deg: 14.793903097758285
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_5 ===
+[tomato_soup_can_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1308 frames
+[Recovery] Template2 mask -> FoundationPose.register() (iteration=5)
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: 'Infinity'
+debug: null
+n_view: 1
+run_id: 3wy8qqex
+use_BN: true
+exp_name: 2024-01-11-20-02-45
+n_epochs: 62
+save_dir: /home/bowenw/debug/2024-01-11-20-02-45/
+use_mask: false
+loss_type: pairwise_valid
+optimizer: adam
+batch_size: 8
+crop_ratio: 1.1
+enable_amp: true
+use_normal: false
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+vis_interval: 1000
+weight_decay: 0
+normalize_xyz: true
+resume_run_id: null
+clip_grad_norm: 'Infinity'
+lr_epoch_decay: 500
+render_backend: nvdiffrast
+train_num_pair: 5
+lr_decay_epochs:
+- 50
+n_epochs_warmup: 1
+make_pair_online: false
+gradient_max_norm: 'Infinity'
+max_step_per_epoch: 10000
+n_rendering_workers: 1
+save_epoch_interval: 100
+n_dataloader_workers: 100
+split_objects_across_gpus: true
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+
+[__init__()] self.h5_file:None
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:151: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[__init__()] welcome
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: .inf
+debug: null
+w_rot: 0.1
+n_view: 1
+run_id: null
+use_BN: true
+rot_rep: axis_angle
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+exp_name: 2023-10-28-18-33-37
+save_dir: /tmp/2023-10-28-18-33-37/
+loss_type: l2
+optimizer: adam
+trans_rep: tracknet
+batch_size: 8
+crop_ratio: 1.2
+use_normal: false
+BN_momentum: 0.1
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+normal_uint8: false
+vis_interval: 1000
+weight_decay: 0
+n_max_objects: null
+normalize_xyz: true
+clip_grad_norm: 'Infinity'
+rot_normalizer: 0.3490658503988659
+trans_normalizer:
+- 0.019999999552965164
+- 0.019999999552965164
+- 0.05000000074505806
+max_step_per_epoch: 25000
+val_epoch_interval: 10
+n_dataloader_workers: 60
+enable_amp: true
+use_mask: false
+
+[__init__()] self.h5_file:
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:138: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[reset_object()] self.diameter:0.12032698811571743, vox_size:0.006016349405785872
+[reset_object()] self.pts:torch.Size([984, 3])
+[reset_object()] reset done
+[make_rotation_grid()] cam_in_obs:(42, 4, 4)
+[make_rotation_grid()] rot_grid:(252, 4, 4)
+[make_rotation_grid()] after cluster, rot_grid:(252, 4, 4)
+[make_rotation_grid()] self.rot_grid: torch.Size([252, 4, 4])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+/root/autodl-tmp/conda-envs/foundationpose/lib/python3.10/site-packages/torch/__init__.py:1144: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:432.)
+  _C._set_default_tensor_type(t)
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:190: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:193: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([136, 106, 130,  10,  76,   4,  46, 137, 100, 115,  85,  13, 160,  75,
+        154, 214, 235, 172, 229,  94, 196,  22, 178, 148, 241, 201,  40,  49,
+        247, 149, 166,  52, 202,  58,  31,  53, 124, 118, 199,  61, 175,   1,
+        208,  97, 223, 127,  98,  64, 205, 168, 220, 226,   7, 181,   9, 219,
+        250,  88,  91,  67,  79, 232, 103, 121, 119,  16, 133, 203,  82, 145,
+         73, 193, 187, 151,  19, 155,  70, 238,  65,  68, 125, 209, 169,  55,
+         25, 228,  56, 222,  41,  26, 131, 215, 147, 174, 224,  47, 188,  11,
+         77,  92, 244,   8,  17,  32, 167, 207, 240, 251, 161, 230, 236, 123,
+         34, 248,  54,  35,  14,  21,   5, 153, 104, 129,  80, 194, 164, 158,
+        245,  71, 146,  89,  95,  74, 171, 165,  62, 152,  87,  20, 170, 231,
+        185, 122,  50, 111,  59, 197,  23, 179, 176, 107,   6,  63, 225,  83,
+        190,  44, 218, 159,  84, 184, 200,  29, 195, 116, 246,  60, 217,  36,
+        227,  42, 101, 134, 157, 105, 216,  81, 144, 210, 126, 198, 173, 192,
+         78, 212,  39,   0,  72, 211,  37, 128, 191,   2, 204, 114,  86, 249,
+        242,  15, 109,  28, 110,  12, 206,  33, 239,  99, 233, 108, 120, 135,
+         38,  48,  43, 132, 163, 150,  30, 102,  57, 221,   3, 117,  27,  93,
+        189, 183,  96,  69, 243,  45, 237,  18, 177, 162, 213,  90, 180, 186,
+         24, 234,  51, 141, 156, 139, 182, 112,  66, 140, 143, 113, 142, 138])
+[register()] sorted scores:tensor([100.8716, 100.8696, 100.8696, 100.8638, 100.8599, 100.8589, 100.8467,
+        100.8320, 100.8169, 100.4702, 100.4675, 100.4331, 100.4265, 100.4163,
+        100.4109, 100.3928, 100.3853, 100.3772, 100.3752, 100.3523, 100.3523,
+        100.3442, 100.3337, 100.3291, 100.3225, 100.3115, 100.3091, 100.3022,
+        100.2983, 100.2947, 100.2881, 100.2837, 100.2788, 100.2725, 100.2712,
+        100.2710, 100.2708, 100.2695, 100.2654, 100.2617, 100.2563, 100.2498,
+        100.2487, 100.2438, 100.2413, 100.2405, 100.2388, 100.2341, 100.2289,
+        100.2251, 100.2241, 100.2177, 100.2172, 100.2169, 100.2166, 100.2159,
+        100.2148, 100.2081, 100.2069, 100.2014, 100.1980, 100.1976, 100.1886,
+        100.1868, 100.1826, 100.1805, 100.1794, 100.1575, 100.1490, 100.1487,
+        100.1451, 100.1417, 100.1288, 100.1271, 100.1239, 100.1078, 100.1046,
+        100.1021, 100.0973, 100.0885, 100.0793, 100.0790, 100.0771, 100.0740,
+        100.0625, 100.0561, 100.0541, 100.0519, 100.0406, 100.0311, 100.0025,
+         99.9992,  99.9922,  99.9917,  99.9734,  99.9678,  99.9671,  99.9640,
+         99.9634,  99.9587,  99.9485,  99.9413,  99.9389,  99.9373,  99.9354,
+         99.9216,  99.9069,  99.9016,  99.8918,  99.8878,  99.8730,  99.8672,
+         99.8611,  99.8594,  99.8590,  99.8463,  99.8400,  99.8243,  99.8202,
+         99.8145,  99.8070,  99.8066,  99.8010,  99.7976,  99.7968,  99.7942,
+         99.7775,  99.7719,  99.7670,  99.7668,  99.7665,  99.7656,  99.7653,
+         99.7651,  99.7643,  99.7643,  99.7605,  99.7587,  99.7511,  99.7466,
+         99.7456,  99.7434,  99.7415,  99.7402,  99.7385,  99.7356,  99.7354,
+         99.7327,  99.7292,  99.7234,  99.7219,  99.7178,  99.7161,  99.7122,
+         99.7117,  99.7095,  99.7087,  99.7080,  99.7051,  99.7024,  99.7017,
+         99.7012,  99.7009,  99.6973,  99.6948,  99.6934,  99.6934,  99.6929,
+         99.6924,  99.6921,  99.6875,  99.6875,  99.6841,  99.6838,  99.6819,
+         99.6763,  99.6760,  99.6704,  99.6694,  99.6611,  99.6602,  99.6597,
+         99.6594,  99.6594,  99.6567,  99.6565,  99.6562,  99.6531,  99.6519,
+         99.6484,  99.6479,  99.6477,  99.6436,  99.6431,  99.6396,  99.6379,
+         99.6365,  99.6360,  99.6350,  99.6345,  99.6340,  99.6335,  99.6333,
+         99.6318,  99.6306,  99.6248,  99.6206,  99.6199,  99.6152,  99.6108,
+         99.6082,  99.6045,  99.6033,  99.6011,  99.6011,  99.5991,  99.5967,
+         99.5928,  99.5911,  99.5906,  99.5884,  99.5764,  99.5718,  99.5708,
+         99.5706,  99.5671,  99.5669,  99.5588,  99.5557,  99.5537,  99.5417,
+         99.5413,  99.5366,  99.5198,  99.5173,  99.5127,  99.5110,  99.5090,
+         99.5068,  99.5059,  99.5017,  99.4858,  99.4756,  99.4604,  99.4575,
+         99.4482,  99.4326,  99.4272,  99.4209,  99.4126,  99.3921,  99.3804])
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Module Utils 65dffc6 load on device 'cuda:0' took 0.86 ms  (cached)
+num original candidates = 252
+num of pose after clustering: 252
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_5 frame=806
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6392657621707901 0.09513274336283185 0.8137535816618912
+positive inliers / visible support / spatial bins: 284 349 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5280581348405329
+coverage: 0.5343137254901961
+center_error_norm: 0.12393606628092863
+depth_residual_m: 0.02066948777650296
+depth_support: 752
+template_score_margin: 0.001953125
+translation_jump_m: 0.004115950771633039
+rotation_jump_deg: 20.32741287944752
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_occ40 ===
+[tomato_soup_can_yalehand0_occ40] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_occ60 ===
+[tomato_soup_can_yalehand0_occ60] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_drop60 ===
+[tomato_soup_can_yalehand0_drop60] manifest paths and SHA-256 values verified: 1308 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_tomato_soup_can_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_tomato_soup_can_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.7039
+Obs risk AUROC            = 0.9363
+Prior risk AUROC          = 0.9292
