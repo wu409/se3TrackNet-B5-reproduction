@@ -1,4 +1,5 @@
 """Prepare/seal a development-only release. No inference or fitting in this helper."""
+import runtime_settings
 import csv
 import hashlib
 import json
@@ -185,6 +186,7 @@ def prepare(generated_manifest=False):
             "FOUNDATIONPOSE_SCORER_WEIGHT", "SAM2_PYTHON", "SAM2_DIR", "SAM2_CONFIG",
             "SAM2_CHECKPOINT", "PYOPENGL_PLATFORM", "PYTHONHASHSEED", "TRAIN_CONDITIONS_JSON")
     keys += ("SE3_PYTHON", "SE3_WEIGHT_ROOT", "SE3_DATA_ROOT")
+    keys += ("B5_NUM_THREADS", "B5_IO_WORKERS") + runtime_settings.THREAD_KEYS
     config = {"status": "prepared_not_frozen", "created_utc": datetime.now(timezone.utc).isoformat(),
               "training_manifest": str(training_manifest.resolve()),
               "manifest_mode": "single_reference" if generated_manifest else "legacy_subset",
@@ -199,12 +201,18 @@ def prepare(generated_manifest=False):
               "manifest_contains_reserved_sequences": generated_manifest,
               "backbone_retrained": False,
               "observer_config_sha256": sha(observer_path),
+              "perception_runtime_config": __import__("perception_runtime").CONFIG.copy(),
+              "execution_settings": runtime_settings.execution_config(),
               "backbone_observations": "frozen predictions until correction; then restarted SE3 own-observation recursion",
               "bitwise_determinism_guaranteed": False,
               "paths": {k: env.get(k) for k in keys}}
     dump(release / "effective_config.json", config)
     record(release / "effective_config.json")
     dump(release / "input_hashes.json", inventory)
+    for kind, python_key, repo_key in (("sam2", "SAM2_PYTHON", "SAM2_DIR"),
+                                      ("foundationpose", "FOUNDATIONPOSE_PYTHON", "FOUNDATIONPOSE_DIR")):
+        subprocess.run([env[python_key], '-B', str(source/'perception_workers.py'),
+                        '--check', kind, env[repo_key]], check=True)
     for label, key in (("training", "TRAIN_PYTHON"), ("sam2", "SAM2_PYTHON"),
                        ("foundationpose", "FOUNDATIONPOSE_PYTHON"), ("se3", "SE3_PYTHON")):
         result = subprocess.run([env[key], "-m", "pip", "freeze"],
@@ -231,6 +239,13 @@ def seal():
     from b5_revision import CONFIG
     if cfg.get('b5_policy_config') != CONFIG:
         raise ValueError('Cannot seal incompatible policy/model configuration')
+    from perception_runtime import CONFIG as runtime_config
+    effective_runtime = json.loads((release / 'effective_config.json').read_text(encoding='utf-8'))
+    if cfg.get('execution_settings') != effective_runtime.get('execution_settings') or not cfg.get('execution_settings'):
+        raise ValueError('Cannot seal mismatched CPU/I/O budgets')
+    if (cfg.get('perception_runtime_config') != runtime_config
+            or effective_runtime.get('perception_runtime_config') != runtime_config):
+        raise ValueError('Cannot seal mismatched persistent perception configuration')
     if cfg.get('observer_config_sha256') != sha(release / 'observer_config.json'):
         raise ValueError('Wrong observer configuration')
     if cfg.get("training_mode") != "final_development_fit" or cfg["held_out_base"] is not None:
@@ -268,6 +283,8 @@ def seal():
         "recovery_gate_config": cfg.get("recovery_gate_config"),
         "b5_policy_config": cfg.get("b5_policy_config"),
         "observer_config_sha256": cfg.get("observer_config_sha256"),
+        "perception_runtime_config": cfg.get("perception_runtime_config"),
+        "execution_settings": cfg.get("execution_settings"),
         "test_evaluation_completed": False,
         "note": "Model/source/input release only; new-test runner still requires adaptation."}
     files = []

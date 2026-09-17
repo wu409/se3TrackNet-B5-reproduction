@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 from b5_revision import CONFIG as B5_POLICY_CONFIG
+import runtime_settings
 import cv2
 from scipy.spatial.transform import Rotation as R_sci
 
@@ -2068,6 +2069,13 @@ from estimater import FoundationPose
 from learning.training.predict_pose_refine import PoseRefinePredictor
 from learning.training.predict_score import ScorePredictor
 
+import random
+random.seed(42); np.random.seed(42); torch.manual_seed(42)
+torch.backends.cudnn.benchmark = False
+thread_count = int(os.environ.get("B5_NUM_THREADS", os.environ.get("OMP_NUM_THREADS", "4")))
+torch.set_num_threads(thread_count)
+torch.set_num_interop_threads(thread_count)
+
 rgb = np.load(args.rgb_npy).astype(np.uint8)
 depth = np.load(args.depth_npy).astype(np.float32)
 ob_mask = np.load(args.mask_npy).astype(bool)
@@ -2195,6 +2203,12 @@ def foundationpose_register_from_mask(
     Run full FoundationPose register() from the current RGB-D and the
     template-generated recovery mask. No recursive pose initializes FoundationPose.
     """
+    from perception_runtime import active_session
+    session = active_session()
+    if session is not None:
+        return session.register(current_rgb_real, current_depth_real, recovery_mask,
+                                K, mesh_file, refine_iter)
+    # Legacy one-shot path retained for isolated equivalence diagnostics only.
     foundationpose_python = (
         foundationpose_python
         or DEFAULT_FOUNDATIONPOSE_PYTHON
@@ -2976,10 +2990,10 @@ DEFAULT_SAM2_PYTHON = os.environ.get(
 )
 DEFAULT_SAM2_DIR = os.environ.get("SAM2_DIR", "/home/wyg/sam2")
 DEFAULT_SAM2_CONFIG = os.environ.get(
-    "SAM2_CONFIG", "configs/sam2.1/sam2.1_hiera_l.yaml"
+    "SAM2_CONFIG", "configs/sam2.1/sam2.1_hiera_s.yaml"
 )
 DEFAULT_SAM2_CHECKPOINT = os.environ.get(
-    "SAM2_CHECKPOINT", "/home/wyg/sam2/checkpoints/sam2.1_hiera_large.pt"
+    "SAM2_CHECKPOINT", "/home/wyg/sam2/checkpoints/sam2.1_hiera_small.pt"
 )
 DEFAULT_SAM2_CACHE_ROOT = os.environ.get(
     "SAM2_CACHE_ROOT", "./sam2_recovery_cache"
@@ -3014,6 +3028,13 @@ sam2_dir = os.path.abspath(args.sam2_dir)
 os.chdir(sam2_dir)
 sys.path.insert(0, sam2_dir)
 from sam2.build_sam import build_sam2_video_predictor
+
+import random
+random.seed(42); np.random.seed(42); torch.manual_seed(42)
+torch.backends.cudnn.benchmark = False
+thread_count = int(os.environ.get("B5_NUM_THREADS", os.environ.get("OMP_NUM_THREADS", "4")))
+torch.set_num_threads(thread_count)
+torch.set_num_interop_threads(thread_count)
 
 with open(args.rgb_paths, "r", encoding="utf-8") as stream:
     rgb_paths = json.load(stream)
@@ -3163,10 +3184,13 @@ def sam2_mask_at_recovery(
 ):
     """Propagate the official first-frame mask through the recovery frame.
 
-    SAM2 runs in its own process. The process exits immediately after saving the
-    recovery-frame mask, releasing model/state GPU memory before FoundationPose
-    starts. RGB paths are exact resolved manifest paths, in manifest order.
+    New episode runners use a resident, causal SAM2 session. Without a session,
+    retain the legacy prefix-replay implementation for equivalence diagnostics.
     """
+    from perception_runtime import active_session
+    session = active_session()
+    if session is not None:
+        return session.current_mask(rgb_paths, initial_mask_path)
     diagnostics = {
         "sam2_called": False,
         "sam2_subprocess_started": False,

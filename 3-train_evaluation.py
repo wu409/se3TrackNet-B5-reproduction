@@ -1,4 +1,6 @@
+import runtime_settings
 from online_observer import RestartableObserver, close_episode_observers
+from perception_runtime import PerceptionSession, close_episode_perception
 import os
 import time
 import importlib.util
@@ -396,6 +398,11 @@ def load_shared_artifacts(args):
     with open(args.shared_config_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
     from b5_revision import CONFIG as policy_config
+    import runtime_settings
+    runtime_settings.apply_frozen(cfg.get('execution_settings'))
+    from perception_runtime import CONFIG as runtime_config
+    if cfg.get("perception_runtime_config") != runtime_config:
+        raise ValueError("Perception runtime/model mismatch; use a NEW persistent-perception training release")
     from online_observer import digest, validate_config
     validate_config(args.observer_config)
     if cfg.get("b5_policy_config") != policy_config:
@@ -509,6 +516,7 @@ def decision_inputs(variant, obs_error, prior_error, obs_risk, prior_risk):
     return obs_error, prior_error, obs_risk, prior_risk
 
 
+@close_episode_perception
 @close_episode_observers
 
 def evaluate_episode(
@@ -559,25 +567,31 @@ def evaluate_episode(
     quality_records = []
     label_consistency_failures = []
     observer = RestartableObserver(args.observer_config, args.test_base_seq, "observer_" + last_name + ".log")
+    init_mask_path = os.path.abspath(os.path.join(args.ycbineoat_root, args.test_base_seq, "init_mask.png"))
+    perception = PerceptionSession(args, list(df_manifest["rgb_path"]), init_mask_path,
+                                   args.foundationpose_mesh_file, "perception_" + last_name)
     schedule = None
     if args.policy_variant in ("simple", "no_quality"):
         from matched_schedule import load_schedule
         schedule = load_schedule(args.reference_full_dir, last_name, df_manifest["frame_idx"])
 
-    for row in df_manifest.itertuples():
-        i = int(row.seq_idx)
-        frame_id = int(row.frame_idx)
-        matched_frames.append(frame_id)
+    def read_frame(row):
         T_obs = np.loadtxt(row.pred_path).reshape(4, 4)
-        T_baseline_obs = T_obs.copy()
         T_gt = np.loadtxt(row.gt_path).reshape(4, 4)
         depth_raw = cv2.imread(row.depth_path, cv2.IMREAD_UNCHANGED)
         if depth_raw is None:
             raise FileNotFoundError(row.depth_path)
         depth_real = depth_raw.astype(np.float32) / 1000.0
-        # row.rgb_path is already resolved by load_episode_manifest. Preserve
-        # that exact artifact/order for SAM2 while retaining existing RGB I/O.
         rgb_real, rgb_path = load_foundationpose_recovery_rgb(row.rgb_path)
+        return row, T_obs, T_gt, depth_real, rgb_real, rgb_path
+
+    for loaded in perception.prefetch(read_frame, df_manifest.itertuples()):
+        row, T_obs, T_gt, depth_real, rgb_real, rgb_path = loaded
+        i = int(row.seq_idx)
+        frame_id = int(row.frame_idx)
+        matched_frames.append(frame_id)
+        T_baseline_obs = T_obs.copy()
+        perception.advance(i, rgb_path)
 
         if i < 2:
             T_prior2 = T_prior3 = T_prior4 = T_prior5 = T_prior6 = T_obs
@@ -614,9 +628,10 @@ def evaluate_episode(
         # B1: observation only.
         E_obs_gt_cm = U.adi(T_obs, T_gt, open3d_model) * 100.0
         E_prior_gt_cm = U.adi(T_prior5, T_gt, open3d_model) * 100.0
-        b1_errs.append(U.adi(T_baseline_obs, T_gt, open3d_model) * 100.0)
+        same_observation = np.array_equal(T_obs, T_baseline_obs)
+        b1_errs.append(E_obs_gt_cm if same_observation else U.adi(T_baseline_obs, T_gt, open3d_model) * 100.0)
 
-        baseline_features = extract_pose_conditioned_features(
+        baseline_features = obs_features if same_observation else extract_pose_conditioned_features(
             T_baseline_obs, depth_real, model_pts, scene, renderer, mesh_node)
         # B2: fixed alpha.
         delta = se3_log_map(np.linalg.inv(T_prior2) @ T_baseline_obs)
@@ -916,6 +931,9 @@ def evaluate_episode(
             "observer_source": observer.source,
             "observer_restart": int(bool(b5_state.get("restart_observer"))),
             "observer_wall_ms": observer.wall_ms,
+            "sam2_frame_wall_ms": perception.wall_ms,
+            "sam2_propagated_frames_total": perception.index + 1,
+            "perception_runtime_version": __import__("perception_runtime").CONFIG["version"],
             "relocalization_attempted": int(bool(b5_state.get("relocalization_attempted"))),
             "relocalization_generated": int(bool(reloc.get("raw_recovery_generated"))),
             "relocalization_used": int(bool(b5_state.get("relocalization_used"))),
@@ -927,7 +945,7 @@ def evaluate_episode(
             "sam2_cache_hit": int(bool(recovery_info and recovery_info.get("sam2_cache_hit", False))),
             "quality_wall_ms": quality_wall_ms,
             "transition_wall_ms": transition_wall_ms,
-            "policy_wall_ms": observer.wall_ms + transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") in ("simple", "no_quality") else quality_wall_ms),
+            "policy_wall_ms": perception.wall_ms + observer.wall_ms + transition_wall_ms + (0.0 if getattr(args, "policy_variant", "full") in ("simple", "no_quality") else quality_wall_ms),
         })
 
     if label_consistency_failures:
@@ -1435,8 +1453,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--sam2_python', type=str, default="/root/autodl-tmp/conda-envs/sam2/bin/python")
     parser.add_argument('--sam2_dir', type=str, default="/root/autodl-tmp/sam2")
-    parser.add_argument('--sam2_config', type=str, default="configs/sam2.1/sam2.1_hiera_l.yaml")
-    parser.add_argument('--sam2_checkpoint', type=str, default="/root/autodl-tmp/sam2/checkpoints/sam2.1_hiera_large.pt")
+    parser.add_argument('--sam2_config', type=str, default=runtime_settings.SAM2_DEFAULT_CONFIG)
+    parser.add_argument('--sam2_checkpoint', type=str, default="/root/autodl-tmp/sam2/checkpoints/sam2.1_hiera_small.pt")
     parser.add_argument('--sam2_cache_root', type=str, default="./sam2_recovery_cache")
 
     parser.add_argument('--shared_model_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/artifacts/shared_pose_quality_model.joblib")

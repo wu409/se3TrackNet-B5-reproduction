@@ -1,4 +1,6 @@
+import runtime_settings
 from online_observer import RestartableObserver, close_episode_observers
+from perception_runtime import PerceptionSession, close_episode_perception
 import os
 import json
 import hashlib
@@ -783,6 +785,7 @@ def load_initial_template_inputs(
     )
 
 
+@close_episode_perception
 @close_episode_observers
 def rollout_episode(
     episode_df,
@@ -813,13 +816,19 @@ def rollout_episode(
     mesh_file = resolve_foundationpose_mesh_file(args, obj_idx)
     base_sequence = str(episode_df.iloc[0]["base_sequence"])
     observer = RestartableObserver(args.observer_config, base_sequence, "observer_" + seq + ".log")
+    perception = PerceptionSession(args,
+        [resolve_path(p, args.data_dir) for p in episode_df["rgb_path"]],
+        init_mask_path, mesh_file, "perception_" + seq + "_" + policy_model_stage)
 
-    for frame_index, (_, row) in enumerate(episode_df.iterrows()):
-        frame_id = int(row["frame_id"])
+    def read_frame(row):
         T_obs, T_gt, depth_real = load_frame_from_manifest(row, args)
-        # Keep the exact resolved manifest path as well as the existing RGB
-        # array. SAM2 consumes these same artifacts in the same frame order.
         rgb_real, rgb_path = load_foundationpose_recovery_rgb(seq, row, args)
+        return row, T_obs, T_gt, depth_real, rgb_real, rgb_path
+
+    for frame_index, loaded in enumerate(perception.prefetch(read_frame, (r for _, r in episode_df.iterrows()))):
+        row, T_obs, T_gt, depth_real, rgb_real, rgb_path = loaded
+        frame_id = int(row["frame_id"])
+        perception.advance(frame_index, rgb_path)
         T_obs = observer.observe(T_obs, rgb_path, resolve_path(row["depth_path"], args.data_dir))
 
         T_prior = make_prior(T_B5_history, T_obs, b5_state, compute_se3_prior)
@@ -912,6 +921,8 @@ def rollout_episode(
             policy_model_stage=policy_model_stage,
         ))
         rows[-1].update(observer_source=observer.source, observer_wall_ms=observer.wall_ms,
+            sam2_frame_wall_ms=perception.wall_ms,
+            perception_runtime_version=__import__("perception_runtime").CONFIG["version"],
             observer_restarted=bool(b5_state.get("restart_observer")),
             relocalization_attempted=bool(b5_state.get("relocalization_attempted")),
             relocalization_used=bool(b5_state.get("relocalization_used")),
@@ -995,6 +1006,8 @@ def save_shared_artifacts(
     joblib.dump(risk_calibrator, paths["calibrator"])
     cfg = {
         "version": "shared_pose_quality_v1",
+        "perception_runtime_config": __import__("perception_runtime").CONFIG.copy(),
+        "execution_settings": runtime_settings.execution_config(),
         "observer_config_sha256": __import__("online_observer").digest(args.observer_config),
         "recovery_gate_config": __import__("recovery_gate").CONFIG.copy(),
         "b5_policy_config": __import__("b5_revision").CONFIG.copy(),
@@ -1271,8 +1284,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--sam2_python', type=str, default="/home/wyg/anaconda3/envs/sam2/bin/python")
     parser.add_argument('--sam2_dir', type=str, default="/home/wyg/sam2")
-    parser.add_argument('--sam2_config', type=str, default="configs/sam2.1/sam2.1_hiera_l.yaml")
-    parser.add_argument('--sam2_checkpoint', type=str, default="/home/wyg/sam2/checkpoints/sam2.1_hiera_large.pt")
+    parser.add_argument('--sam2_config', type=str, default=runtime_settings.SAM2_DEFAULT_CONFIG)
+    parser.add_argument('--sam2_checkpoint', type=str, default="/home/wyg/sam2/checkpoints/sam2.1_hiera_small.pt")
     parser.add_argument('--sam2_cache_root', type=str, default="./sam2_recovery_cache")
 
     parser.add_argument('--shared_model_out', type=str, default="./shared_pose_quality_model.joblib")

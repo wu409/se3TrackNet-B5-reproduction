@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Four-mode v2: nine-sequence reference, four development sequences, then freeze.
+# Persistent SAM2/FP runtime is snapshotted and checked; see PERCEPTION_RUNTIME_GUIDE.md.
 # SE3_PYTHON must support predict.Tracker; SE3_WEIGHT_ROOT/SE3_DATA_ROOT locate assets.
 # Usage: bash run_train.sh [--manifest-only | --check-only] [runner options]
 # run_train.py implements this workflow; users do not need to launch it separately.
@@ -18,7 +19,8 @@ if [[ -z "${TRAIN_PYTHON:-}" ]]; then
     TRAIN_PYTHON=$(command -v python)
 fi
 export TRAIN_PYTHON
-export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export OMP_NUM_THREADS=$B5_NUM_THREADS
 [[ "$OMP_NUM_THREADS" =~ ^[1-9][0-9]*$ ]] || { echo 'OMP_NUM_THREADS must be positive' >&2; exit 2; }
 
 # The runner creates a NEW reference_manifest.csv covering nine sequences.

@@ -63,7 +63,7 @@ def assert_matched(full, q0):
         raise ValueError("No-rollout release must have zero refits")
     for key in ("seed", "train_fraction", "risk_threshold_cm", "prior_advantage_margin_cm",
                 "train_bases", "fit_conditions", "feature_columns", "target", "manifest_sha256",
-                "b5_policy_config", "recovery_gate_config", "observer_config_sha256"):
+                "b5_policy_config", "recovery_gate_config", "observer_config_sha256", "perception_runtime_config", "execution_settings"):
         if fc.get(key) != qc.get(key):
             raise ValueError("Full/q0 settings differ: " + key)
     for key in ("paths", "training_selection", "blackout_min_frames", "foundationpose_refine_iter"):
@@ -175,6 +175,12 @@ def verify_result(run, parent, required):
     run = Path(run).expanduser().resolve()
     done = evaluation.read_json(run / "COMPLETE.json")
     protocol = evaluation.read_json(run / "test_protocol.json")
+    from perception_runtime import CONFIG as runtime_config
+    if protocol.get("perception_runtime_config") != runtime_config:
+        raise ValueError("Cannot reuse results from a different perception runtime")
+    parent_cfg = evaluation.read_json(parent/'artifacts/shared_quality_config.json')
+    if protocol.get('execution_settings') != parent_cfg.get('execution_settings'):
+        raise ValueError('Cannot reuse results from a different CPU/I/O budget')
     if protocol.get('b5_policy_config', {}).get('version') != 'four_mode_relocalization_v2':
         raise ValueError('Old full/simple results are not matching four-mode v2 controls')
     if protocol.get('training_freeze_sha256') != evaluation.sha(parent/'freeze.sha256'):
@@ -202,7 +208,8 @@ def evaluate(args):
     if (Path(provenance["parent_release"]).resolve() != parent
             or provenance["parent_freeze_sha256"] != evaluation.sha(parent / "freeze.sha256")):
         raise ValueError("q0 was not derived from this exact full release")
-    for name in ("b5_policy.py", "b5_revision.py", "recovery_gate.py", "online_observer.py", "pose_safety.py", "predict.py"):
+    for name in ("b5_policy.py", "b5_revision.py", "recovery_gate.py", "online_observer.py", "pose_safety.py", "predict.py",
+                 "perception_runtime.py", "perception_workers.py", "runtime_settings.py", "ordered_prefetch.py"):
         if evaluation.sha(parent / "source" / name) != evaluation.sha(q0 / "source" / name):
             raise ValueError("Full/q0 policy source mismatch: " + name)
     existing = verify_result(args.full_results, parent, ["full"]) if args.full_results else None

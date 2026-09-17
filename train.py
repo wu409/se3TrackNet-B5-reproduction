@@ -34,6 +34,7 @@
 #
 
 
+import runtime_settings
 import open3d as o3d
 import sys,shutil
 import os
@@ -61,6 +62,7 @@ random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 torch.backends.cudnn.benchmark = True
+runtime_settings.configure_libraries()
 
 
 if __name__=="__main__":
@@ -80,7 +82,7 @@ if __name__=="__main__":
 
 	hsv_noise = config['data_augmentation']['hsv_noise']
 	batch_size = config['batch_size']
-	n_workers = config['n_workers']
+	n_workers = int(os.environ.get('B5_IO_WORKERS', config.get('n_workers', 4)))
 
 	augmentations = Compose([
 							HSVJitter(hsv_noise[0],hsv_noise[1],hsv_noise[2]),

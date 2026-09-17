@@ -13,6 +13,7 @@ The reference covers all nine sequences x nine conditions; fitting selects only
 TRAIN_BASES from this same CSV. No train/test manifest CSVs are generated.
 """
 import argparse
+import runtime_settings
 import csv
 from datetime import datetime, timezone
 import json
@@ -67,11 +68,13 @@ def arguments(argv=None):
     ):
         p.add_argument("--" + option, default=os.environ.get(env, default))
     p.add_argument("--sam2-checkpoint", default=os.environ.get("SAM2_CHECKPOINT"))
+    p.add_argument("--sam2-config", default=os.environ.get("SAM2_CONFIG", runtime_settings.SAM2_DEFAULT_CONFIG))
     return p.parse_args(argv)
 
 
 def environment(args, release):
     env = dict(os.environ)
+    runtime_settings.configure_environment(env)
     env.update(PYTHONIOENCODING="utf-8", PYTHONUTF8="1", PYTHONDONTWRITEBYTECODE="1",
                PYTHONHASHSEED="42", TRAIN_REPO=str(REPO), RELEASE_DIR=str(release),
                TRAIN_CONDITIONS_JSON=json.dumps(CONDITIONS),
@@ -88,9 +91,10 @@ def environment(args, release):
         ("se3_data_root", "SE3_DATA_ROOT"),
     ):
         env[key] = str(absolute(getattr(args, name)))
-    env["SAM2_CONFIG"] = "configs/sam2.1/sam2.1_hiera_l.yaml"
+    env["SAM2_CONFIG"] = args.sam2_config
     env["SAM2_CHECKPOINT"] = str(absolute(args.sam2_checkpoint)) if args.sam2_checkpoint else str(
-        Path(env["SAM2_DIR"]) / "checkpoints/sam2.1_hiera_large.pt")
+        Path(env["SAM2_DIR"]) / "checkpoints" / runtime_settings.SAM2_DEFAULT_CHECKPOINT)
+    runtime_settings.validate_sam_pair(env['SAM2_CONFIG'], env['SAM2_CHECKPOINT'])
     env["FOUNDATIONPOSE_REFINER_WEIGHT"] = str(Path(env["FOUNDATIONPOSE_DIR"]) /
         "weights/2023-10-28-18-33-37/model_best.pth")
     env["FOUNDATIONPOSE_SCORER_WEIGHT"] = str(Path(env["FOUNDATIONPOSE_DIR"]) /

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Four-mode v2: no_quality is a conditional full-trigger-replay control;
+# All controls use the same persistent perception runtime as full and q0.
 # no_recovery_admission removes BLACKOUT admission only, never a MODE3 gate.
 # Evaluate controls and q0; optionally reuse a completed matched full/simple run.
 # bash run_ablations.sh --release /full/release --no-rollout-release /q0/release \
@@ -9,7 +10,8 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 export PYOPENGL_PLATFORM=${PYOPENGL_PLATFORM:-egl}
-export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export OMP_NUM_THREADS=$B5_NUM_THREADS
 [[ "$OMP_NUM_THREADS" =~ ^[1-9][0-9]*$ ]] || { echo 'OMP_NUM_THREADS must be positive' >&2; exit 2; }
 if [[ -z "${TEST_PYTHON:-}" ]]; then
     source "${CONDA_SH:-/root/miniconda3/etc/profile.d/conda.sh}"

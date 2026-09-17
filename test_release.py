@@ -3,6 +3,7 @@
 The shell is the user entry point. Five confirmed untouched sequences are the
 default test population. No inference is run by --check-only.
 """
+import runtime_settings
 import argparse
 import ast
 import csv
@@ -70,6 +71,16 @@ def verify_release(release):
     if not required <= checked:
         raise ValueError("Release checksum list lacks required files: " + str(sorted(required - checked)))
     cfg = read_json(release / "artifacts/shared_quality_config.json")
+    from perception_runtime import CONFIG as runtime_config
+    if cfg.get("perception_runtime_config") != runtime_config:
+        raise ValueError("Use a NEW persistent-perception training release; no mixing with prefix-replay runs")
+    runtime_sources = {"source/" + name for name in
+                       ("perception_runtime.py", "perception_workers.py", "runtime_settings.py", "ordered_prefetch.py")}
+    if not runtime_sources <= checked:
+        raise ValueError("Missing frozen persistent perception implementation")
+    for name in ("perception_runtime.py", "perception_workers.py", "runtime_settings.py", "ordered_prefetch.py"):
+        if sha(release / "source" / name) != sha(ROOT / name):
+            raise ValueError("Frozen/current perception implementation differs: " + name)
     from b5_revision import CONFIG
     if cfg.get('b5_policy_config') != CONFIG:
         raise ValueError('Use a newly trained four-mode v2 release; old releases cannot be retrofitted')
@@ -80,6 +91,10 @@ def verify_release(release):
     if cfg.get('observer_config_sha256') != sha(release/'observer_config.json'):
         raise ValueError('Wrong frozen observer configuration')
     effective = read_json(release / "effective_config.json")
+    if not cfg.get('execution_settings') or effective.get('execution_settings') != cfg['execution_settings']:
+        raise ValueError('Effective/model CPU/I/O budgets disagree')
+    if effective.get("perception_runtime_config") != cfg["perception_runtime_config"]:
+        raise ValueError("Effective/model perception configurations disagree")
     if effective.get('observer_config_sha256') != cfg['observer_config_sha256']:
         raise ValueError('Effective/model observer configurations disagree')
     if cfg.get("recovery_gate_config") and "source/recovery_gate.py" not in checked:
@@ -195,19 +210,28 @@ def scan_test_images(manifest, paths):
     errors = []
     previous = ImageFile.LOAD_TRUNCATED_IMAGES
     ImageFile.LOAD_TRUNCATED_IMAGES = False
+    runtime_settings.configure_libraries()
+    def decode(item):
+        path, kind = item
+        try:
+            with Image.open(path) as im:
+                im.verify()
+            with Image.open(path) as im:
+                im.load()
+            decoded = cv2.imread(path, cv2.IMREAD_COLOR if kind == 'rgb' else cv2.IMREAD_UNCHANGED)
+            if decoded is None or decoded.size == 0:
+                raise ValueError('OpenCV cannot decode image')
+        except Exception as exc:
+            return dict(path=path, kind=kind, error=str(exc))
+        return None
+    from ordered_prefetch import OrderedPrefetch
+    loader = OrderedPrefetch(decode, images.items(), runtime_settings.execution_config()['io_workers'])
     try:
-        for path, kind in images.items():
-            try:
-                with Image.open(path) as im:
-                    im.verify()
-                with Image.open(path) as im:
-                    im.load()
-                decoded = cv2.imread(path, cv2.IMREAD_COLOR if kind == 'rgb' else cv2.IMREAD_UNCHANGED)
-                if decoded is None or decoded.size == 0:
-                    raise ValueError('OpenCV cannot decode image')
-            except Exception as exc:
-                errors.append(dict(path=path, kind=kind, error=str(exc)))
+        for error in loader:
+            if error is not None:
+                errors.append(error)
     finally:
+        loader.close()
         ImageFile.LOAD_TRUNCATED_IMAGES = previous
     return dict(passed=not errors, checked_images=len(images), errors=errors)
 
@@ -360,6 +384,7 @@ def main(argv=None):
         raise ValueError("Output must be new and outside the frozen training release")
     print("Verifying frozen model/source/component/input hashes...", flush=True)
     cfg, effective = verify_release(release)
+    runtime_settings.apply_frozen(cfg['execution_settings'])
     if "no_rollout" in args.variants and (cfg.get("on_policy_refine_rounds") != 0
                                          or effective.get("on_policy_refine_rounds") != 0):
         raise ValueError("no_rollout requires its separately trained and frozen q0 release")
@@ -405,6 +430,8 @@ def main(argv=None):
         simple_control="observation fallback with full MODE3 trigger replay; conditional control, not wholly nonlearned",
         recovery_gate_revision=args.recovery_gate_revision, recovery_gate_config=gate_config,
         b5_policy_revision=args.b5_policy_revision, b5_policy_config=policy_config,
+        perception_runtime_config=cfg["perception_runtime_config"],
+        execution_settings=cfg["execution_settings"],
         model_policy_training_match=("diagnostic_policy_override_no_refit" if args.b5_policy_revision != "frozen"
                                      else "release_policy"),
         evaluation_status=("post_test_diagnostic_not_untouched" if args.recovery_gate_revision != "frozen"
@@ -421,7 +448,7 @@ def main(argv=None):
         recovery_window="60 frames including first valid-depth frame after >=10-frame blackout",
         latency="confirm five consecutive errors <= risk threshold; unsuccessful events censored at window/sequence end",
         rejection_denominator="raw proposals generated; also report not-generated / all blackout exits",
-        timing="observer worker wall time + quality + transition; includes lazy startup and registration; excludes initial offline backbone pass, GT and outer I/O; not end-to-end FPS",
+        timing="every-frame SAM2 wall time + observer worker wall time + quality + transition; includes worker startup and registration; GPU work serialized, models resident; excludes initial offline backbone pass, GT and outer I/O; not end-to-end FPS",
         timing_simple="diagnostic quality excluded; trigger schedule creation cost reported in full, not free deployment claim",
         test_gt="offline scoring only; first-frame init_mask is an allowed input",
         uncertainty="sequence/object clustered, never independent-frame CI; primary object bootstrap has only n=3",
@@ -429,15 +456,19 @@ def main(argv=None):
             "no_rollout": "q0 bootstrap, own calibration and endogenous triggers; measure changed call counts",
             "no_recovery_admission": "remove BLACKOUT geometric admission only; MODE3 remains SE3-only"},
         additional_ablations_pending=[],
-        environment={k: os.environ.get(k) for k in ("OMP_NUM_THREADS", "PYOPENGL_PLATFORM")})
+        environment={k: os.environ.get(k) for k in ("B5_NUM_THREADS", "B5_IO_WORKERS", "PYOPENGL_PLATFORM") + runtime_settings.THREAD_KEYS})
     dump(output / "test_protocol.json", protocol)
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONDONTWRITEBYTECODE="1",
                PYTHONHASHSEED=str(cfg["seed"]), PYOPENGL_PLATFORM=paths.get("PYOPENGL_PLATFORM") or "egl")
-    env.setdefault("OMP_NUM_THREADS", "1")
+    runtime_settings.configure_environment(env)
     for name, key in (("test", "TRAIN_PYTHON"), ("sam2", "SAM2_PYTHON"), ("foundationpose", "FOUNDATIONPOSE_PYTHON"), ("se3", "SE3_PYTHON")):
         pip = subprocess.run([paths[key], "-m", "pip", "freeze"], check=True, capture_output=True, text=True, env=env)
         (output / (name+"_pip_freeze.txt")).write_text(pip.stdout, encoding="utf-8")
     from online_observer import read_config
+    for kind, python_key, repo_key in (("sam2", "SAM2_PYTHON", "SAM2_DIR"),
+                                      ("foundationpose", "FOUNDATIONPOSE_PYTHON", "FOUNDATIONPOSE_DIR")):
+        subprocess.run([paths[python_key], '-B', str(output/'source/perception_workers.py'),
+                        '--check', kind, paths[repo_key]], check=True, env=env)
     ocfg = read_config(release/'observer_config.json')
     for base in TEST:
         subprocess.run([paths['SE3_PYTHON'], '-B', str(output/'source/online_observer.py'),

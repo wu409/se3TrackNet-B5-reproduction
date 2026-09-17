@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Four-mode v2 only: derive q0 with identical observer restart/assets, zero refits.
+# Inherit the parent's persistent SAM2/FP runtime; no legacy/new runtime mixing.
 # Train and freeze q0 from an exact completed full release; never change that release.
 # bash run_ablation_train.sh --release /absolute/new/full/release [--check-only]
 set -Eeuo pipefail
@@ -7,7 +8,8 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 export PYOPENGL_PLATFORM=${PYOPENGL_PLATFORM:-egl}
-export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export OMP_NUM_THREADS=$B5_NUM_THREADS
 [[ "$OMP_NUM_THREADS" =~ ^[1-9][0-9]*$ ]] || { echo 'OMP_NUM_THREADS must be positive' >&2; exit 2; }
 if [[ -z "${TRAIN_PYTHON:-}" ]]; then
     source "${CONDA_SH:-/root/miniconda3/etc/profile.d/conda.sh}"

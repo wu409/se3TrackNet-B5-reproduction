@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Four-mode v2: checks -> full training -> full/simple testing -> q0 -> ablations.
+# All new stages use persistent perception v1; do not overlay a running release.
 # Only orchestrates existing entry points. Never patches code or reuses old runs.
 # Usage:
 #   export SE3_PYTHON=/absolute/path/to/compatible/se3/environment/bin/python
@@ -13,15 +14,17 @@ set -Eeuo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 cd "$SCRIPT_DIR"
 DRY_RUN=0
+SKIP_STANDALONE_CHECKS=0
 RUN_DIR=""
 CURRENT_STAGE="initialization"
 
 usage() {
     printf '%s\n' \
-        'Usage: bash run_all.sh [--dry-run] [--run-dir NEW_DIRECTORY]' \
+        'Usage: bash run_all.sh [--dry-run] [--skip-standalone-checks] [--run-dir NEW_DIRECTORY]' \
         'Runs all six steps sequentially; full/simple is one testing step.' \
         'Default output: <project>/all_runs/run_<UTC>_<PID>_<random>/' \
         '--dry-run prints paths/commands only: no environment activation or file creation.' \
+        '--skip-standalone-checks omits duplicate check-only runs; real runs retain all built-in checks.' \
         'Use SE3_PYTHON for the compatible SE3 environment; otherwise TRAIN_PYTHON is used.' \
         'A failed run is preserved, never overwritten or automatically resumed.'
 }
@@ -29,6 +32,7 @@ usage() {
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) DRY_RUN=1; shift ;;
+        --skip-standalone-checks) SKIP_STANDALONE_CHECKS=1; shift ;;
         --run-dir)
             [[ $# -ge 2 && -n "$2" ]] || { echo '--run-dir needs a NEW directory' >&2; exit 2; }
             RUN_DIR=$2; shift 2 ;;
@@ -41,13 +45,18 @@ RUN_DIR=${RUN_DIR:-"$SCRIPT_DIR/all_runs/run_$(date -u +%Y%m%dT%H%M%SZ)_$$_${RAN
 [[ "$RUN_DIR" == /* ]] || RUN_DIR="$SCRIPT_DIR/$RUN_DIR"
 [[ ! -e "$RUN_DIR" && ! -L "$RUN_DIR" ]] || { echo "Output already exists; choose a NEW directory: $RUN_DIR" >&2; exit 2; }
 
-export OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export B5_IO_WORKERS=${B5_IO_WORKERS:-$B5_NUM_THREADS}
+export OMP_NUM_THREADS=$B5_NUM_THREADS
 [[ "$OMP_NUM_THREADS" =~ ^[1-9][0-9]*$ ]] || { echo 'OMP_NUM_THREADS must be positive' >&2; exit 2; }
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 export SE3_WEIGHT_ROOT=${SE3_WEIGHT_ROOT:-"$SCRIPT_DIR/YCBInEOAT_weights"}
 export SE3_DATA_ROOT=${SE3_DATA_ROOT:-"$SCRIPT_DIR/datasets/YCBInEOAT_data"}
 for entry in run_train.sh run_test.sh run_ablation_train.sh run_ablations.sh; do
     [[ -f "$SCRIPT_DIR/$entry" ]] || { echo "Missing entry point: $entry" >&2; exit 2; }
+done
+for entry in perception_runtime.py perception_workers.py runtime_settings.py ordered_prefetch.py; do
+    [[ -f "$SCRIPT_DIR/$entry" ]] || { echo "Missing persistent perception implementation: $entry" >&2; exit 2; }
 done
 
 failed() {
@@ -107,10 +116,11 @@ printf 'FULL_RELEASE=%s\nFULL_RESULTS=%s\nQ0_RELEASE=%s\nABLATION_RESULTS=%s\n' 
 if [[ "$DRY_RUN" == 0 ]]; then
     # Shell-escaped exact paths; source this file later to reuse explicit outputs.
     for key in TRAIN_PYTHON TEST_PYTHON SE3_PYTHON SE3_WEIGHT_ROOT SE3_DATA_ROOT \
-               OMP_NUM_THREADS RUN_DIR TRAIN_CHECK FULL_RELEASE TEST_CHECK \
+               OMP_NUM_THREADS B5_NUM_THREADS B5_IO_WORKERS SKIP_STANDALONE_CHECKS RUN_DIR TRAIN_CHECK FULL_RELEASE TEST_CHECK \
                FULL_RESULTS Q0_TRAIN_OUTPUT Q0_RELEASE ABLATION_RESULTS; do
         printf 'export %s=%q\n' "$key" "${!key}"
     done > "$RUN_DIR/paths.env"
+    printf 'stage\tstarted_utc\tfinished_utc\telapsed_seconds\texit_code\n' > "$RUN_DIR/stage_timings.tsv"
 fi
 
 run_stage() {
@@ -120,8 +130,18 @@ run_stage() {
     printf '  %q' "$@"
     printf '\n'
     if [[ "$DRY_RUN" == 0 ]]; then
+        local started_utc started_seconds finished_utc elapsed stage_exit=0
+        started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        started_seconds=$SECONDS
+        printf 'Started: %s\n' "$started_utc"
         # pipefail propagates child failure even when tee succeeds.
-        "$@" 2>&1 | tee "$RUN_DIR/logs/$CURRENT_STAGE.log"
+        "$@" 2>&1 | tee "$RUN_DIR/logs/$CURRENT_STAGE.log" || stage_exit=$?
+        finished_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        elapsed=$((SECONDS - started_seconds))
+        printf '%s\t%s\t%s\t%s\t%s\n' "$CURRENT_STAGE" "$started_utc" \
+            "$finished_utc" "$elapsed" "$stage_exit" >> "$RUN_DIR/stage_timings.tsv"
+        printf 'Finished: %s | elapsed: %s seconds | exit: %s\n' "$finished_utc" "$elapsed" "$stage_exit"
+        return "$stage_exit"
     fi
 }
 
@@ -139,16 +159,24 @@ print("Verified receipt:", path)
 PY
 }
 
-run_stage 01_train_check bash "$SCRIPT_DIR/run_train.sh" --check-only --release-dir "$TRAIN_CHECK"
-if [[ "$DRY_RUN" == 0 ]]; then
-    [[ -f "$TRAIN_CHECK/reference_manifest.csv" && -f "$TRAIN_CHECK/effective_config.json" && ! -e "$TRAIN_CHECK/FROZEN.json" ]]
+if [[ "$SKIP_STANDALONE_CHECKS" == 0 ]]; then
+    run_stage 01_train_check bash "$SCRIPT_DIR/run_train.sh" --check-only --release-dir "$TRAIN_CHECK"
+    if [[ "$DRY_RUN" == 0 ]]; then
+        [[ -f "$TRAIN_CHECK/reference_manifest.csv" && -f "$TRAIN_CHECK/effective_config.json" && ! -e "$TRAIN_CHECK/FROZEN.json" ]]
+    fi
+else
+    printf '\nSkipping standalone training check; run_train retains manifest generation and prepare-generated validation.\n'
 fi
 
 run_stage 02_train_full bash "$SCRIPT_DIR/run_train.sh" --release-dir "$FULL_RELEASE"
 receipt "$FULL_RELEASE/FROZEN.json" final_development_model_frozen
 
-run_stage 03_test_check bash "$SCRIPT_DIR/run_test.sh" --release "$FULL_RELEASE" --check-only --output "$TEST_CHECK"
-receipt "$TEST_CHECK/CHECKED.json" preflight_passed_no_inference
+if [[ "$SKIP_STANDALONE_CHECKS" == 0 ]]; then
+    run_stage 03_test_check bash "$SCRIPT_DIR/run_test.sh" --release "$FULL_RELEASE" --check-only --output "$TEST_CHECK"
+    receipt "$TEST_CHECK/CHECKED.json" preflight_passed_no_inference
+else
+    printf '\nSkipping standalone testing check; run_test retains release, data and inference preflight validation.\n'
+fi
 
 run_stage 04_test_full_simple bash "$SCRIPT_DIR/run_test.sh" --release "$FULL_RELEASE" --variants full simple --output "$FULL_RESULTS"
 receipt "$FULL_RESULTS/COMPLETE.json" frozen_test_complete post_test_diagnostic_complete
@@ -163,6 +191,6 @@ receipt "$ABLATION_RESULTS/COMPLETE.json" post_test_ablation_complete
 if [[ "$DRY_RUN" == 1 ]]; then
     printf '\nDRY RUN ONLY: no directories created, no training/testing executed.\n'
 else
-    printf 'All six stages completed successfully at %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUN_DIR/PIPELINE_COMPLETE.txt"
+    printf 'All requested stages completed successfully at %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUN_DIR/PIPELINE_COMPLETE.txt"
     printf '\nAll stages completed. Exact paths: %s\nFinal ablations: %s\n' "$RUN_DIR/paths.env" "$ABLATION_RESULTS"
 fi

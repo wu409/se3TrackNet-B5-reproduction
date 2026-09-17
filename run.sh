@@ -52,8 +52,10 @@ FOUNDATIONPOSE_REFINE_ITER=${FOUNDATIONPOSE_REFINE_ITER:-5}
 # one mask, exits to release GPU memory, and only then FoundationPose starts.
 SAM2_PYTHON=${SAM2_PYTHON:-/root/autodl-tmp/conda-envs/sam2/bin/python}
 SAM2_DIR=${SAM2_DIR:-/root/autodl-tmp/sam2}
-SAM2_CONFIG=${SAM2_CONFIG:-configs/sam2.1/sam2.1_hiera_l.yaml}
-SAM2_CHECKPOINT=${SAM2_CHECKPOINT:-"$SAM2_DIR/checkpoints/sam2.1_hiera_large.pt"}
+SAM2_CONFIG=${SAM2_CONFIG:-configs/sam2.1/sam2.1_hiera_s.yaml}
+SAM2_CHECKPOINT=${SAM2_CHECKPOINT:-"$SAM2_DIR/checkpoints/sam2.1_hiera_small.pt"}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export OMP_NUM_THREADS=$B5_NUM_THREADS
 SAM2_CACHE_ROOT=${SAM2_CACHE_ROOT:-"$SCRIPT_DIR/sam2_recovery_cache"}
 
 # Shared B5 pose-quality estimator artifacts.

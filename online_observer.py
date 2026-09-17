@@ -4,6 +4,7 @@ The worker runs in the explicitly frozen SE3 environment. After a correction it
 tracks from its own last observation, never from every B5 output. RGB is RGB;
 depth passed to Tracker is the original uint16 millimetre image (no hole filling).
 """
+import runtime_settings
 import atexit
 import functools
 import hashlib
@@ -174,6 +175,7 @@ def worker(config_path, base, check_only=False):
     import torch
     from PIL import Image
     from predict import Tracker
+    runtime_settings.configure_libraries()
     cfg = validate_config(config_path)
     assets = cfg['objects'][cfg['sequence_objects'][base]]
     info = yaml.safe_load(Path(assets['dataset_info']).read_text())

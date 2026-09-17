@@ -33,6 +33,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+import runtime_settings
 import open3d as o3d
 import sys,math,random
 import os,subprocess,pdb
@@ -53,6 +54,7 @@ from data_augmentation import *
 from se3_tracknet import *
 from datasets import *
 from offscreen_renderer import *
+runtime_settings.configure_libraries()
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 import numpy as np
