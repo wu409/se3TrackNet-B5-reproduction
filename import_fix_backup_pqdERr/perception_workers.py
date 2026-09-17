@@ -15,27 +15,6 @@ import traceback
 import numpy as np
 
 
-def configure_component_imports(kind, repo):
-    """Isolate component imports from the SE3 launcher/source directory."""
-    repo = Path(repo).resolve()
-    launcher = Path(__file__).resolve().parent
-    sys.path[:] = [p for p in sys.path if p and Path(p).resolve() != launcher]
-    os.chdir(str(repo))
-    paths = [str(repo)]
-    if kind == "foundationpose":
-        paths.append(str(repo / "learning" / "models"))
-    sys.path[:0] = paths
-    if kind == "foundationpose":
-        import inspect
-        import network_modules
-        expected = (repo / "learning" / "models" / "network_modules.py").resolve()
-        actual = Path(inspect.getfile(network_modules.ConvBNReLU)).resolve()
-        if actual != expected:
-            raise RuntimeError("FoundationPose network module collision: " + str(actual))
-        if "norm_layer" not in inspect.signature(network_modules.ConvBNReLU.__init__).parameters:
-            raise RuntimeError("FoundationPose ConvBNReLU lacks norm_layer: " + str(actual))
-
-
 class LazyFrames:
     """Official synchronous loader arithmetic, but only one decoded CPU image.
 
@@ -230,6 +209,8 @@ def main():
     sys.stdout = sys.stderr
     kind, path = sys.argv[1:]
     cfg = json.loads(Path(path).read_text(encoding="utf-8"))
+    os.chdir(cfg["repo"])
+    sys.path.insert(0, cfg["repo"])
     worker = None
     try:
         # Initialization is inside the first request: errors reach the parent
@@ -239,7 +220,6 @@ def main():
             try:
                 import torch
                 if worker is None:
-                    configure_component_imports(kind, cfg["repo"])
                     runtime_settings.configure_libraries()
                 start = time.perf_counter()
                 with torch.inference_mode():
@@ -274,7 +254,8 @@ def main():
 def check_environment(kind, repo):
     """Import/API check only: no model loading, inference or CUDA allocation."""
     import inspect
-    configure_component_imports(kind, repo)
+    os.chdir(repo)
+    sys.path.insert(0, repo)
     if kind == "sam2":
         from sam2.build_sam import build_sam2_video_predictor
         from sam2.sam2_video_predictor import SAM2VideoPredictor
