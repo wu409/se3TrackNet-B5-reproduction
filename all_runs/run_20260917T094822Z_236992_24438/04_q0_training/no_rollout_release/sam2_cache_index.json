@@ -1,0 +1,494 @@
+{
+  "format": "causal_sam2_episode_cache_v1",
+  "cache_root": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks",
+  "manifest_sha256": "70061b0e887927ee4732ca96882d876754bac4d60633c3f3ddfd168996b14e56",
+  "episodes": [
+    {
+      "sequence": "bleach0_black10",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/d53203fa17bf4bce6d02f87836557cf3c84be90b3376e289ef0104144c4f5847/COMPLETE.json",
+      "sha256": "fc84b857b175f8aeadd21f4d7def008fcdf654f8f645f12ef4303880a8367c34"
+    },
+    {
+      "sequence": "bleach0_black10_2",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/49beefeaa049ed39c4c29d186b8f1aa4482d7bf3e02944abb9bdecd4b2fa7825/COMPLETE.json",
+      "sha256": "7aacaac4d71715d839a993899f16c54e8a6ae20079e7651efe0844277fe57366"
+    },
+    {
+      "sequence": "bleach0_black10_3",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/9c649174f83e3e364527e490b7f15724ef73dde19b635f7ce5caca36914adc25/COMPLETE.json",
+      "sha256": "d14a384c3972dfa3788582d7f76f1a6d344f35801f95819f0ea6bbe3d1c427dd"
+    },
+    {
+      "sequence": "bleach0_black10_4",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/767799662596c650382631a026dd55e5ae0bad11ccd6773fa7c657720b239b50/COMPLETE.json",
+      "sha256": "102cd142aca421ce2c0aa3521ad9ccdde99c6986d606da4aa0705a236161c5b5"
+    },
+    {
+      "sequence": "bleach0_black10_5",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/b1a9438741a3d591cbed3e350be9a974c01d1c21b3fbce1c32dd3bef4fe8cbd2/COMPLETE.json",
+      "sha256": "62fe6f330d0090395cb495a56207403a105db05ab823652f5ecf77ff9b5218c9"
+    },
+    {
+      "sequence": "bleach0_clean",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/93e7e895ecf718518bfeebe051b2f48cb9664e9817dd75c8c274db16a53f5802/COMPLETE.json",
+      "sha256": "f550d5c92148f9ad397efa13396b29c7d738cbf3163493062b5c0d9f596a8edb"
+    },
+    {
+      "sequence": "bleach0_drop60",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/ac1f0608437191a52cac7771b0623afe25d966c995faaab243f2de26f3ed5236/COMPLETE.json",
+      "sha256": "09297f13998b93d62ff28d2e2af926e65f30862156b65f318a26e239d18c7cb0"
+    },
+    {
+      "sequence": "bleach0_occ40",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e42be14b3603939e9f874242edfd8f008d413e573786fe909622b614651474e5/COMPLETE.json",
+      "sha256": "9ff8a18f9e573cfcc4403a53cc2d2b4005d353a47666eec9234498abd31572d2"
+    },
+    {
+      "sequence": "bleach0_occ60",
+      "frames": 663,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/a807beb68988accd2de0d00d2517722228f3b6286c417e103da58b914860ec0f/COMPLETE.json",
+      "sha256": "726cd85ca0a7e2d926b6eff4248e7a758ab2b1a67e21dcb32000fcc0682a45c5"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/86389561d7c9a2f93f62acd5488209290ce92195dae324cf11f2672cd44bac2c/COMPLETE.json",
+      "sha256": "7927fc929d09d563a4091c701082e8c883980314386f1217316955ad131ed352"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_2",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/88189ebf3f3e263742a6961d9214c181cac75e7a765b95b0b4381c3ee9490c63/COMPLETE.json",
+      "sha256": "f94789fe808f6a51d886276017aecbaa13431fa3df0af8608762a8ecf47779d8"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_3",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e8553224e56e7c03c0dc277e67efcbd66aae6deec61a250bbc55e46d68dc9307/COMPLETE.json",
+      "sha256": "137dcf4cc11633d0169475299134e0e6769646c699d0a5d4d7e9beb1a3768ac0"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_4",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/27482a66e31a8eff6ce5afaeedf9ae062ee3f5336d11af6368106a928431ab96/COMPLETE.json",
+      "sha256": "dd716e5a3f5386c9c0b070836f50674a706c7e85d78f67f8e5408f51a1bad5c5"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_black10_5",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/516a9d00d03d211af9ad71634cbeea1f4bd2a534b29f98f1b6631abd3b2eb20f/COMPLETE.json",
+      "sha256": "bb014421926b5d0856874bc32befe3c188992696782545f88220a3759be60bd5"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_clean",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/5c19849f6eee5a35db8002349deff420e42f0ccdc31e6e352bcf4dbded287991/COMPLETE.json",
+      "sha256": "6e3e90e14cf597e8291c17a16f5d58c709f7bcea1b205fa2a6612a23a38c8577"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_drop60",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e457d28192a1413dc8209b49b5dea3ea390fa6c2edf9c2dd0d6bac2d46458aa8/COMPLETE.json",
+      "sha256": "961dea6da95a26e997ed7241c70104d45fd202ce2ace3a8fe6d69027742dc6c3"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_occ40",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/df3f1392abc8a83612b79b46af25a709ce585964d120a986a2c000c5346003e1/COMPLETE.json",
+      "sha256": "a19559df3f28417bb7dd76bebe79753f6385a67ef91540bb4afa2e862af30918"
+    },
+    {
+      "sequence": "bleach_hard_00_03_chaitanya_occ60",
+      "frames": 441,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/10e10bf36c9afd7bebcc76ef5736bfcf6ff7c70ecc795196bf5a6d696638cb83/COMPLETE.json",
+      "sha256": "398fd32d88ab7212d230a9529189c6a83f97d9cf40c88cb9877881e7d5aa2a69"
+    },
+    {
+      "sequence": "cracker_box_reorient_black10",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e777d86b4f1e62cf350d4d1bb1df3ac408bae1f37eaa5d110bd2a30594236012/COMPLETE.json",
+      "sha256": "d59acecc49c9e90a3de4d7748d98c2ff63a31cc13e77f4fb5d7e409a5d3f066d"
+    },
+    {
+      "sequence": "cracker_box_reorient_black10_2",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/8e6563bad69767b7569cc65f343f4674f0c94a575c8b7b8c440804233926fd15/COMPLETE.json",
+      "sha256": "1b2b3ae5d6dca4e0d9930676b648956eb4bd51b6bd335bc5513955af814ef969"
+    },
+    {
+      "sequence": "cracker_box_reorient_black10_3",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/2e2f48d109f4c91113ad359772e85309f01b4682ee80b0454531636c762bcf80/COMPLETE.json",
+      "sha256": "de1b0cf812c7bf81ac5ff8228718c363f6e655077f5a187be51a78bfee83fc58"
+    },
+    {
+      "sequence": "cracker_box_reorient_black10_4",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/8c907b95bd06fb2682a691c4d430b5061dc340727f5028d0c097a0186dec2b2e/COMPLETE.json",
+      "sha256": "6b8ccdbae220dcd7a8cb375aef80411eaa8d5595ec65256cbb30b03a8f2c36a1"
+    },
+    {
+      "sequence": "cracker_box_reorient_black10_5",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/eb1c2d8df8c9d167642ddcf6fce24381d1faa1e7ec573b601cd61b86b5947960/COMPLETE.json",
+      "sha256": "6055d2d5f4c94dfd724824c2bd9b9020e6a2446ebe38e91df29e9d013f3c38a3"
+    },
+    {
+      "sequence": "cracker_box_reorient_clean",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/5d51b7e02fc378d88a0a2624a53b169f84d560af50d7283242c36963daf54edb/COMPLETE.json",
+      "sha256": "f4245164e275f40c17a2c151775c33e06281f07d2efaae0176fba7931ccaf7e8"
+    },
+    {
+      "sequence": "cracker_box_reorient_drop60",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e1785c4c50b3014ed01640fe3174fdfac21635b3e342b4b12c177c5a8c3e2fd7/COMPLETE.json",
+      "sha256": "176429ed17e5874e604a78a10adb43170793b4bb9130fb6b7e2ad584e69e04b4"
+    },
+    {
+      "sequence": "cracker_box_reorient_occ40",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/fa3e189630167f200b75cb397c3f38d0ab6d0aca62e9ab2bba4ba54c62551769/COMPLETE.json",
+      "sha256": "385161facaaa49b0e146391e21e294cb3756a17e7862c9b295541ad933f7c779"
+    },
+    {
+      "sequence": "cracker_box_reorient_occ60",
+      "frames": 375,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/2f1f8c8b7d9db105088c76ea322bedd2f6eaa1ffccab3b8f77df68d8af89dd97/COMPLETE.json",
+      "sha256": "32fdd06d26764df247b0164387e6061cbe61664ba5aa2aabd173919761ed38aa"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_black10",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/4be2cc0f6c6886469e60444cc81934ceb4b35014245e71f8b192be9443bb82f3/COMPLETE.json",
+      "sha256": "25d8fa350a0c624bffa0b6eebc3fca65351d373421dd6e9bda88a14c9875bccb"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_black10_2",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/9fc38677935d345ff4059b251636906deba59d3e561e682d4a26ebaeb378fdd9/COMPLETE.json",
+      "sha256": "7a051e39a6225ebf41cd2670e0d3962bdd197e7e615788bf19cc770a0946bbbd"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_black10_3",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/3a1785dec3458b65656a994deb89fbc75b4bd6724688b2ae68c97b9e85188a25/COMPLETE.json",
+      "sha256": "73d837093d6b02eda0176e2ed1b0868ae3a321ccd88c1f11b9fbb227b1c06d88"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_black10_4",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/cb7f260f583d18a4dfc05e3852a541051e14e4253173c239fe2dcc4ccc571505/COMPLETE.json",
+      "sha256": "3feb68c6e38dd6e427e4788f695a28b0ec4adec1802d2bdbb24d678566bdd247"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_black10_5",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/c4d52fd7549d55fd8daba1e4967a39a03db813d4e459f18170dfeb8fef0c22c5/COMPLETE.json",
+      "sha256": "b18588ca73eff0bed9b27155081eb3c6df55568f77c0b4b80229d1c92a313cef"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_clean",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/824da1a1376f88995e72b8bd69ded9f6207bf4c7ecc058d347ac1cbeeead31f2/COMPLETE.json",
+      "sha256": "13edda0a451cdb9c6f483c6d36cecd41fc927e6c660668da2eb446e58adc879d"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_drop60",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/6f65b0ee29a6dcbf3538666012dd904b6719121fecf49726ac8cb6bf771607e7/COMPLETE.json",
+      "sha256": "612c00f29bf6fc58cfdfda7b2bd40dc6c9ba9197eb2f16a2782a5942b680498d"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_occ40",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/9bdb66214fd0e9bfc888cfca52c3edea3bf0a95b562e4fa17e7957031e1f1ab1/COMPLETE.json",
+      "sha256": "34f5ba1946e577891485f4f3f92232f8b879f53a42bdfbf72e84d46447fbf485"
+    },
+    {
+      "sequence": "cracker_box_yalehand0_occ60",
+      "frames": 1327,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/a48c879108bfb25c350d1c27deb75a8e6eed7ede56315fb504927bf0012e57dc/COMPLETE.json",
+      "sha256": "aae85f169c3e7c012a278d747227991dd463827d3c692724bd1f1f37b20bbc28"
+    },
+    {
+      "sequence": "mustard0_black10",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/ccd14b2c90e39ef75ea0b54cca64eb14695f030c40b3ad7e8d20f56f5c13a8c5/COMPLETE.json",
+      "sha256": "68432a12d1f2817e59a50c54cbfa3a28ec7c56facf18f0c3891d49ac82351225"
+    },
+    {
+      "sequence": "mustard0_black10_2",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/c13f5697f07b95e5d5f67f3c6d27c7f9717d007f43ed0480378530e471c3d6a3/COMPLETE.json",
+      "sha256": "c2e11531023ac0e745da52ad40ac20438e290ca03d3d4a8c9879c01e01b707bd"
+    },
+    {
+      "sequence": "mustard0_black10_3",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/98e67a24e327e4f1a3e2dfeead6f29780226e117d12237c4a118935d520b0bb3/COMPLETE.json",
+      "sha256": "28eb0745d3cdf68d10ddfb0e2e423d817bf242917967f10f53297a29fddc6e9d"
+    },
+    {
+      "sequence": "mustard0_black10_4",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/8ce0eb3ce1e6897c93ddaf2a9f8e1cedc231f2321181b931658e6ca0aeea14ba/COMPLETE.json",
+      "sha256": "04c7af56fa605614880e7549b38fd4cc1037c746b89d3307b3208c91bcefe6d4"
+    },
+    {
+      "sequence": "mustard0_black10_5",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/34c8cdee801bc099ec542ba9875dbe0fba837b9897af69cd5edbb5ace030f298/COMPLETE.json",
+      "sha256": "bd6ad7d1c62eab2d106d565f1c1df3f1f7ce37f03c847f7a24ce0321facbf402"
+    },
+    {
+      "sequence": "mustard0_clean",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e86e0ef61e49e2e504353cddf95fa92949252c76db7d66e5ea029e294ba7d4ba/COMPLETE.json",
+      "sha256": "eb9fef1d8bb74366b2e2e7c4818d49a51fcfbf493353c0a5650e27fbcfb1386e"
+    },
+    {
+      "sequence": "mustard0_drop60",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/120bac34c4ab48d23561ba0302b1af13a6c9b7ff37e8bf3bc27809e45b9ce5c6/COMPLETE.json",
+      "sha256": "36b722eba509b83902ea8c5ace9e4994aef5e1f3efadfaf540d74cf2f76af8cf"
+    },
+    {
+      "sequence": "mustard0_occ40",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/3ecfa11cbf68fa0632381c8f097219bfc9d66f6fc9940f617f4d0da49444b5ce/COMPLETE.json",
+      "sha256": "fcfa93705eb4f6adad3f7f6eb5d05425272f8f709a0f8a759eb5ffc080b39838"
+    },
+    {
+      "sequence": "mustard0_occ60",
+      "frames": 737,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/0cc75c4975557499a717b3ca257f532d32cd0a9de59747417e371682f7baa919/COMPLETE.json",
+      "sha256": "30f28aefdad3c80f9823b6a237a2ce54592d9b8ec2f905ba2fcd844294d5b0ba"
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/ab3963bc41828d322bb3810805bb735eb5ddd64f7c4fb7aa07a4b59f29f5b9c5/COMPLETE.json",
+      "sha256": "8519b9387f358e8dcbd34b11f77a7da5b1b7ded80fb31a44c0a140d39ef3832f"
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_2",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/2fef9df73682fa76a4d35d8cdfffab0615e9d41d6644dc1d7db78903854762c9/COMPLETE.json",
+      "sha256": "55f0055b98b8ffbd84b45c5adb1c5f2e1d01386e973324b3a62ea87a5e39fd92"
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_3",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/eed1371ed902a5c8a59d1a36c45698c53bdec1977cfb178b914a3e1531f70c21/COMPLETE.json",
+      "sha256": "ce8df82a4e37e15880a270058c7ab2d9cf8010461ddbafb80ff1f4300250c13d"
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_4",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/7d3cf719c5d0f517d49ddf6d400b08d5a51a2e936e0947015a7295cebc7d210f/COMPLETE.json",
+      "sha256": "684e98c7b80e68ba10d2b45c627b4c20c2519144130b2962f9e8c4d2428af803"
+    },
+    {
+      "sequence": "mustard_easy_00_02_black10_5",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/20fe4fdc914bbb671cbf18c2186bbbb060cf7bcc9873cb66b80e0bcaf7462b9d/COMPLETE.json",
+      "sha256": "263b0df9dec63ea1f069209853cb04b1f17b68ef4a6e9840fb076e797dd26fb1"
+    },
+    {
+      "sequence": "mustard_easy_00_02_clean",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/16fec4363cc9bc9fba764272b2c90d3a1bdd5eb918dac82ea21c8701e5f42ea4/COMPLETE.json",
+      "sha256": "bd3d594556b4056b315c9772d734898da772db6367ee5b30a2ec9f0210812045"
+    },
+    {
+      "sequence": "mustard_easy_00_02_drop60",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/cbaaf8481faff1c18692fb9b8a161f2e4db7827df7af2e85c4a5de3a5e2f6ee5/COMPLETE.json",
+      "sha256": "0ee5771df0a673d965364a855fe49e69c8236409b724ee0db704be9332fde2bd"
+    },
+    {
+      "sequence": "mustard_easy_00_02_occ40",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/733991d5c3035ac2cdd91decb76c5c5be934e5f69440486dfdf5d0df74454841/COMPLETE.json",
+      "sha256": "17ce32d0667a782479bc25fc66f0bc0c4167b1564f4eef6306d4edae0d4b79ee"
+    },
+    {
+      "sequence": "mustard_easy_00_02_occ60",
+      "frames": 689,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/32212a14f19ceeb622fb1e191cfb55f72c2a0248e30c0e4efd8f05522c97bcce/COMPLETE.json",
+      "sha256": "7473096f1bb8497a9d8599fd7b0114fef0e45e4e5c29947af526a8b463a5b35f"
+    },
+    {
+      "sequence": "sugar_box1_black10",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/8d3acd5a6f34ddfaf8ad01731c0f38444ebf1283ab3b3b12634e4556b98e791c/COMPLETE.json",
+      "sha256": "4a2c945de6a73a41922971434a28c876940532f303c3cb67d5b2ba532a8b87f9"
+    },
+    {
+      "sequence": "sugar_box1_black10_2",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/fdf84ce3542bfbcfbf23c351c991e5c005a70c897a35a9e0f236e1b7ce73d14b/COMPLETE.json",
+      "sha256": "90ded81cf234192e58c382be42ac50be66e613f05066eff852e58895f69726f7"
+    },
+    {
+      "sequence": "sugar_box1_black10_3",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/974ffeb2ccf6d81d20b313d2c1532c6bb20f2d36d0b2ea2428e18e85a68b573c/COMPLETE.json",
+      "sha256": "ce3abf816f4465a17de9c86e29c502f3cae1e27db3ba39caab94019d99ca8c27"
+    },
+    {
+      "sequence": "sugar_box1_black10_4",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/e9528013f57bdc0c4ee9706c9190b2e8450fe48090853a49b059efb56f3d10a6/COMPLETE.json",
+      "sha256": "f0200bb28630474af92b3ed17280bcc3d98810eafe0fe3d987647132ae6ff30f"
+    },
+    {
+      "sequence": "sugar_box1_black10_5",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/4ce2a98a6daa348cdd6520c451139806d0fa9edb9f48471f817456366fd68f41/COMPLETE.json",
+      "sha256": "261a3ce88cc093bf95e2d02d11d88ab600f59600fb34da3bc2f4b97f3950b6fb"
+    },
+    {
+      "sequence": "sugar_box1_clean",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/658392a22307d2a6fa535af7d01f0f291a05c8a6bdd87dca944e60df4309df78/COMPLETE.json",
+      "sha256": "157ff887794c6cb410230016d2d4aa63b09139d0c130484af891fca7557bb682"
+    },
+    {
+      "sequence": "sugar_box1_drop60",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/416fcbeadf420302ac5ae7025c3d0e6833c193fedb58b6efb6530561f09a1440/COMPLETE.json",
+      "sha256": "9f51726ba1d065047826b3c52124d9a5ab467f3731ced626ad29e0150c7ef93a"
+    },
+    {
+      "sequence": "sugar_box1_occ40",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/b0e1baf191dd9d7279fa23b58d2552a6519df3798b361424691510780e00c1a8/COMPLETE.json",
+      "sha256": "122f0e97530281bef5eaf29d58eb9a67414539dcc69ca72c6e53b19732d33c45"
+    },
+    {
+      "sequence": "sugar_box1_occ60",
+      "frames": 907,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/2d43287da74aa78924564276fd9307ffac17f2e20c3814b798d0f6ea41b06551/COMPLETE.json",
+      "sha256": "0a7e7cd8207f87d5207dd9ffe5921b0c2aac462c6552dcd560389b2839d646eb"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_black10",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/fce354e69e7ea1a2d439e0c016ff0fccdb2223a57de691ff6477ccc752864331/COMPLETE.json",
+      "sha256": "3b26722ada4773f0f4b53a3f63a3c00d85608f339affe851edbc4673fab6a4c2"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_black10_2",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/a2d32fd74364b0be19f85a0b8e5008cd8ae5de112e8d2f31e957fda30c01f52c/COMPLETE.json",
+      "sha256": "178d419b5d7b38d165994fad2d41dc67b8cffa4444c416451632d3659ff5f2cf"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_black10_3",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/f15cbf2e4c495c3d31b9f3131bb34d3f2708f52119ad76065911429872c54089/COMPLETE.json",
+      "sha256": "e930e2ccba345f44b5b5a0f6d70f165013a878c17466fbda5ca80d593d4278de"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_black10_4",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/5a63d442ca855db3792b32717211e36f8bebbacf767d4cb621ad4960507ab87f/COMPLETE.json",
+      "sha256": "f057feb9566a829b589e891026bd0f37b88d6f9e92d2a910b6c13849db973e41"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_black10_5",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/da8e70848b82cbf0f8cd95f22c70f153dd103f10084e4ecdbcd7ac44572cae7e/COMPLETE.json",
+      "sha256": "10dea47ddc9559a77410fe8c505d674bf2483c3ed4e1706e9ca85999dcac829d"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_clean",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/03d04b74f9c03a367e2b50b26b40284c8336f54f100b321a3126c1c8b27c5092/COMPLETE.json",
+      "sha256": "bc879195ec309b65eeef7ecedf30484eb21fbf0362ac808a94e13a71bd99eda1"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_drop60",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/0cfa8c2036ab626b6bb65e8fb2d721c3cb489498603c319b4a47b9b90c9b0d18/COMPLETE.json",
+      "sha256": "75af0ef3fc918763f0b62d63899bd6f7a427eaf26ec2562352624519f5cf2837"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_occ40",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/b007ba14fafd19f97098b578b88f1a944b49f8117c8a92b70dc66e76d0a42066/COMPLETE.json",
+      "sha256": "6f73a718a0a510a7f697c57a04db140b98a9401375bf9bf5d5813eedc8e49a77"
+    },
+    {
+      "sequence": "sugar_box_yalehand0_occ60",
+      "frames": 1002,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/ce979c9f38a5b023131a0859b3fe0f8f1799644b26559d2f392da6a5e3490c4b/COMPLETE.json",
+      "sha256": "5f3462911fa6aea331c9ce572c6a7aec9a8463dffc0c1e0678bb130de29abb59"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_black10",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/bba7bd9dc684ef46463bfc95e05273c8510c9c47de027a2970de870602563cf3/COMPLETE.json",
+      "sha256": "e4ce6835ece07429c5eef163fa789c6f3f48ad834c2bb3c4cb04ff7c2f80449b"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_black10_2",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/4f20926c52f9da2026460b23e8b57d0d3cbe573dbf426d81aa6be57e77e5b7cf/COMPLETE.json",
+      "sha256": "1ca8c5057972d92962522b8c472bde33086e3e96deea74f5b59e8d2250b43ed0"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_black10_3",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/cb279b5e90cdafb49eb06eb4ca4d2f7790e5fcf6402b2cab2e31e7f24e15c59c/COMPLETE.json",
+      "sha256": "ecf27ffc2b953852da44b848d5293fbaffdc5a3cfb58c239c8740ef1be2efc4d"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_black10_4",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/b490f8e37f4c0923faa61434f8f94cec20a6e663f71c4d799ed26ca4693728e8/COMPLETE.json",
+      "sha256": "a0af30dca3bbba8df1d32495e9c92545dfc1db0e3f2ea82acfc40297fd657488"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_black10_5",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/a21e293ff1eb11a128dc289ed457d3ecd7ddb4911b2744caee9190f2c861bf0b/COMPLETE.json",
+      "sha256": "e2b9355e3e460a2e85ac9b7738342de9b46db4dc4b7ff5e7beb5783a959c9dae"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_clean",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/8de730399a974d8cd7faccdf3d705895f547397a1fc6f9602f4f696ea403ebd0/COMPLETE.json",
+      "sha256": "5d61097d517826b73f88b885f2e011457be911de5520e22cfdb296d187c61710"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_drop60",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/89c00d3b33421156743c5550edb4ac9f2b5a9c1bf6a8ac7076c483843b88d615/COMPLETE.json",
+      "sha256": "70d6343e762c89ee0128f42dceed59c358fb36988636229a824d4ccb76031f3d"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_occ40",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/0b256427a3a65ecb3c3fcd239872c89a3f23662544330e5640024cf6395ef802/COMPLETE.json",
+      "sha256": "5a791f6e2a11ac802368331ce4eb59006a972e7b433a214ec03ff1e7787e26da"
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0_occ60",
+      "frames": 1308,
+      "receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/45b5d24601403863fc5081130239a4992d3dee8cbef211da3200f2434acf13f8/COMPLETE.json",
+      "sha256": "815cfa0db37ea038d7bdda00a14fa4a5825f8f545f41e001b6b9f7f06ca7c196"
+    }
+  ],
+  "note": "All manifest RGB episodes, first-frame prompt only; no GT poses, labels, or quality fitting."
+}

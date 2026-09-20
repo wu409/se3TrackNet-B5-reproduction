@@ -1,0 +1,194 @@
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating tomato_soup_can_yalehand0_clean ===
+[tomato_soup_can_yalehand0_clean] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_black10 ===
+[tomato_soup_can_yalehand0_black10] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10 frame=169
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5592885375494071 0.16591928251121077 0.6713881019830028
+positive inliers / visible support / spatial bins: 237 353 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5075955997904662
+coverage: 0.5575373993095513
+center_error_norm: 0.11523046537277731
+depth_residual_m: 0.013692611444413638
+depth_support: 562
+template_score_margin: 0.05859375
+translation_jump_m: 0.0015226172055468631
+rotation_jump_deg: 11.95131964515252
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_2 ===
+[tomato_soup_can_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_2 frame=420
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.4625121713729309 0.22282608695652173 0.5774278215223098
+positive inliers / visible support / spatial bins: 220 381 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.55096011816839
+coverage: 0.612144420131291
+center_error_norm: 0.09761962442376072
+depth_residual_m: 0.021608143767341992
+depth_support: 651
+template_score_margin: 0.03125
+translation_jump_m: 0.021065724737080023
+rotation_jump_deg: 11.914454231964667
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_3 ===
+[tomato_soup_can_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_3 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5067796610169492 0.36597938144329895 0.4763092269326683
+positive inliers / visible support / spatial bins: 191 401 10
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5469473684210526
+coverage: 0.5953253895508708
+center_error_norm: 0.08777724804461647
+depth_residual_m: 0.0397839598689228
+depth_support: 722
+template_score_margin: 0.015625
+translation_jump_m: 0.03729319476868078
+rotation_jump_deg: 4.115809387371471
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_4 ===
+[tomato_soup_can_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_4 frame=669
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6669329073482428 0.045563549160671464 0.9335443037974683
+positive inliers / visible support / spatial bins: 295 316 11
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5146526177148502
+coverage: 0.5222185098563314
+center_error_norm: 0.14448108563968645
+depth_residual_m: 0.021747506029959784
+depth_support: 746
+template_score_margin: 0.005859375
+translation_jump_m: 0.006617361973854001
+rotation_jump_deg: 9.851781887638628
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_5 ===
+[tomato_soup_can_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_5 frame=806
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.6345541401273885 0.10457516339869281 0.8624708624708625
+positive inliers / visible support / spatial bins: 370 429 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.7394957983193278
+coverage: 0.8641571194762684
+center_error_norm: 0.05445567160266328
+depth_residual_m: 0.02517522581215198
+depth_support: 1158
+template_score_margin: 0.0029296875
+translation_jump_m: 0.0021202169898795684
+rotation_jump_deg: 11.691802095550976
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_occ40 ===
+[tomato_soup_can_yalehand0_occ40] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_occ60 ===
+[tomato_soup_can_yalehand0_occ60] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_drop60 ===
+[tomato_soup_can_yalehand0_drop60] manifest paths and SHA-256 values verified: 1308 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_tomato_soup_can_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_tomato_soup_can_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.6164
+Obs risk AUROC            = 0.5383
+Prior risk AUROC          = 0.5301

@@ -1,0 +1,4 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+cracker_box_reorient_black10_3,1579908957952716266,1,1,1,0.41363138052509607,,1,2484.3193674460053,1,0,0.41363138052509607,False,1
+cracker_box_reorient_black10_3,1579908959892045006,1,1,1,0.4358620918111329,,1,2486.8888165801764,1,0,0.4358620918111329,False,1
+cracker_box_reorient_black10_3,1579908960049671718,1,1,1,0.23261971061561243,,1,2488.331153988838,1,0,0.23261971061561243,False,1

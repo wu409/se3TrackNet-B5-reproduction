@@ -1,0 +1,194 @@
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating sugar_box_yalehand0_clean ===
+[sugar_box_yalehand0_clean] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_black10 ===
+[sugar_box_yalehand0_black10] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: ablation_no_blackout_geometric_admission_v2
+gate_status: None
+acceptance_path: None
+decision_category: None
+occlusion / conflict / inlier fractions: None None None
+positive inliers / visible support / spatial bins: None None None
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_2 ===
+[sugar_box_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: ablation_no_blackout_geometric_admission_v2
+gate_status: None
+acceptance_path: None
+decision_category: None
+occlusion / conflict / inlier fractions: None None None
+positive inliers / visible support / spatial bins: None None None
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_3 ===
+[sugar_box_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: ablation_no_blackout_geometric_admission_v2
+gate_status: None
+acceptance_path: None
+decision_category: None
+occlusion / conflict / inlier fractions: None None None
+positive inliers / visible support / spatial bins: None None None
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_4 ===
+[sugar_box_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_4 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: ablation_no_blackout_geometric_admission_v2
+gate_status: None
+acceptance_path: None
+decision_category: None
+occlusion / conflict / inlier fractions: None None None
+positive inliers / visible support / spatial bins: None None None
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_5 ===
+[sugar_box_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_5 frame=610
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: ablation_no_blackout_geometric_admission_v2
+gate_status: None
+acceptance_path: None
+decision_category: None
+occlusion / conflict / inlier fractions: None None None
+positive inliers / visible support / spatial bins: None None None
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_occ40 ===
+[sugar_box_yalehand0_occ40] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_occ60 ===
+[sugar_box_yalehand0_occ60] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_drop60 ===
+[sugar_box_yalehand0_drop60] manifest paths and SHA-256 values verified: 1002 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_sugar_box_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_sugar_box_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8223
+Obs risk AUROC            = 0.8954
+Prior risk AUROC          = 0.8817

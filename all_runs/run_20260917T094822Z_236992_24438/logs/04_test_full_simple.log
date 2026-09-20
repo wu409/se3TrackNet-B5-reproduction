@@ -1,0 +1,1943 @@
+Verifying frozen model/source/component/input hashes...
+Auditing 5 test sequences x 9 conditions without inference...
+Decoding frozen RGB/depth/initial masks (no model inference)...
+Persistent perception import/API check passed: sam2
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Persistent perception import/API check passed: foundationpose
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+Frozen feature implementation and model imports validated; no inference executed.
+Evaluating full cracker_box_reorient
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating cracker_box_reorient_clean ===
+[cracker_box_reorient_clean] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_black10 ===
+[cracker_box_reorient_black10] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10 frame=1579908951442253069
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.41975308641975306 0.0 0.9988839285714286
+positive inliers / visible support / spatial bins: 895 896 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8667784832874087
+coverage: 0.8758019610216681
+center_error_norm: 0.018635698037330794
+depth_residual_m: 0.006443166524410293
+depth_support: 1526
+template_score_margin: 0.0625
+translation_jump_m: 0.005113636822531891
+rotation_jump_deg: 3.8320724706348144
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_2 ===
+[cracker_box_reorient_black10_2] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_2 frame=1579908960965741309
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5752561071710008 0.025974025974025976 0.9980657640232108
+positive inliers / visible support / spatial bins: 516 517 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8830633566567622
+coverage: 0.9025274294670846
+center_error_norm: 0.008523021176723286
+depth_residual_m: 0.04208700239084662
+depth_support: 1222
+template_score_margin: 0.0
+translation_jump_m: 0.09920811251985011
+rotation_jump_deg: 44.146299207074726
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_3 ===
+[cracker_box_reorient_black10_3] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_3 frame=1579908955061541775
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4090100770598696 0.0 0.9954648526077098
+positive inliers / visible support / spatial bins: 878 882 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8607278782112274
+coverage: 0.8725584760067518
+center_error_norm: 0.01453787189383134
+depth_residual_m: 0.006615213854312851
+depth_support: 1497
+template_score_margin: 0.0
+translation_jump_m: 0.006785598921227622
+rotation_jump_deg: 2.4372799335573574
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_4 ===
+[cracker_box_reorient_black10_4] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_4 frame=1579908956858690945
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.442002442002442 0.016411378555798686 0.9810201660735468
+positive inliers / visible support / spatial bins: 827 843 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8594146984097111
+coverage: 0.8748922310566146
+center_error_norm: 0.012466460707413795
+depth_residual_m: 0.007072572013378187
+depth_support: 1475
+template_score_margin: 0.0
+translation_jump_m: 0.13248983829489336
+rotation_jump_deg: 11.70555807784119
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_5 ===
+[cracker_box_reorient_black10_5] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_5 frame=1579908963939619743
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5556426332288401 0.054673721340388004 0.9961685823754789
+positive inliers / visible support / spatial bins: 520 522 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8681159420289855
+coverage: 0.881833349690843
+center_error_norm: 0.0034518036824574935
+depth_residual_m: 0.04221852367520329
+depth_support: 1201
+template_score_margin: 0.015625
+translation_jump_m: 0.017546540124756874
+rotation_jump_deg: 30.042935752389507
+=======================================
+
+
+=== Evaluating cracker_box_reorient_occ40 ===
+[cracker_box_reorient_occ40] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_occ60 ===
+[cracker_box_reorient_occ60] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_drop60 ===
+[cracker_box_reorient_drop60] manifest paths and SHA-256 values verified: 375 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_cracker_box_reorient_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_cracker_box_reorient_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.9573
+Obs risk AUROC            = 0.9411
+Prior risk AUROC          = 0.8408
+Evaluating full cracker_box_yalehand0
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating cracker_box_yalehand0_clean ===
+[cracker_box_yalehand0_clean] manifest paths and SHA-256 values verified: 1327 frames
+
+=== Evaluating cracker_box_yalehand0_black10 ===
+[cracker_box_yalehand0_black10] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4632352941176471 0.0547945205479452 0.84375
+positive inliers / visible support / spatial bins: 162 192 9
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5541819099280939
+coverage: 0.5541819099280939
+center_error_norm: 0.10394461024413755
+depth_residual_m: 0.023896460864782365
+depth_support: 365
+template_score_margin: 0.015625
+translation_jump_m: 0.0061842753033799274
+rotation_jump_deg: 3.7837161886043584
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_2 ===
+[cracker_box_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.43765903307888043 0.07918552036199095 0.7748344370860927
+positive inliers / visible support / spatial bins: 117 151 7
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5074496056091148
+coverage: 0.5074496056091148
+center_error_norm: 0.09847866439990834
+depth_residual_m: 0.026914384437084216
+depth_support: 332
+template_score_margin: 0.015625
+translation_jump_m: 0.015453166963149023
+rotation_jump_deg: 9.998347928251254
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_3 ===
+[cracker_box_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.543613707165109 0.013651877133105802 0.9760956175298805
+positive inliers / visible support / spatial bins: 245 251 8
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5743339253996448
+coverage: 0.5743339253996448
+center_error_norm: 0.0568089364303761
+depth_residual_m: 0.012312415075063754
+depth_support: 479
+template_score_margin: 0.046875
+translation_jump_m: 0.04926377556407056
+rotation_jump_deg: 11.504569908119034
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_4 ===
+[cracker_box_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_4 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5548780487804879 0.03767123287671233 0.9736842105263158
+positive inliers / visible support / spatial bins: 222 228 9
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5634402991564483
+coverage: 0.5634402991564483
+center_error_norm: 0.0526429454362276
+depth_residual_m: 0.018439040402293216
+depth_support: 456
+template_score_margin: 0.0
+translation_jump_m: 0.01705932858154315
+rotation_jump_deg: 8.095884245861892
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_5 ===
+[cracker_box_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_5 frame=610
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5827586206896552 0.1487603305785124 1.0
+positive inliers / visible support / spatial bins: 230 230 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5951382268827454
+coverage: 0.5952233398484054
+center_error_norm: 0.034995077744424286
+depth_residual_m: 0.0838530020261109
+depth_support: 610
+template_score_margin: 0.0
+translation_jump_m: 0.022853468162069294
+rotation_jump_deg: 14.982406409151261
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_occ40 ===
+[cracker_box_yalehand0_occ40] manifest paths and SHA-256 values verified: 1327 frames
+
+=== Evaluating cracker_box_yalehand0_occ60 ===
+[cracker_box_yalehand0_occ60] manifest paths and SHA-256 values verified: 1327 frames
+
+=== Evaluating cracker_box_yalehand0_drop60 ===
+[cracker_box_yalehand0_drop60] manifest paths and SHA-256 values verified: 1327 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_cracker_box_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_cracker_box_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.9294
+Obs risk AUROC            = 0.6092
+Prior risk AUROC          = 0.5784
+Evaluating full sugar_box_yalehand0
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating sugar_box_yalehand0_clean ===
+[sugar_box_yalehand0_clean] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_black10 ===
+[sugar_box_yalehand0_black10] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6213364595545134 0.034055727554179564 0.679144385026738
+positive inliers / visible support / spatial bins: 127 187 10
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.44273453684522046
+coverage: 0.5114529914529915
+center_error_norm: 0.18222789412157162
+depth_residual_m: 0.019868022602681057
+depth_support: 415
+template_score_margin: 0.0625
+translation_jump_m: 0.013068134588830755
+rotation_jump_deg: 178.57587002030974
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_2 ===
+[sugar_box_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.546029919447641 0.0 1.0
+positive inliers / visible support / spatial bins: 323 323 8
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.357421875
+coverage: 0.3982589771490751
+center_error_norm: 0.221545541850036
+depth_residual_m: 0.010208937384337202
+depth_support: 642
+template_score_margin: 0.015625
+translation_jump_m: 0.015004523553696834
+rotation_jump_deg: 5.530112083190706
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_3 ===
+[sugar_box_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5440044004400441 0.0 1.0
+positive inliers / visible support / spatial bins: 354 354 11
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.36981085728322277
+coverage: 0.3963928383359663
+center_error_norm: 0.21087585604978956
+depth_residual_m: 0.00814686933662001
+depth_support: 656
+template_score_margin: 0.015625
+translation_jump_m: 0.023052448886757042
+rotation_jump_deg: 3.1220430715528518
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_4 ===
+[sugar_box_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_4 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.47629083245521603 0.019114688128772636 0.9742441209406495
+positive inliers / visible support / spatial bins: 870 893 14
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.7977167778347871
+coverage: 0.8231634679020516
+center_error_norm: 0.03919430508086089
+depth_residual_m: 0.0069081062065661225
+depth_support: 1533
+template_score_margin: 0.03125
+translation_jump_m: 0.0093028777518433
+rotation_jump_deg: 4.334353571473133
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_5 ===
+[sugar_box_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_5 frame=610
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5286944045911047 0.0030441400304414 0.8153241650294696
+positive inliers / visible support / spatial bins: 415 509 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.755796639012976
+coverage: 0.7890295358649789
+center_error_norm: 0.04886865996184954
+depth_residual_m: 0.013847205854244538
+depth_support: 1062
+template_score_margin: 0.0
+translation_jump_m: 0.03127424501489595
+rotation_jump_deg: 5.438843681733605
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_occ40 ===
+[sugar_box_yalehand0_occ40] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_occ60 ===
+[sugar_box_yalehand0_occ60] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_drop60 ===
+[sugar_box_yalehand0_drop60] manifest paths and SHA-256 values verified: 1002 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_sugar_box_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_sugar_box_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8248
+Obs risk AUROC            = 0.8954
+Prior risk AUROC          = 0.8819
+Evaluating full sugar_box1
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating sugar_box1_clean ===
+[sugar_box1_clean] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_black10 ===
+[sugar_box1_black10] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.43219772879091517 0.0 0.995398773006135
+positive inliers / visible support / spatial bins: 649 652 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.7446007031642391
+coverage: 0.7604513977943063
+center_error_norm: 0.013728218895174523
+depth_residual_m: 0.0067363005818128485
+depth_support: 1161
+template_score_margin: 0.03125
+translation_jump_m: 0.003976447122455851
+rotation_jump_deg: 7.719889376152816
+=======================================
+
+
+=== Evaluating sugar_box1_black10_2 ===
+[sugar_box1_black10_2] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.7991169977924945 0.8791208791208791 1.0
+positive inliers / visible support / spatial bins: 1 1 1
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.0017857142857142857
+coverage: 0.004714016341923318
+center_error_norm: 0.322467345465795
+depth_residual_m: 0.0011778509902581336
+depth_support: 1
+template_score_margin: 0.046875
+translation_jump_m: 0.19671851998288098
+rotation_jump_deg: 136.29836178389905
+=======================================
+
+
+=== Evaluating sugar_box1_black10_3 ===
+[sugar_box1_black10_3] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4929059379926432 0.0 1.0
+positive inliers / visible support / spatial bins: 898 898 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8496785890885116
+coverage: 0.8606010016694491
+center_error_norm: 0.008107660158523313
+depth_residual_m: 0.008270609012603791
+depth_support: 1729
+template_score_margin: 0.015625
+translation_jump_m: 0.006261736206092697
+rotation_jump_deg: 3.8033344419665873
+=======================================
+
+
+=== Evaluating sugar_box1_black10_4 ===
+[sugar_box1_black10_4] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_4 frame=500
+  trigger = blackout_exit
+  raw = False
+  accepted = False
+  used = False
+  recovery_failure_reason = sam2_recovery_mask_failed
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+rejection_reasons: ['raw_recovery_not_generated']
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box1_black10_5 ===
+[sugar_box1_black10_5] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_5 frame=610
+  trigger = blackout_exit
+  raw = False
+  accepted = False
+  used = False
+  recovery_failure_reason = sam2_recovery_mask_failed
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+rejection_reasons: ['raw_recovery_not_generated']
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box1_occ40 ===
+[sugar_box1_occ40] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_occ60 ===
+[sugar_box1_occ60] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_drop60 ===
+[sugar_box1_drop60] manifest paths and SHA-256 values verified: 907 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_sugar_box1_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_sugar_box1_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8765
+Obs risk AUROC            = 0.7750
+Prior risk AUROC          = 0.7444
+Evaluating full tomato_soup_can_yalehand0
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating tomato_soup_can_yalehand0_clean ===
+[tomato_soup_can_yalehand0_clean] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_black10 ===
+[tomato_soup_can_yalehand0_black10] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10 frame=169
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5592885375494071 0.16591928251121077 0.6713881019830028
+positive inliers / visible support / spatial bins: 237 353 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5075955997904662
+coverage: 0.5575373993095513
+center_error_norm: 0.11523046537277731
+depth_residual_m: 0.013692611444413638
+depth_support: 562
+template_score_margin: 0.05859375
+translation_jump_m: 0.0015226172055468631
+rotation_jump_deg: 11.95131964515252
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_2 ===
+[tomato_soup_can_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_2 frame=420
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.4625121713729309 0.22282608695652173 0.5774278215223098
+positive inliers / visible support / spatial bins: 220 381 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.55096011816839
+coverage: 0.612144420131291
+center_error_norm: 0.09761962442376072
+depth_residual_m: 0.021608143767341992
+depth_support: 651
+template_score_margin: 0.03125
+translation_jump_m: 0.021065724737080023
+rotation_jump_deg: 11.914454231964667
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_3 ===
+[tomato_soup_can_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_3 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5067796610169492 0.36597938144329895 0.4763092269326683
+positive inliers / visible support / spatial bins: 191 401 10
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5469473684210526
+coverage: 0.5953253895508708
+center_error_norm: 0.08777724804461647
+depth_residual_m: 0.0397839598689228
+depth_support: 722
+template_score_margin: 0.015625
+translation_jump_m: 0.03729319476868078
+rotation_jump_deg: 4.115809387371471
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_4 ===
+[tomato_soup_can_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_4 frame=669
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6669329073482428 0.045563549160671464 0.9335443037974683
+positive inliers / visible support / spatial bins: 295 316 11
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5146526177148502
+coverage: 0.5222185098563314
+center_error_norm: 0.14448108563968645
+depth_residual_m: 0.021747506029959784
+depth_support: 746
+template_score_margin: 0.005859375
+translation_jump_m: 0.006617361973854001
+rotation_jump_deg: 9.851781887638628
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_5 ===
+[tomato_soup_can_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_5 frame=806
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.6345541401273885 0.10457516339869281 0.8624708624708625
+positive inliers / visible support / spatial bins: 370 429 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.7394957983193278
+coverage: 0.8641571194762684
+center_error_norm: 0.05445567160266328
+depth_residual_m: 0.02517522581215198
+depth_support: 1158
+template_score_margin: 0.0029296875
+translation_jump_m: 0.0021202169898795684
+rotation_jump_deg: 11.691802095550976
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_occ40 ===
+[tomato_soup_can_yalehand0_occ40] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_occ60 ===
+[tomato_soup_can_yalehand0_occ60] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_drop60 ===
+[tomato_soup_can_yalehand0_drop60] manifest paths and SHA-256 values verified: 1308 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_tomato_soup_can_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_tomato_soup_can_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.6164
+Obs risk AUROC            = 0.5383
+Prior risk AUROC          = 0.5301
+Evaluating simple cracker_box_reorient
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating cracker_box_reorient_clean ===
+[cracker_box_reorient_clean] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_black10 ===
+[cracker_box_reorient_black10] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10 frame=1579908951442253069
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.41975308641975306 0.0 0.9988839285714286
+positive inliers / visible support / spatial bins: 895 896 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8667784832874087
+coverage: 0.8758019610216681
+center_error_norm: 0.018635698037330794
+depth_residual_m: 0.006443166524410293
+depth_support: 1526
+template_score_margin: 0.0625
+translation_jump_m: 0.010657727662612703
+rotation_jump_deg: 9.23099469474534
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_2 ===
+[cracker_box_reorient_black10_2] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_2 frame=1579908960965741309
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5752561071710008 0.025974025974025976 0.9980657640232108
+positive inliers / visible support / spatial bins: 516 517 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8830633566567622
+coverage: 0.9025274294670846
+center_error_norm: 0.008523021176723286
+depth_residual_m: 0.04208700239084662
+depth_support: 1222
+template_score_margin: 0.0
+translation_jump_m: 0.11071532950419237
+rotation_jump_deg: 55.29245051717256
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_3 ===
+[cracker_box_reorient_black10_3] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_3 frame=1579908955061541775
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4090100770598696 0.0 0.9954648526077098
+positive inliers / visible support / spatial bins: 878 882 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8607278782112274
+coverage: 0.8725584760067518
+center_error_norm: 0.01453787189383134
+depth_residual_m: 0.006615213854312851
+depth_support: 1497
+template_score_margin: 0.0
+translation_jump_m: 0.003985682626873891
+rotation_jump_deg: 5.592927570179106
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_4 ===
+[cracker_box_reorient_black10_4] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_4 frame=1579908956858690945
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.442002442002442 0.016411378555798686 0.9810201660735468
+positive inliers / visible support / spatial bins: 827 843 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8594146984097111
+coverage: 0.8748922310566146
+center_error_norm: 0.012466460707413795
+depth_residual_m: 0.007072572013378187
+depth_support: 1475
+template_score_margin: 0.0
+translation_jump_m: 0.13002600700007988
+rotation_jump_deg: 29.435071620628634
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_5 ===
+[cracker_box_reorient_black10_5] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_5 frame=1579908963939619743
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5556426332288401 0.054673721340388004 0.9961685823754789
+positive inliers / visible support / spatial bins: 520 522 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8681159420289855
+coverage: 0.881833349690843
+center_error_norm: 0.0034518036824574935
+depth_residual_m: 0.04221852367520329
+depth_support: 1201
+template_score_margin: 0.015625
+translation_jump_m: 0.47632256904906556
+rotation_jump_deg: 77.53153131041842
+=======================================
+
+
+=== Evaluating cracker_box_reorient_occ40 ===
+[cracker_box_reorient_occ40] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_occ60 ===
+[cracker_box_reorient_occ60] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_drop60 ===
+[cracker_box_reorient_drop60] manifest paths and SHA-256 values verified: 375 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_cracker_box_reorient_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_cracker_box_reorient_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8733
+Obs risk AUROC            = 0.9410
+Prior risk AUROC          = 0.9607
+Evaluating simple cracker_box_yalehand0
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating cracker_box_yalehand0_clean ===
+[cracker_box_yalehand0_clean] manifest paths and SHA-256 values verified: 1327 frames
+
+=== Evaluating cracker_box_yalehand0_black10 ===
+[cracker_box_yalehand0_black10] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4632352941176471 0.0547945205479452 0.84375
+positive inliers / visible support / spatial bins: 162 192 9
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5541819099280939
+coverage: 0.5541819099280939
+center_error_norm: 0.10394461024413755
+depth_residual_m: 0.023896460864782365
+depth_support: 365
+template_score_margin: 0.015625
+translation_jump_m: 0.0061842753033799274
+rotation_jump_deg: 3.7837161886043584
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_2 ===
+[cracker_box_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.43765903307888043 0.07918552036199095 0.7748344370860927
+positive inliers / visible support / spatial bins: 117 151 7
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5074496056091148
+coverage: 0.5074496056091148
+center_error_norm: 0.09847866439990834
+depth_residual_m: 0.026914384437084216
+depth_support: 332
+template_score_margin: 0.015625
+translation_jump_m: 0.015453166963149023
+rotation_jump_deg: 9.998347928251254
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_3 ===
+[cracker_box_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.543613707165109 0.013651877133105802 0.9760956175298805
+positive inliers / visible support / spatial bins: 245 251 8
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5743339253996448
+coverage: 0.5743339253996448
+center_error_norm: 0.0568089364303761
+depth_residual_m: 0.012312415075063754
+depth_support: 479
+template_score_margin: 0.046875
+translation_jump_m: 0.04926377556407056
+rotation_jump_deg: 11.504569908119034
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_4 ===
+[cracker_box_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_4 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5548780487804879 0.03767123287671233 0.9736842105263158
+positive inliers / visible support / spatial bins: 222 228 9
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5634402991564483
+coverage: 0.5634402991564483
+center_error_norm: 0.0526429454362276
+depth_residual_m: 0.018439040402293216
+depth_support: 456
+template_score_margin: 0.0
+translation_jump_m: 0.01705932858154315
+rotation_jump_deg: 8.095884245861892
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_black10_5 ===
+[cracker_box_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1327 frames
+
+[Recovery] episode=cracker_box_yalehand0_black10_5 frame=610
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5827586206896552 0.1487603305785124 1.0
+positive inliers / visible support / spatial bins: 230 230 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5951382268827454
+coverage: 0.5952233398484054
+center_error_norm: 0.034995077744424286
+depth_residual_m: 0.0838530020261109
+depth_support: 610
+template_score_margin: 0.0
+translation_jump_m: 0.8656143485958745
+rotation_jump_deg: 140.9401908838832
+=======================================
+
+
+=== Evaluating cracker_box_yalehand0_occ40 ===
+[cracker_box_yalehand0_occ40] manifest paths and SHA-256 values verified: 1327 frames
+
+=== Evaluating cracker_box_yalehand0_occ60 ===
+[cracker_box_yalehand0_occ60] manifest paths and SHA-256 values verified: 1327 frames
+
+=== Evaluating cracker_box_yalehand0_drop60 ===
+[cracker_box_yalehand0_drop60] manifest paths and SHA-256 values verified: 1327 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_cracker_box_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_cracker_box_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.9062
+Obs risk AUROC            = 0.6096
+Prior risk AUROC          = 0.7863
+Evaluating simple sugar_box_yalehand0
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating sugar_box_yalehand0_clean ===
+[sugar_box_yalehand0_clean] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_black10 ===
+[sugar_box_yalehand0_black10] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6213364595545134 0.034055727554179564 0.679144385026738
+positive inliers / visible support / spatial bins: 127 187 10
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.44273453684522046
+coverage: 0.5114529914529915
+center_error_norm: 0.18222789412157162
+depth_residual_m: 0.019868022602681057
+depth_support: 415
+template_score_margin: 0.0625
+translation_jump_m: 0.018747210136356635
+rotation_jump_deg: 148.59840260809716
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_2 ===
+[sugar_box_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.546029919447641 0.0 1.0
+positive inliers / visible support / spatial bins: 323 323 8
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.357421875
+coverage: 0.3982589771490751
+center_error_norm: 0.221545541850036
+depth_residual_m: 0.010208937384337202
+depth_support: 642
+template_score_margin: 0.015625
+translation_jump_m: 0.01385542189717
+rotation_jump_deg: 15.979455168410478
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_3 ===
+[sugar_box_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5440044004400441 0.0 1.0
+positive inliers / visible support / spatial bins: 354 354 11
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.36981085728322277
+coverage: 0.3963928383359663
+center_error_norm: 0.21087585604978956
+depth_residual_m: 0.00814686933662001
+depth_support: 656
+template_score_margin: 0.015625
+translation_jump_m: 0.03316482073060802
+rotation_jump_deg: 11.931815440300696
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_4 ===
+[sugar_box_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_4 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.47629083245521603 0.019114688128772636 0.9742441209406495
+positive inliers / visible support / spatial bins: 870 893 14
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.7977167778347871
+coverage: 0.8231634679020516
+center_error_norm: 0.03919430508086089
+depth_residual_m: 0.0069081062065661225
+depth_support: 1533
+template_score_margin: 0.03125
+translation_jump_m: 0.012187326973382671
+rotation_jump_deg: 5.087087100633098
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_black10_5 ===
+[sugar_box_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1002 frames
+
+[Recovery] episode=sugar_box_yalehand0_black10_5 frame=610
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5286944045911047 0.0030441400304414 0.8153241650294696
+positive inliers / visible support / spatial bins: 415 509 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.755796639012976
+coverage: 0.7890295358649789
+center_error_norm: 0.04886865996184954
+depth_residual_m: 0.013847205854244538
+depth_support: 1062
+template_score_margin: 0.0
+translation_jump_m: 0.03209936376846472
+rotation_jump_deg: 5.241738387290668
+=======================================
+
+
+=== Evaluating sugar_box_yalehand0_occ40 ===
+[sugar_box_yalehand0_occ40] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_occ60 ===
+[sugar_box_yalehand0_occ60] manifest paths and SHA-256 values verified: 1002 frames
+
+=== Evaluating sugar_box_yalehand0_drop60 ===
+[sugar_box_yalehand0_drop60] manifest paths and SHA-256 values verified: 1002 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_sugar_box_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_sugar_box_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8134
+Obs risk AUROC            = 0.8954
+Prior risk AUROC          = 0.8937
+Evaluating simple sugar_box1
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating sugar_box1_clean ===
+[sugar_box1_clean] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_black10 ===
+[sugar_box1_black10] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.43219772879091517 0.0 0.995398773006135
+positive inliers / visible support / spatial bins: 649 652 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.7446007031642391
+coverage: 0.7604513977943063
+center_error_norm: 0.013728218895174523
+depth_residual_m: 0.0067363005818128485
+depth_support: 1161
+template_score_margin: 0.03125
+translation_jump_m: 0.010369205788778877
+rotation_jump_deg: 9.184248500138457
+=======================================
+
+
+=== Evaluating sugar_box1_black10_2 ===
+[sugar_box1_black10_2] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.7991169977924945 0.8791208791208791 1.0
+positive inliers / visible support / spatial bins: 1 1 1
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.0017857142857142857
+coverage: 0.004714016341923318
+center_error_norm: 0.322467345465795
+depth_residual_m: 0.0011778509902581336
+depth_support: 1
+template_score_margin: 0.046875
+translation_jump_m: 0.19752269761587726
+rotation_jump_deg: 149.7224456951619
+=======================================
+
+
+=== Evaluating sugar_box1_black10_3 ===
+[sugar_box1_black10_3] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4929059379926432 0.0 1.0
+positive inliers / visible support / spatial bins: 898 898 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8496785890885116
+coverage: 0.8606010016694491
+center_error_norm: 0.008107660158523313
+depth_residual_m: 0.008270609012603791
+depth_support: 1729
+template_score_margin: 0.015625
+translation_jump_m: 0.004396963786734805
+rotation_jump_deg: 8.65723779375011
+=======================================
+
+
+=== Evaluating sugar_box1_black10_4 ===
+[sugar_box1_black10_4] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_4 frame=500
+  trigger = blackout_exit
+  raw = False
+  accepted = False
+  used = False
+  recovery_failure_reason = sam2_recovery_mask_failed
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+rejection_reasons: ['raw_recovery_not_generated']
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box1_black10_5 ===
+[sugar_box1_black10_5] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_5 frame=610
+  trigger = blackout_exit
+  raw = False
+  accepted = False
+  used = False
+  recovery_failure_reason = sam2_recovery_mask_failed
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+rejection_reasons: ['raw_recovery_not_generated']
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box1_occ40 ===
+[sugar_box1_occ40] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_occ60 ===
+[sugar_box1_occ60] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_drop60 ===
+[sugar_box1_drop60] manifest paths and SHA-256 values verified: 907 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_sugar_box1_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_sugar_box1_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8176
+Obs risk AUROC            = 0.7743
+Prior risk AUROC          = 0.7902
+Evaluating simple tomato_soup_can_yalehand0
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating tomato_soup_can_yalehand0_clean ===
+[tomato_soup_can_yalehand0_clean] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_black10 ===
+[tomato_soup_can_yalehand0_black10] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10 frame=169
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5592885375494071 0.16591928251121077 0.6713881019830028
+positive inliers / visible support / spatial bins: 237 353 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5075955997904662
+coverage: 0.5575373993095513
+center_error_norm: 0.11523046537277731
+depth_residual_m: 0.013692611444413638
+depth_support: 562
+template_score_margin: 0.05859375
+translation_jump_m: 0.00563289701042832
+rotation_jump_deg: 2.846573146456747
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_2 ===
+[tomato_soup_can_yalehand0_black10_2] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_2 frame=420
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.4625121713729309 0.22282608695652173 0.5774278215223098
+positive inliers / visible support / spatial bins: 220 381 12
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.55096011816839
+coverage: 0.612144420131291
+center_error_norm: 0.09761962442376072
+depth_residual_m: 0.021608143767341992
+depth_support: 651
+template_score_margin: 0.03125
+translation_jump_m: 0.02159199947428964
+rotation_jump_deg: 8.537025724766455
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_3 ===
+[tomato_soup_can_yalehand0_black10_3] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_3 frame=500
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.5067796610169492 0.36597938144329895 0.4763092269326683
+positive inliers / visible support / spatial bins: 191 401 10
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.5469473684210526
+coverage: 0.5953253895508708
+center_error_norm: 0.08777724804461647
+depth_residual_m: 0.0397839598689228
+depth_support: 722
+template_score_margin: 0.015625
+translation_jump_m: 0.03340108079629922
+rotation_jump_deg: 12.355731919688711
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_4 ===
+[tomato_soup_can_yalehand0_black10_4] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_4 frame=669
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.6669329073482428 0.045563549160671464 0.9335443037974683
+positive inliers / visible support / spatial bins: 295 316 11
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.5146526177148502
+coverage: 0.5222185098563314
+center_error_norm: 0.14448108563968645
+depth_residual_m: 0.021747506029959784
+depth_support: 746
+template_score_margin: 0.005859375
+translation_jump_m: 0.007405020783492399
+rotation_jump_deg: 14.787424109237863
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_black10_5 ===
+[tomato_soup_can_yalehand0_black10_5] manifest paths and SHA-256 values verified: 1308 frames
+
+[Recovery] episode=tomato_soup_can_yalehand0_black10_5 frame=806
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.6345541401273885 0.10457516339869281 0.8624708624708625
+positive inliers / visible support / spatial bins: 370 429 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.7394957983193278
+coverage: 0.8641571194762684
+center_error_norm: 0.05445567160266328
+depth_residual_m: 0.02517522581215198
+depth_support: 1158
+template_score_margin: 0.0029296875
+translation_jump_m: 0.004238198501803366
+rotation_jump_deg: 20.484246158880875
+=======================================
+
+
+=== Evaluating tomato_soup_can_yalehand0_occ40 ===
+[tomato_soup_can_yalehand0_occ40] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_occ60 ===
+[tomato_soup_can_yalehand0_occ60] manifest paths and SHA-256 values verified: 1308 frames
+
+=== Evaluating tomato_soup_can_yalehand0_drop60 ===
+[tomato_soup_can_yalehand0_drop60] manifest paths and SHA-256 values verified: 1308 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_tomato_soup_can_yalehand0_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_tomato_soup_can_yalehand0_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.5964
+Obs risk AUROC            = 0.5383
+Prior risk AUROC          = 0.5276
+Frozen testing complete: /root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple

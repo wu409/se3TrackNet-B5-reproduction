@@ -1,0 +1,33 @@
+{
+  "config": {
+    "version": "cached_perception_v2",
+    "sam2": "precomputed_causal_episode_masks",
+    "scheduling": "serialized_gpu_resident_workers",
+    "frame_input": "causal_lazy_rgb_float32",
+    "sam2_video_storage": "cpu_one_image_cache",
+    "sam2_state_storage": "cpu_no_memory_pruning",
+    "foundationpose": "resident_models_independent_register_per_request",
+    "cache": "complete_content_addressed_episode_read_only",
+    "timeout_seconds": 1200,
+    "failure": "abort_no_silent_fallback",
+    "seed": 42
+  },
+  "execution_settings": {
+    "version": "cpu_io_budget_v1",
+    "cpu_threads": 16,
+    "io_workers": 8
+  },
+  "complete": true,
+  "frames_advanced": 663,
+  "manifest_frames": 663,
+  "sam2_wall_ms": 1681.3814966008067,
+  "foundationpose_wall_ms": 43989.19794242829,
+  "foundationpose_calls": 6,
+  "episode_scope_wall_ms": 102259.99860372394,
+  "sam2_log": null,
+  "sam2_timing_scope": "cache_read_only_not_online_fps",
+  "sam2_cache_receipt": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_run/sam2_masks/causal_sam2_episode_cache_v1/b1a9438741a3d591cbed3e350be9a974c01d1c21b3fbce1c32dd3bef4fe8cbd2/COMPLETE.json",
+  "sam2_cache_receipt_sha256": "62fe6f330d0090395cb495a56207403a105db05ab823652f5ecf77ff9b5218c9",
+  "sam2_precompute_wall_ms": 99026.22816804796,
+  "foundationpose_log": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release/perception_bleach0_black10_5_refine_input_q0_foundationpose.log"
+}

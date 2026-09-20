@@ -1,0 +1,4 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+sugar_box_yalehand0_clean,29,1,1,1,1.0275715863762735,,1,26495.451734401286,1,0,1.0275715863762735,False,1
+sugar_box_yalehand0_clean,32,1,1,1,0.34869150431100515,,1,2405.0934286788106,1,0,0.34869150431100515,False,1
+sugar_box_yalehand0_clean,43,1,1,1,0.7697004804316012,,1,2402.847595512867,1,0,0.7697004804316012,False,1

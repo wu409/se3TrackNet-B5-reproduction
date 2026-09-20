@@ -1,0 +1,95 @@
+Manifest artifact verification passed: 70840 unique files
+Object 006_mustard_bottle: D_obj=22.442 cm
+Object 006_mustard_bottle: D_obj=22.442 cm
+Object 021_bleach_cleanser: D_obj=27.882 cm
+Object 021_bleach_cleanser: D_obj=27.882 cm
+
+=== Shared pose-quality training: final development fit or held-out fold ===
+held-out: None
+train bases: ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+Stage 0 q0 (obs-only seed): {'train_samples': 15921, 'cal_samples': 6849, 'train_mae_cm': 6.377882593721318, 'cal_mae_cm': 10.437588131736726, 'cal_risk_auroc': 0.9958680729458207, 'p_risk_threshold': 0.6, 'threshold_balanced_accuracy': 0.9722733474686632}
+[on-policy round 1] mustard_easy_00_02_clean
+[on-policy round 1] mustard_easy_00_02_black10
+[on-policy round 1] mustard_easy_00_02_black10_2
+[on-policy round 1] mustard_easy_00_02_black10_3
+[on-policy round 1] mustard_easy_00_02_black10_4
+[on-policy round 1] mustard_easy_00_02_black10_5
+[on-policy round 1] mustard_easy_00_02_occ40
+[on-policy round 1] mustard_easy_00_02_occ60
+[on-policy round 1] mustard_easy_00_02_drop60
+[on-policy round 1] mustard0_clean
+[on-policy round 1] mustard0_black10
+[on-policy round 1] mustard0_black10_2
+[on-policy round 1] mustard0_black10_3
+[on-policy round 1] mustard0_black10_4
+[on-policy round 1] mustard0_black10_5
+[on-policy round 1] mustard0_occ40
+[on-policy round 1] mustard0_occ60
+[on-policy round 1] mustard0_drop60
+[on-policy round 1] bleach0_clean
+[on-policy round 1] bleach0_black10
+[on-policy round 1] bleach0_black10_2
+[on-policy round 1] bleach0_black10_3
+[on-policy round 1] bleach0_black10_4
+[on-policy round 1] bleach0_black10_5
+[on-policy round 1] bleach0_occ40
+[on-policy round 1] bleach0_occ60
+[on-policy round 1] bleach0_drop60
+[on-policy round 1] bleach_hard_00_03_chaitanya_clean
+[on-policy round 1] bleach_hard_00_03_chaitanya_black10
+[on-policy round 1] bleach_hard_00_03_chaitanya_black10_2
+[on-policy round 1] bleach_hard_00_03_chaitanya_black10_3
+[on-policy round 1] bleach_hard_00_03_chaitanya_black10_4
+[on-policy round 1] bleach_hard_00_03_chaitanya_black10_5
+[on-policy round 1] bleach_hard_00_03_chaitanya_occ40
+[on-policy round 1] bleach_hard_00_03_chaitanya_occ60
+[on-policy round 1] bleach_hard_00_03_chaitanya_drop60
+Stage 1 q1 fit: {'train_samples': 31842, 'cal_samples': 13698, 'train_mae_cm': 1.740434901517721, 'cal_mae_cm': 17.729989493742362, 'cal_risk_auroc': 0.904355942767098, 'p_risk_threshold': 0.24999999999999994, 'threshold_balanced_accuracy': 0.8698642086965447}
+[FINAL frozen rollout] mustard_easy_00_02_clean
+[FINAL frozen rollout] mustard_easy_00_02_black10
+[FINAL frozen rollout] mustard_easy_00_02_black10_2
+[FINAL frozen rollout] mustard_easy_00_02_black10_3
+[FINAL frozen rollout] mustard_easy_00_02_black10_4
+[FINAL frozen rollout] mustard_easy_00_02_black10_5
+[FINAL frozen rollout] mustard_easy_00_02_occ40
+[FINAL frozen rollout] mustard_easy_00_02_occ60
+[FINAL frozen rollout] mustard_easy_00_02_drop60
+[FINAL frozen rollout] mustard0_clean
+[FINAL frozen rollout] mustard0_black10
+[FINAL frozen rollout] mustard0_black10_2
+[FINAL frozen rollout] mustard0_black10_3
+[FINAL frozen rollout] mustard0_black10_4
+[FINAL frozen rollout] mustard0_black10_5
+[FINAL frozen rollout] mustard0_occ40
+[FINAL frozen rollout] mustard0_occ60
+[FINAL frozen rollout] mustard0_drop60
+[FINAL frozen rollout] bleach0_clean
+[FINAL frozen rollout] bleach0_black10
+[FINAL frozen rollout] bleach0_black10_2
+[FINAL frozen rollout] bleach0_black10_3
+[FINAL frozen rollout] bleach0_black10_4
+[FINAL frozen rollout] bleach0_black10_5
+[FINAL frozen rollout] bleach0_occ40
+[FINAL frozen rollout] bleach0_occ60
+[FINAL frozen rollout] bleach0_drop60
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_clean
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_black10
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_black10_2
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_black10_3
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_black10_4
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_black10_5
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_occ40
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_occ60
+[FINAL frozen rollout] bleach_hard_00_03_chaitanya_drop60
+
+========================================================================
+FINAL shared-quality label generation complete
+held-out base      : None
+train bases        : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+rows / episodes    : 22770 / 36
+p_risk_threshold   : 0.2500
+advantage margin cm: 0.1000
+label CSV          : ./per_frame_label_threshold1.0.csv
+shared artifacts   : {'scaler': '/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release/artifacts/shared_pose_quality_scaler.joblib', 'model': '/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release/artifacts/shared_pose_quality_model.joblib', 'calibrator': '/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release/artifacts/shared_risk_calibrator.joblib', 'config': '/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release/artifacts/shared_quality_config.json'}
+IMPORTANT: GT generated E_obs/E_prior only; it never entered B5 decisions.
+========================================================================

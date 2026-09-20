@@ -1,0 +1,25 @@
+{
+  "base_sequences": [
+    "bleach_hard_00_03_chaitanya",
+    "bleach0",
+    "cracker_box_reorient",
+    "cracker_box_yalehand0",
+    "mustard_easy_00_02",
+    "mustard0",
+    "sugar_box_yalehand0",
+    "sugar_box1",
+    "tomato_soup_can_yalehand0"
+  ],
+  "common_conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "extra_conditions": {}
+}

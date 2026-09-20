@@ -1,0 +1,2 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+tomato_soup_can_yalehand0_black10_2,561,1,1,1,0.4023502635867019,,1,2375.444320961833,1,0,0.4023502635867019,False,1

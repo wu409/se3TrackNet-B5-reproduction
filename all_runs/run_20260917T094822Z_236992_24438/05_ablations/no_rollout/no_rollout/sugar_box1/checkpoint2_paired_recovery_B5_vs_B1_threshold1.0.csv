@@ -1,0 +1,6 @@
+episode,recovery_frame,recovery_trigger,raw_recovery_generated,raw_recovery_error_cm,accepted_recovery,accepted_recovery_error_cm,recovery_used,B1_error_cm,B5_operational_error_cm,raw_minus_B1_cm,accepted_minus_B1_cm,operational_minus_B1_cm
+sugar_box1_black10,100,blackout_exit,True,0.2688826470563648,True,0.2688826470563648,True,11.655435824132043,0.2688826470563648,-11.386553177075678,-11.386553177075678,-11.386553177075678
+sugar_box1_black10_2,260,blackout_exit,True,5.958832158000717,False,,False,2.769225210402507,3.8429661553139045,3.1896069475982096,,1.0737409449113975
+sugar_box1_black10_3,340,blackout_exit,True,0.3076533122133222,True,0.3076533122133222,True,6.042168620273632,0.3076533122133222,-5.73451530806031,-5.73451530806031,-5.73451530806031
+sugar_box1_black10_4,500,blackout_exit,False,,False,,False,6.5828317226888755,0.5091005359125097,,,-6.0737311867763655
+sugar_box1_black10_5,610,blackout_exit,False,,False,,False,5.144905827220873,3.154656600745128,,,-1.9902492264757448

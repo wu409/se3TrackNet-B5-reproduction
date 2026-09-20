@@ -1,0 +1,194 @@
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating cracker_box_reorient_clean ===
+[cracker_box_reorient_clean] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_black10 ===
+[cracker_box_reorient_black10] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10 frame=1579908951442253069
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.41975308641975306 0.0 0.9988839285714286
+positive inliers / visible support / spatial bins: 895 896 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8667784832874087
+coverage: 0.8758019610216681
+center_error_norm: 0.018635698037330794
+depth_residual_m: 0.006443166524410293
+depth_support: 1526
+template_score_margin: 0.0625
+translation_jump_m: 0.010657727662612703
+rotation_jump_deg: 9.23099469474534
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_2 ===
+[cracker_box_reorient_black10_2] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_2 frame=1579908960965741309
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5752561071710008 0.025974025974025976 0.9980657640232108
+positive inliers / visible support / spatial bins: 516 517 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8830633566567622
+coverage: 0.9025274294670846
+center_error_norm: 0.008523021176723286
+depth_residual_m: 0.04208700239084662
+depth_support: 1222
+template_score_margin: 0.0
+translation_jump_m: 0.11071532950419237
+rotation_jump_deg: 55.29245051717256
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_3 ===
+[cracker_box_reorient_black10_3] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_3 frame=1579908955061541775
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4090100770598696 0.0 0.9954648526077098
+positive inliers / visible support / spatial bins: 878 882 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8607278782112274
+coverage: 0.8725584760067518
+center_error_norm: 0.01453787189383134
+depth_residual_m: 0.006615213854312851
+depth_support: 1497
+template_score_margin: 0.0
+translation_jump_m: 0.003985682626873891
+rotation_jump_deg: 5.592927570179106
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_4 ===
+[cracker_box_reorient_black10_4] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_4 frame=1579908956858690945
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.442002442002442 0.016411378555798686 0.9810201660735468
+positive inliers / visible support / spatial bins: 827 843 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8594146984097111
+coverage: 0.8748922310566146
+center_error_norm: 0.012466460707413795
+depth_residual_m: 0.007072572013378187
+depth_support: 1475
+template_score_margin: 0.0
+translation_jump_m: 0.13002600700007988
+rotation_jump_deg: 29.435071620628634
+=======================================
+
+
+=== Evaluating cracker_box_reorient_black10_5 ===
+[cracker_box_reorient_black10_5] manifest paths and SHA-256 values verified: 375 frames
+
+[Recovery] episode=cracker_box_reorient_black10_5 frame=1579908963939619743
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.5556426332288401 0.054673721340388004 0.9961685823754789
+positive inliers / visible support / spatial bins: 520 522 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8681159420289855
+coverage: 0.881833349690843
+center_error_norm: 0.0034518036824574935
+depth_residual_m: 0.04221852367520329
+depth_support: 1201
+template_score_margin: 0.015625
+translation_jump_m: 0.47632256904906556
+rotation_jump_deg: 77.53153131041842
+=======================================
+
+
+=== Evaluating cracker_box_reorient_occ40 ===
+[cracker_box_reorient_occ40] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_occ60 ===
+[cracker_box_reorient_occ60] manifest paths and SHA-256 values verified: 375 frames
+
+=== Evaluating cracker_box_reorient_drop60 ===
+[cracker_box_reorient_drop60] manifest paths and SHA-256 values verified: 375 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_cracker_box_reorient_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_cracker_box_reorient_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.8733
+Obs risk AUROC            = 0.9410
+Prior risk AUROC          = 0.9607

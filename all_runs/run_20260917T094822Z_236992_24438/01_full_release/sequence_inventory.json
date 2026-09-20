@@ -1,0 +1,89 @@
+{
+  "expected_sequences": 9,
+  "known_object_identities": 5,
+  "train_bases": [
+    "mustard_easy_00_02",
+    "mustard0",
+    "bleach0",
+    "bleach_hard_00_03_chaitanya"
+  ],
+  "training_conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "training_instances": 36,
+  "sequences": [
+    {
+      "sequence": "bleach_hard_00_03_chaitanya",
+      "cad_object": "021_bleach_cleanser",
+      "directory_present": true,
+      "role": "development_training",
+      "quality_training_object_seen": true
+    },
+    {
+      "sequence": "bleach0",
+      "cad_object": "021_bleach_cleanser",
+      "directory_present": true,
+      "role": "development_training",
+      "quality_training_object_seen": true
+    },
+    {
+      "sequence": "cracker_box_reorient",
+      "cad_object": "003_cracker_box",
+      "directory_present": true,
+      "role": "reserved_not_trained",
+      "quality_training_object_seen": false
+    },
+    {
+      "sequence": "cracker_box_yalehand0",
+      "cad_object": "003_cracker_box",
+      "directory_present": true,
+      "role": "reserved_not_trained",
+      "quality_training_object_seen": false
+    },
+    {
+      "sequence": "mustard_easy_00_02",
+      "cad_object": "006_mustard_bottle",
+      "directory_present": true,
+      "role": "development_training",
+      "quality_training_object_seen": true
+    },
+    {
+      "sequence": "mustard0",
+      "cad_object": "006_mustard_bottle",
+      "directory_present": true,
+      "role": "development_training",
+      "quality_training_object_seen": true
+    },
+    {
+      "sequence": "sugar_box_yalehand0",
+      "cad_object": "004_sugar_box",
+      "directory_present": true,
+      "role": "reserved_not_trained",
+      "quality_training_object_seen": false
+    },
+    {
+      "sequence": "sugar_box1",
+      "cad_object": "004_sugar_box",
+      "directory_present": true,
+      "role": "reserved_not_trained",
+      "quality_training_object_seen": false
+    },
+    {
+      "sequence": "tomato_soup_can_yalehand0",
+      "cad_object": "005_tomato_soup_can",
+      "directory_present": true,
+      "role": "reserved_not_trained",
+      "quality_training_object_seen": false
+    }
+  ],
+  "unlisted_directories": [],
+  "note": "Reserved means excluded here, not certification of an untouched test set. "
+}

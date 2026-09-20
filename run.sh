@@ -54,7 +54,8 @@ SAM2_PYTHON=${SAM2_PYTHON:-/root/autodl-tmp/conda-envs/sam2/bin/python}
 SAM2_DIR=${SAM2_DIR:-/root/autodl-tmp/sam2}
 SAM2_CONFIG=${SAM2_CONFIG:-configs/sam2.1/sam2.1_hiera_s.yaml}
 SAM2_CHECKPOINT=${SAM2_CHECKPOINT:-"$SAM2_DIR/checkpoints/sam2.1_hiera_small.pt"}
-export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-16}
+export B5_IO_WORKERS=${B5_IO_WORKERS:-8}
 export OMP_NUM_THREADS=$B5_NUM_THREADS
 SAM2_CACHE_ROOT=${SAM2_CACHE_ROOT:-"$SCRIPT_DIR/sam2_recovery_cache"}
 

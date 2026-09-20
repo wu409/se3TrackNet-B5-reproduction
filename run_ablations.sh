@@ -10,7 +10,8 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 export PYOPENGL_PLATFORM=${PYOPENGL_PLATFORM:-egl}
-export B5_NUM_THREADS=${B5_NUM_THREADS:-${OMP_NUM_THREADS:-4}}
+export B5_NUM_THREADS=${B5_NUM_THREADS:-16}
+export B5_IO_WORKERS=${B5_IO_WORKERS:-8}
 export OMP_NUM_THREADS=$B5_NUM_THREADS
 [[ "$OMP_NUM_THREADS" =~ ^[1-9][0-9]*$ ]] || { echo 'OMP_NUM_THREADS must be positive' >&2; exit 2; }
 if [[ -z "${TEST_PYTHON:-}" ]]; then

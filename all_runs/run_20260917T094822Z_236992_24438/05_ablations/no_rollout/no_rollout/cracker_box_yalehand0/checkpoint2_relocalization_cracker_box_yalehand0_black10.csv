@@ -1,0 +1,10 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+cracker_box_yalehand0_black10,0,1,1,1,0.49981678039482635,,1,25836.00976318121,1,0,0.49981678039482635,False,1
+cracker_box_yalehand0_black10,1,1,1,1,0.4680673205500923,,1,2430.803084746003,1,0,0.4680673205500923,False,1
+cracker_box_yalehand0_black10,38,1,1,1,0.4256975931364289,,1,2440.3856564313173,1,0,0.4256975931364289,False,1
+cracker_box_yalehand0_black10,39,1,1,1,0.43789387683938685,,1,2447.2057158127427,1,0,0.43789387683938685,False,1
+cracker_box_yalehand0_black10,82,1,1,1,0.4005610957423422,,1,2454.5605927705765,1,0,0.4005610957423422,False,1
+cracker_box_yalehand0_black10,84,1,1,1,0.4369127559961218,,1,2441.743432544172,1,0,0.4369127559961218,False,1
+cracker_box_yalehand0_black10,86,1,1,1,0.3766106905003281,,1,2449.531917460263,1,0,0.3766106905003281,False,1
+cracker_box_yalehand0_black10,88,1,1,1,0.3579539954460254,,1,2441.919314675033,1,0,0.3579539954460254,False,1
+cracker_box_yalehand0_black10,341,1,1,1,0.45189514640287437,,1,2468.6079593375325,1,0,0.45189514640287437,False,1

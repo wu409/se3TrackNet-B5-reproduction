@@ -1,0 +1,6 @@
+episode,recovery_frame,recovery_trigger,raw_recovery_generated,raw_recovery_error_cm,accepted_recovery,accepted_recovery_error_cm,recovery_used,B1_error_cm,B5_operational_error_cm,raw_minus_B1_cm,accepted_minus_B1_cm,operational_minus_B1_cm
+tomato_soup_can_yalehand0_black10,169,blackout_exit,True,0.3092008911358477,False,,False,10.91598672674298,0.36638192702563455,-10.606785835607132,,-10.549604799717347
+tomato_soup_can_yalehand0_black10_2,420,blackout_exit,True,0.44646571395930396,False,,False,10.657053182637268,0.7993659404509628,-10.210587468677964,,-9.857687242186305
+tomato_soup_can_yalehand0_black10_3,500,blackout_exit,True,0.42671268883924823,False,,False,13.164109030005115,1.4363758269111273,-12.737396341165866,,-11.727733203093987
+tomato_soup_can_yalehand0_black10_4,669,blackout_exit,True,0.34824375325219137,True,0.34824375325219137,True,12.581453670887722,0.34824375325219137,-12.23320991763553,-12.23320991763553,-12.23320991763553
+tomato_soup_can_yalehand0_black10_5,806,blackout_exit,True,0.35028757484903483,False,,False,11.233211165026527,0.3054928568230989,-10.88292359017749,,-10.927718308203428

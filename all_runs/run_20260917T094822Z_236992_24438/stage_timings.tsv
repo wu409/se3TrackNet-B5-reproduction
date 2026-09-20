@@ -1,0 +1,5 @@
+stage	started_utc	finished_utc	elapsed_seconds	exit_code
+02_train_full	2026-09-17T09:48:22Z	2026-09-17T17:31:37Z	27795	0
+04_test_full_simple	2026-09-17T17:31:37Z	2026-09-18T09:50:22Z	58725	0
+05_train_q0	2026-09-18T09:50:22Z	2026-09-18T11:38:32Z	6490	0
+06_test_ablations	2026-09-18T11:38:33Z	2026-09-19T05:55:53Z	65840	0

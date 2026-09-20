@@ -1,0 +1,59 @@
+{
+  "version": "restartable_se3_observer_v2",
+  "python": "/root/autodl-tmp/conda-envs/b5-main/bin/python3.8",
+  "objects": {
+    "003_cracker_box": {
+      "checkpoint": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/cracker_box/model_best_val.pth.tar",
+      "mean": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/cracker_box/mean.npy",
+      "std": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/cracker_box/std.npy",
+      "dataset_info": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT_data/cracker_box/dataset_info.yml",
+      "mesh": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/003_cracker_box/textured.obj"
+    },
+    "004_sugar_box": {
+      "checkpoint": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/sugar_box/model_best_val.pth.tar",
+      "mean": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/sugar_box/mean.npy",
+      "std": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/sugar_box/std.npy",
+      "dataset_info": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT_data/sugar_box/dataset_info.yml",
+      "mesh": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/004_sugar_box/textured.obj"
+    },
+    "005_tomato_soup_can": {
+      "checkpoint": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/tomato_soup_can/model_best_val.pth.tar",
+      "mean": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/tomato_soup_can/mean.npy",
+      "std": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/tomato_soup_can/std.npy",
+      "dataset_info": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT_data/tomato_soup_can/dataset_info.yml",
+      "mesh": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/005_tomato_soup_can/textured.obj"
+    },
+    "006_mustard_bottle": {
+      "checkpoint": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/mustard_bottle/model_best_val.pth.tar",
+      "mean": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/mustard_bottle/mean.npy",
+      "std": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/mustard_bottle/std.npy",
+      "dataset_info": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT_data/mustard_bottle/dataset_info.yml",
+      "mesh": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.obj"
+    },
+    "021_bleach_cleanser": {
+      "checkpoint": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/bleach_cleanser/model_best_val.pth.tar",
+      "mean": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/bleach_cleanser/mean.npy",
+      "std": "/root/autodl-tmp/se3TrackNet-B5-reproduction/YCBInEOAT_weights/bleach_cleanser/std.npy",
+      "dataset_info": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCBInEOAT_data/bleach_cleanser/dataset_info.yml",
+      "mesh": "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/021_bleach_cleanser/textured.obj"
+    }
+  },
+  "sequence_objects": {
+    "bleach_hard_00_03_chaitanya": "021_bleach_cleanser",
+    "bleach0": "021_bleach_cleanser",
+    "cracker_box_reorient": "003_cracker_box",
+    "cracker_box_yalehand0": "003_cracker_box",
+    "mustard_easy_00_02": "006_mustard_bottle",
+    "mustard0": "006_mustard_bottle",
+    "sugar_box_yalehand0": "004_sugar_box",
+    "sugar_box1": "004_sugar_box",
+    "tomato_soup_can_yalehand0": "005_tomato_soup_can"
+  },
+  "seed": 42,
+  "samples": 1,
+  "trans_normalizer": 0.03,
+  "rot_normalizer_degrees": 30,
+  "depth_input": "manifest_uint16_mm_no_filling",
+  "initial_stream": "frozen_precomputed_predictions_until_first_correction",
+  "after_restart": "previous_tracker_observation_not_previous_policy_output"
+}

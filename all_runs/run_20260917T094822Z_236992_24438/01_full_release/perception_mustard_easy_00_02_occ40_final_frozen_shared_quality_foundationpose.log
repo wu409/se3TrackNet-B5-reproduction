@@ -1,0 +1,883 @@
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: 'Infinity'
+debug: null
+n_view: 1
+run_id: 3wy8qqex
+use_BN: true
+exp_name: 2024-01-11-20-02-45
+n_epochs: 62
+save_dir: /home/bowenw/debug/2024-01-11-20-02-45/
+use_mask: false
+loss_type: pairwise_valid
+optimizer: adam
+batch_size: 8
+crop_ratio: 1.1
+enable_amp: true
+use_normal: false
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+vis_interval: 1000
+weight_decay: 0
+normalize_xyz: true
+resume_run_id: null
+clip_grad_norm: 'Infinity'
+lr_epoch_decay: 500
+render_backend: nvdiffrast
+train_num_pair: 5
+lr_decay_epochs:
+- 50
+n_epochs_warmup: 1
+make_pair_online: false
+gradient_max_norm: 'Infinity'
+max_step_per_epoch: 10000
+n_rendering_workers: 1
+save_epoch_interval: 100
+n_dataloader_workers: 100
+split_objects_across_gpus: true
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+
+[__init__()] self.h5_file:None
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2024-01-11-20-02-45/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:151: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[__init__()] welcome
+[__init__()] self.cfg: 
+ lr: 0.0001
+c_in: 6
+zfar: .inf
+debug: null
+w_rot: 0.1
+n_view: 1
+run_id: null
+use_BN: true
+rot_rep: axis_angle
+ckpt_dir: /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+exp_name: 2023-10-28-18-33-37
+save_dir: /tmp/2023-10-28-18-33-37/
+loss_type: l2
+optimizer: adam
+trans_rep: tracknet
+batch_size: 8
+crop_ratio: 1.2
+use_normal: false
+BN_momentum: 0.1
+max_num_key: null
+warmup_step: -1
+input_resize:
+- 160
+- 160
+max_step_val: 1000
+normal_uint8: false
+vis_interval: 1000
+weight_decay: 0
+n_max_objects: null
+normalize_xyz: true
+clip_grad_norm: 'Infinity'
+rot_normalizer: 0.3490658503988659
+trans_normalizer:
+- 0.019999999552965164
+- 0.019999999552965164
+- 0.05000000074505806
+max_step_per_epoch: 25000
+val_epoch_interval: 10
+n_dataloader_workers: 60
+enable_amp: true
+use_mask: false
+
+[__init__()] self.h5_file:
+[__init__()] Using pretrained model from /root/autodl-tmp/FoundationPose/learning/training/../../weights/2023-10-28-18-33-37/model_best.pth
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:138: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(ckpt_dir)
+[__init__()] init done
+[reset_object()] self.diameter:0.19640101255594383, vox_size:0.009820050627797191
+[reset_object()] self.pts:torch.Size([655, 3])
+[reset_object()] reset done
+[make_rotation_grid()] cam_in_obs:(42, 4, 4)
+[make_rotation_grid()] rot_grid:(252, 4, 4)
+num original candidates = 252
+num of pose after clustering: 252
+[make_rotation_grid()] after cluster, rot_grid:(252, 4, 4)
+[make_rotation_grid()] self.rot_grid: torch.Size([252, 4, 4])
+[register()] Welcome
+Module Utils 65dffc6 load on device 'cuda:0' took 0.75 ms  (cached)
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+/root/autodl-tmp/conda-envs/foundationpose/lib/python3.10/site-packages/torch/__init__.py:1144: UserWarning: torch.set_default_tensor_type() is deprecated as of PyTorch 2.1, please use torch.set_default_dtype() and torch.set_default_device() as alternatives. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:432.)
+  _C._set_default_tensor_type(t)
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+/root/autodl-tmp/FoundationPose/learning/training/predict_pose_refine.py:190: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+/root/autodl-tmp/FoundationPose/learning/training/predict_score.py:193: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=self.amp):
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([105,  75, 147,  99,  44,   2, 128, 135,  74,   9, 129,   3, 165, 218,
+        134,  45, 200,   8, 217, 141, 104,  21,  81,  39,  20,  80, 117, 123,
+         14,  93,  38,  87,  15, 116, 122, 158, 213, 152, 138, 157, 151,  17,
+         86, 251, 199, 209,  71, 127,  98,  70, 121, 239, 119, 233, 170,  58,
+        140,  13,  59, 137, 144,  11,  32, 168, 173, 191,  26, 149, 204, 197,
+         92, 230, 207, 226, 160, 248, 242, 182, 153, 146,  56, 231, 143, 178,
+          4, 177, 249,  50, 194, 133, 225, 220, 206, 115,  68, 159, 201, 125,
+        176,  62, 195,  53, 224,  69,  65, 219, 107, 100, 212,  60,  63, 228,
+         57, 188,  37, 164, 244,  83, 211,  51, 234,  89, 184,  43,  16, 132,
+         77, 155, 102,  84, 186, 192,  48, 246, 227, 250, 236,   6,  10, 185,
+        163,  54, 245, 139, 232, 142, 196, 131, 179,  12, 180, 172,  66, 130,
+        198, 208, 148,  72,  28, 118,  95, 111,  23, 101, 124, 181, 241,  34,
+        108, 203, 126, 171, 136, 240,  35, 113,  90, 190,   5,  52,  78, 120,
+         82,  76, 110,  64, 174,  40, 238,  29, 187,  46,   1,  25, 167, 216,
+         24, 215, 214, 156,  41,  47, 175, 114, 112, 103, 223,  31, 109,  85,
+         91, 166,  97,  19, 154, 145,  79,   7,  96,  55, 235, 202,  30,  73,
+        221, 150, 161,  18, 222,   0, 169, 205,  67,  88, 193, 247, 106, 229,
+         27,  61, 189,  33,  22, 237, 243,  49,  36, 183,  42, 210, 162,  94])
+[register()] sorted scores:tensor([100.9990, 100.9849, 100.9761, 100.9756, 100.9741, 100.9731, 100.9688,
+        100.9688, 100.9683, 100.9668, 100.9663, 100.9653, 100.9639, 100.9639,
+        100.9624, 100.9595, 100.9570, 100.9551, 100.9526, 100.9194, 100.9121,
+        100.8770, 100.8657, 100.8633, 100.8628, 100.8613, 100.8604, 100.8594,
+        100.8579, 100.8525, 100.8521, 100.8506, 100.8452, 100.8369, 100.8369,
+        100.8315, 100.8291, 100.8091, 100.8071, 100.7808, 100.6577, 100.6357,
+        100.6221, 100.6191, 100.6094, 100.5884, 100.5879, 100.5781, 100.5742,
+        100.5718, 100.5718, 100.5698, 100.5659, 100.5654, 100.5527, 100.5498,
+        100.5498, 100.5435, 100.5405, 100.5405, 100.5317, 100.5303, 100.5273,
+        100.5259, 100.5234, 100.5063, 100.5054, 100.5034, 100.4902, 100.4856,
+        100.4731, 100.4382, 100.4246, 100.4148, 100.4084, 100.4070, 100.4021,
+        100.4006, 100.3928, 100.3860, 100.3813, 100.3755, 100.3740, 100.3655,
+        100.3604, 100.3601, 100.3582, 100.3557, 100.3542, 100.3486, 100.3455,
+        100.3401, 100.3398, 100.3394, 100.3359, 100.3257, 100.3206, 100.3076,
+        100.2734, 100.2686, 100.2646, 100.2637, 100.2600, 100.2358, 100.2277,
+        100.2273, 100.2246, 100.2167, 100.2122, 100.2029, 100.1985, 100.1923,
+        100.1841, 100.1692, 100.1614, 100.1595, 100.1534, 100.1525, 100.1426,
+        100.1375, 100.1367, 100.1350, 100.1333, 100.1172, 100.1046, 100.1006,
+        100.0995, 100.0935, 100.0890, 100.0814, 100.0652, 100.0609, 100.0574,
+        100.0560, 100.0547, 100.0521, 100.0512, 100.0509, 100.0463, 100.0198,
+        100.0146, 100.0126, 100.0120, 100.0119, 100.0098, 100.0018,  99.9901,
+         99.9859,  99.9855,  99.9807,  99.9794,  99.9754,  99.9633,  99.9628,
+         99.9617,  99.9573,  99.9498,  99.9484,  99.9444,  99.9395,  99.9389,
+         99.9274,  99.9249,  99.9229,  99.9189,  99.9182,  99.9161,  99.9150,
+         99.9137,  99.9137,  99.9072,  99.9070,  99.9004,  99.8994,  99.8973,
+         99.8808,  99.8748,  99.8723,  99.8700,  99.8684,  99.8649,  99.8611,
+         99.8552,  99.8501,  99.8453,  99.8398,  99.8394,  99.8285,  99.8262,
+         99.8228,  99.8137,  99.8107,  99.7896,  99.7847,  99.7761,  99.7756,
+         99.7727,  99.7720,  99.7688,  99.7677,  99.7644,  99.7610,  99.7601,
+         99.7589,  99.7587,  99.7570,  99.7568,  99.7560,  99.7555,  99.7542,
+         99.7533,  99.7509,  99.7385,  99.7380,  99.7354,  99.7317,  99.7302,
+         99.7251,  99.7234,  99.7209,  99.7202,  99.7122,  99.7019,  99.6919,
+         99.6892,  99.6865,  99.6711,  99.6670,  99.6665,  99.6641,  99.6614,
+         99.6609,  99.6558,  99.6101,  99.6064,  99.6008,  99.5989,  99.5842,
+         99.5574,  99.5532,  99.5503,  99.5457,  99.5349,  99.5173,  99.5159,
+         99.5144,  99.5007,  99.4814,  99.4561,  99.4062,  99.4023,  99.3950])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([135,  75,   2,   8,   9, 134, 218, 217,  74, 128, 129, 165,  44,  45,
+        140,   3,  99, 122, 116,  80,  81, 158,  14,  15, 213,  20,  39,  38,
+        123, 117, 157,  21, 127, 141, 121, 170, 230, 199,  61,  70,  49, 151,
+        147,  86,  98,  17, 207,  22, 178,  19,   1,  93, 143,  73,  92, 228,
+        149, 226,  87, 239, 105,  26,  58, 100, 209,  11, 104, 146, 115, 145,
+         71, 144,  56, 251,  13, 160, 137, 119, 138, 182, 200, 201,  59,  94,
+        233, 152, 191,   4, 206, 168,  68, 242,   7, 220,  57, 153, 211, 177,
+        173, 130, 176, 225, 197, 189, 159, 107, 164,  62, 224, 219,  63, 249,
+         37, 184, 248, 163, 212,  51, 195,  50, 142,  16, 250,  43, 244,  10,
+         53, 194, 108, 186, 171, 231,  88, 234, 106,  69, 196,  64, 124, 139,
+        155, 205,  54,  52, 227, 203,  89, 179,  95, 180, 245,  12, 192,  66,
+        208, 133, 185,  46, 246, 240, 131,  79, 148,  77, 101, 183, 114,  72,
+          6,  32,  83, 237,  28, 241, 243,  34,  84, 120, 118, 136,  29, 216,
+         40, 167,  78, 156,  23,  33, 111, 215, 102, 232,  35, 214,  24, 204,
+        198, 166, 236, 188, 161,  85, 112, 132,  55, 238, 221, 222,  25,  91,
+         90, 109,  31, 172,   5,  65,  97, 113, 223, 181, 175,  27, 110,  30,
+        103, 154, 202, 169,   0, 190, 187,  96, 235,  48,  82, 247,  18, 125,
+         42,  67, 174, 126, 229, 150, 193,  36,  76,  60, 210, 162,  47,  41])
+[register()] sorted scores:tensor([102.4199, 102.4062, 102.4043, 102.4004, 102.3984, 102.3984, 102.3984,
+        102.3965, 102.3945, 102.3945, 102.3945, 102.3887, 102.3867, 102.3867,
+        102.3848, 102.3438, 102.3438, 102.3066, 102.3027, 102.2969, 102.2969,
+        102.2969, 102.2949, 102.2910, 102.2852, 102.2832, 102.2812, 102.2793,
+        102.2773, 102.2715, 102.2480, 102.2070, 102.0840, 102.0723, 101.9873,
+        101.9863, 101.9736, 101.9678, 101.9336, 101.9287, 101.9258, 101.9111,
+        101.8975, 101.8789, 101.8584, 101.8555, 101.8545, 101.8389, 101.8350,
+        101.8184, 101.8174, 101.8164, 101.8096, 101.8086, 101.8086, 101.8066,
+        101.8047, 101.8047, 101.8037, 101.8027, 101.8018, 101.7930, 101.7822,
+        101.7822, 101.7773, 101.7734, 101.7734, 101.7637, 101.7559, 101.7529,
+        101.7490, 101.7432, 101.7422, 101.7334, 101.7285, 101.7246, 101.7227,
+        101.7178, 101.7178, 101.7129, 101.7090, 101.6973, 101.6885, 101.6846,
+        101.6787, 101.6680, 101.6680, 101.6670, 101.6641, 101.6592, 101.6533,
+        101.6533, 101.6318, 101.6279, 101.6250, 101.6172, 101.6094, 101.6016,
+        101.5977, 101.5908, 101.5898, 101.5830, 101.5762, 101.5742, 101.5723,
+        101.5645, 101.5645, 101.5615, 101.5615, 101.5576, 101.5557, 101.5557,
+        101.5518, 101.5488, 101.5391, 101.5361, 101.5352, 101.5342, 101.5303,
+        101.5283, 101.5098, 101.5059, 101.5059, 101.4951, 101.4883, 101.4785,
+        101.4717, 101.4717, 101.4561, 101.4512, 101.4355, 101.4336, 101.4316,
+        101.4307, 101.4111, 101.4102, 101.4092, 101.4072, 101.4014, 101.4004,
+        101.3936, 101.3701, 101.3691, 101.3633, 101.3613, 101.3594, 101.3457,
+        101.3369, 101.3359, 101.3330, 101.3281, 101.3242, 101.3213, 101.3203,
+        101.3125, 101.3115, 101.3076, 101.3018, 101.2998, 101.2969, 101.2939,
+        101.2910, 101.2871, 101.2842, 101.2842, 101.2754, 101.2695, 101.2646,
+        101.2578, 101.2578, 101.2559, 101.2480, 101.2461, 101.2451, 101.2412,
+        101.2373, 101.2373, 101.2354, 101.2314, 101.2314, 101.2305, 101.2295,
+        101.2266, 101.2207, 101.2197, 101.2197, 101.2188, 101.2188, 101.2168,
+        101.2148, 101.2139, 101.2139, 101.2119, 101.2109, 101.2061, 101.1992,
+        101.1982, 101.1973, 101.1914, 101.1895, 101.1885, 101.1826, 101.1816,
+        101.1816, 101.1807, 101.1807, 101.1758, 101.1758, 101.1738, 101.1738,
+        101.1689, 101.1689, 101.1680, 101.1670, 101.1592, 101.1592, 101.1582,
+        101.1543, 101.1543, 101.1514, 101.1484, 101.1445, 101.1426, 101.1406,
+        101.1396, 101.1357, 101.1348, 101.1328, 101.1201, 101.1191, 101.1094,
+        101.1064, 101.1064, 101.1025, 101.1016, 101.0957, 101.0947, 101.0947,
+        101.0889, 101.0889, 101.0820, 101.0781, 101.0742, 101.0684, 101.0586,
+        101.0459, 101.0068, 100.9922, 100.9922, 100.9863, 100.9746, 100.9658])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([ 45,   8,  74, 135, 104,   2,  44, 128, 134,   9,  75, 165, 129,  98,
+         39, 122,  14,  86,  38,  15,  80, 116,  81, 117,  20, 123, 119, 209,
+         89, 228,  84,  71,  17, 153, 152, 233, 201, 246,   3,  21, 172, 176,
+        200, 225, 191,  54, 177,  58, 227, 224,  57,  69, 239,  11, 231,  68,
+        251,  23, 192, 105, 232, 179,  16, 194,  92,  59,   1, 168,  77, 173,
+        249,  83, 218, 195, 102, 171, 186, 197,  66,  95, 158, 137,  50, 170,
+        146, 207, 230,  56, 107,   5, 219,  70, 167, 147, 185, 149, 213, 101,
+        217, 161,  73, 106, 248, 206, 156, 159, 211,  76, 215,  62, 144,  63,
+        157, 184,  36,  88, 212, 234, 174, 139,  51, 221, 245, 141, 100, 138,
+        222,  10, 164, 216, 143,  12,  94, 160,  43,  87, 112, 220, 237, 244,
+         29,  35, 140, 189, 163,  34,  32, 142, 242, 162, 243, 183, 208, 180,
+         26, 182,  40, 110,  28, 210,  72, 166,  47, 109, 235,  33,  27, 238,
+        188, 236, 190, 103, 113, 187,   6,  46,  90, 229, 118,  37, 169,  41,
+         24, 203, 240,  85,  65, 214,  25,  52,  64,  67, 111, 136, 148,  55,
+         53, 155, 108,  31, 181,  91,  30, 131, 202,  42,  96, 196, 125,  97,
+        223, 241,   0, 115, 175, 154,  79, 133, 150, 121,  82, 127,  99,  48,
+         78, 151,  60, 250,  18, 120,  93, 114,   7, 132, 124, 126, 204,  13,
+        199, 198,  19,   4, 130, 193,  49, 247, 145, 205,  61, 226, 178,  22])
+[register()] sorted scores:tensor([102.6172, 102.6113, 102.6113, 102.6113, 102.6094, 102.6074, 102.6074,
+        102.6074, 102.6074, 102.6035, 102.6016, 102.5996, 102.5977, 102.5898,
+        102.5488, 102.5449, 102.5371, 102.5352, 102.5332, 102.5293, 102.5293,
+        102.5293, 102.5254, 102.5234, 102.5215, 102.5000, 102.2617, 102.2500,
+        102.2344, 102.2285, 102.1973, 102.1855, 102.1602, 102.1426, 102.1406,
+        102.1348, 102.1328, 102.1250, 102.1230, 102.1152, 102.1094, 102.1074,
+        102.0762, 102.0586, 102.0566, 102.0527, 102.0430, 102.0391, 102.0391,
+        102.0371, 102.0254, 102.0234, 102.0215, 102.0195, 102.0195, 102.0156,
+        102.0156, 102.0098, 102.0098, 102.0078, 102.0020, 101.9980, 101.9902,
+        101.9902, 101.9814, 101.9570, 101.9551, 101.9512, 101.9414, 101.9395,
+        101.9395, 101.9326, 101.9316, 101.9297, 101.9287, 101.9277, 101.9238,
+        101.9170, 101.9160, 101.9160, 101.9102, 101.9033, 101.9014, 101.8975,
+        101.8955, 101.8955, 101.8867, 101.8809, 101.8760, 101.8740, 101.8730,
+        101.8711, 101.8711, 101.8701, 101.8691, 101.8584, 101.8545, 101.8535,
+        101.8535, 101.8467, 101.8379, 101.8379, 101.8369, 101.8271, 101.8154,
+        101.8135, 101.8096, 101.8037, 101.8008, 101.7910, 101.7871, 101.7861,
+        101.7783, 101.7734, 101.7705, 101.7666, 101.7539, 101.7520, 101.7402,
+        101.7354, 101.7295, 101.7295, 101.7275, 101.7266, 101.7158, 101.7139,
+        101.7080, 101.7070, 101.7061, 101.6982, 101.6973, 101.6943, 101.6943,
+        101.6865, 101.6748, 101.6660, 101.6553, 101.6523, 101.6504, 101.6494,
+        101.6484, 101.6484, 101.6436, 101.6338, 101.6299, 101.6250, 101.6240,
+        101.6221, 101.6123, 101.6113, 101.6113, 101.6084, 101.6074, 101.6055,
+        101.6006, 101.5977, 101.5918, 101.5869, 101.5850, 101.5752, 101.5742,
+        101.5693, 101.5654, 101.5654, 101.5645, 101.5615, 101.5605, 101.5605,
+        101.5586, 101.5557, 101.5547, 101.5518, 101.5488, 101.5488, 101.5469,
+        101.5449, 101.5381, 101.5352, 101.5342, 101.5273, 101.5264, 101.5244,
+        101.5186, 101.5186, 101.5156, 101.5146, 101.5137, 101.5127, 101.5098,
+        101.5078, 101.5068, 101.5020, 101.5010, 101.5000, 101.4990, 101.4912,
+        101.4883, 101.4814, 101.4736, 101.4727, 101.4727, 101.4697, 101.4688,
+        101.4561, 101.4561, 101.4492, 101.4414, 101.4414, 101.4346, 101.4297,
+        101.4287, 101.4287, 101.4141, 101.4092, 101.4043, 101.4023, 101.3857,
+        101.3857, 101.3848, 101.3740, 101.3730, 101.3672, 101.3545, 101.3525,
+        101.3506, 101.3398, 101.3330, 101.3232, 101.3223, 101.3105, 101.2988,
+        101.2988, 101.2939, 101.2881, 101.2871, 101.2852, 101.2793, 101.2666,
+        101.2646, 101.2588, 101.2578, 101.2490, 101.2422, 101.2334, 101.2051,
+        101.2051, 101.2002, 101.1992, 101.1787, 101.1494, 101.1377, 101.1152])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([147, 128,  45, 165,   2,  44,   9,  75, 134,   8, 129,  74, 104, 135,
+         98, 207,  14,  15, 122,  81, 117,  39,  80, 116, 213,  86,  38,  21,
+         71, 209,   3,  11, 233,  17,  20, 156, 206, 152,  89,  16, 197,  92,
+        201, 153, 167, 123, 224, 251,  57, 157, 161, 200,  56, 176, 227, 107,
+         36, 225, 148, 192, 211,  70, 177, 221, 105, 179,  83, 119, 218, 215,
+         66, 208,  68,  62, 228,  79, 158,  23, 195,  43, 137,   5, 191,  54,
+        217,  50, 170, 163, 194, 219, 149, 246,  59, 186,  69, 173, 168, 249,
+         42, 159, 239, 216,   6, 245,  47, 146,  26, 212, 174, 230,  51,  41,
+        185,  95,  63, 138, 141, 248, 102, 231,  77,  88, 243, 162,  32,  40,
+        183, 189, 164, 210, 101, 182, 110,  25,  24, 187, 235, 142, 237,  46,
+        242, 143, 118,  52,  64, 140,  27, 113, 234, 139, 180,  87, 136,  94,
+        171, 220,  31,  29,  93, 166,  90, 100, 160,  30,  28, 214, 112, 236,
+        240,  33,  37,  58,  55, 111,  84, 229, 188, 109,  72, 108,  34,  35,
+        169, 106, 181,  12,  53, 190, 155, 203,   0, 232, 238,  65, 103,  78,
+        241,  67, 222, 250,  85, 175,  96,  97,  99, 131,  60, 125, 172, 223,
+        121,   7, 244, 196, 124, 184,   1,  48,  76, 115,  10,  82, 130,  49,
+         18, 127, 114, 120,  91,  61, 132,  73, 150, 144, 204, 126, 198, 151,
+        154, 199, 202, 226, 133,   4, 178, 193,  13,  22, 247, 205, 145,  19])
+[register()] sorted scores:tensor([94.0039, 93.9453, 93.9336, 93.8984, 93.8906, 93.8906, 93.8711, 93.8711,
+        93.8711, 93.8633, 93.8633, 93.8594, 93.8359, 93.8281, 93.7227, 93.6953,
+        93.6445, 93.6367, 93.6367, 93.6289, 93.6289, 93.6172, 93.6172, 93.6016,
+        93.5898, 93.5742, 93.5430, 92.9609, 92.9414, 92.9414, 92.9141, 92.8906,
+        92.8906, 92.8672, 92.8672, 92.8438, 92.8398, 92.8359, 92.8281, 92.8242,
+        92.8203, 92.8047, 92.8047, 92.8008, 92.7969, 92.7930, 92.7891, 92.7891,
+        92.7852, 92.7852, 92.7852, 92.7852, 92.7812, 92.7734, 92.7695, 92.7617,
+        92.7461, 92.7461, 92.7422, 92.7305, 92.7266, 92.7227, 92.7227, 92.7227,
+        92.7188, 92.7148, 92.7070, 92.6992, 92.6992, 92.6914, 92.6875, 92.6875,
+        92.6836, 92.6758, 92.6680, 92.6562, 92.6523, 92.6484, 92.6406, 92.6367,
+        92.6367, 92.6211, 92.6211, 92.6172, 92.6172, 92.6016, 92.6016, 92.5977,
+        92.5977, 92.5938, 92.5898, 92.5820, 92.5781, 92.5781, 92.5742, 92.5742,
+        92.5625, 92.5625, 92.5508, 92.5508, 92.5273, 92.5234, 92.5195, 92.5078,
+        92.4922, 92.4922, 92.4883, 92.4883, 92.4844, 92.4844, 92.4766, 92.4688,
+        92.4609, 92.4492, 92.4453, 92.4453, 92.4453, 92.4453, 92.4336, 92.4336,
+        92.4258, 92.4258, 92.4258, 92.4219, 92.4180, 92.4180, 92.4180, 92.4180,
+        92.4141, 92.4141, 92.4102, 92.4102, 92.4062, 92.4023, 92.3984, 92.3945,
+        92.3945, 92.3828, 92.3828, 92.3750, 92.3750, 92.3672, 92.3633, 92.3555,
+        92.3555, 92.3555, 92.3516, 92.3477, 92.3477, 92.3398, 92.3398, 92.3320,
+        92.3281, 92.3203, 92.3164, 92.3164, 92.3125, 92.3086, 92.3086, 92.3047,
+        92.3008, 92.2969, 92.2930, 92.2891, 92.2852, 92.2852, 92.2812, 92.2734,
+        92.2734, 92.2617, 92.2617, 92.2539, 92.2500, 92.2500, 92.2461, 92.2461,
+        92.2422, 92.2383, 92.2344, 92.2305, 92.2266, 92.2266, 92.2266, 92.2227,
+        92.2188, 92.2109, 92.2070, 92.1992, 92.1953, 92.1836, 92.1797, 92.1719,
+        92.1680, 92.1641, 92.1641, 92.1602, 92.1602, 92.1562, 92.1562, 92.1484,
+        92.1445, 92.1406, 92.1133, 92.1016, 92.0938, 92.0781, 92.0703, 92.0664,
+        92.0664, 92.0664, 92.0586, 92.0469, 92.0312, 92.0195, 92.0156, 92.0156,
+        92.0078, 92.0039, 92.0039, 92.0000, 91.9922, 91.9922, 91.9922, 91.9766,
+        91.9688, 91.9375, 91.9297, 91.9297, 91.9219, 91.9141, 91.9141, 91.9062,
+        91.9062, 91.8828, 91.8750, 91.8672, 91.8516, 91.8438, 91.8359, 91.8359,
+        91.8203, 91.8203, 91.7812, 91.7734, 91.7656, 91.7656, 91.7578, 91.7500,
+        91.7422, 91.7344, 91.7188, 91.6641])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([200,  32,  74,   8,  98, 103, 128,   1,   2,  73, 104,  86, 122,  14,
+         20,  26,  92, 134,  80, 152, 182,  79, 199,  97,  19, 242, 127,   7,
+        151,  13, 217, 121, 157, 224, 176, 233,  44, 229, 133,  17, 251,  62,
+        116,  71, 169, 194,  89, 206, 209, 248,  38,  68, 107, 230, 146, 197,
+         56, 173, 203,  11,  59, 101, 137, 158, 179, 227, 155,  94, 119, 123,
+         77, 212, 184, 185, 244, 170,  83, 129, 223, 187,  50,   9,  81, 218,
+        163,  23, 164, 211, 131, 125,  75,  88, 102,  95,   5, 245, 100, 159,
+        175,  64,  65, 136, 239, 219,  43, 166, 167, 215,  54, 214,  61, 149,
+         53, 148, 228, 109,  52, 112,  84, 168,  31, 186,  25,  85, 196, 118,
+        234, 232,   6,  24,  45,  66,  49,  78, 135,  40, 130, 141, 172,  10,
+         46, 138, 106,  37, 145,  72, 115, 153,  39, 188, 124,  28, 191, 181,
+         87, 236, 250, 111, 193, 208,  16, 205,  29,  82, 154,  12,  76,  91,
+        147,   3, 132,  90, 105,  15,  96,  70, 247,  35, 110, 139, 222, 201,
+         58, 108, 117, 235, 225, 177, 202,  30, 140, 240, 207,  67, 213,  51,
+        142, 143, 180, 195,   0,  63, 113,  55, 190, 241, 249, 165, 174, 226,
+        238, 178, 171,  18, 220, 160, 192, 114, 246,  21, 231, 198, 150,   4,
+        189,  93,  34,  99,  22,  47,  60, 162, 120, 126,  36,  69, 161, 204,
+         48, 183, 210,  57, 156, 221, 243,  33, 144,  41, 216,  27,  42, 237])
+[register()] sorted scores:tensor([108.6797, 108.6719, 108.6719, 108.6641, 108.6641, 108.6641, 108.6484,
+        108.6406, 108.6250, 108.6250, 108.6250, 108.6172, 108.6172, 108.6094,
+        108.6094, 108.6094, 108.6094, 108.6094, 108.6016, 108.6016, 108.6016,
+        108.5859, 108.5781, 108.5703, 108.5625, 108.5469, 108.5391, 108.4844,
+        108.4688, 108.4531, 108.4062, 108.3828, 108.3516, 108.2344, 108.2188,
+        108.1719, 108.1562, 108.1484, 108.1406, 108.1328, 108.1250, 108.1094,
+        108.1094, 108.1016, 108.0938, 108.0938, 108.0859, 108.0781, 108.0781,
+        108.0781, 108.0547, 108.0547, 108.0469, 108.0469, 108.0391, 108.0312,
+        108.0234, 108.0234, 108.0234, 108.0078, 108.0078, 107.9688, 107.9648,
+        107.9648, 107.9609, 107.9609, 107.9531, 107.9492, 107.9492, 107.9453,
+        107.9336, 107.9297, 107.9219, 107.9219, 107.9219, 107.9141, 107.9062,
+        107.8828, 107.8477, 107.8281, 107.8242, 107.8203, 107.8086, 107.7969,
+        107.7930, 107.7812, 107.7695, 107.7695, 107.7578, 107.7422, 107.7383,
+        107.7344, 107.7344, 107.7266, 107.7188, 107.7188, 107.7070, 107.7031,
+        107.7031, 107.6992, 107.6992, 107.6992, 107.6953, 107.6875, 107.6758,
+        107.6758, 107.6758, 107.6719, 107.6680, 107.6641, 107.6484, 107.6484,
+        107.6445, 107.6445, 107.6367, 107.6289, 107.6250, 107.6250, 107.6211,
+        107.6211, 107.6133, 107.6133, 107.6094, 107.6094, 107.6094, 107.6055,
+        107.6016, 107.5938, 107.5898, 107.5898, 107.5898, 107.5898, 107.5859,
+        107.5820, 107.5820, 107.5781, 107.5781, 107.5781, 107.5781, 107.5742,
+        107.5742, 107.5742, 107.5703, 107.5664, 107.5664, 107.5625, 107.5625,
+        107.5625, 107.5508, 107.5469, 107.5430, 107.5391, 107.5391, 107.5352,
+        107.5312, 107.5273, 107.5273, 107.5234, 107.5156, 107.5117, 107.5078,
+        107.5078, 107.5039, 107.5039, 107.5039, 107.5000, 107.5000, 107.5000,
+        107.4961, 107.4922, 107.4922, 107.4883, 107.4883, 107.4805, 107.4805,
+        107.4766, 107.4766, 107.4648, 107.4648, 107.4648, 107.4648, 107.4609,
+        107.4531, 107.4531, 107.4492, 107.4492, 107.4453, 107.4414, 107.4375,
+        107.4336, 107.4336, 107.4336, 107.4297, 107.4258, 107.4258, 107.4219,
+        107.4219, 107.4219, 107.4219, 107.4219, 107.4180, 107.4141, 107.4141,
+        107.4102, 107.4102, 107.4102, 107.4102, 107.4062, 107.4023, 107.4023,
+        107.3984, 107.3945, 107.3906, 107.3867, 107.3867, 107.3828, 107.3828,
+        107.3750, 107.3750, 107.3672, 107.3555, 107.3438, 107.3398, 107.3281,
+        107.3203, 107.3047, 107.3008, 107.2930, 107.2891, 107.2773, 107.2773,
+        107.2773, 107.2695, 107.2695, 107.2656, 107.2617, 107.2617, 107.2539,
+        107.2500, 107.2500, 107.2422, 107.2383, 107.2383, 107.2188, 107.2188,
+        107.2148, 107.2109, 107.2070, 107.2070, 107.2031, 107.1875, 107.1797])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([134,  32,   1,  74, 128,  73,  98, 104,   2, 200,   8, 103, 224,  20,
+         80,  86, 122,  97, 242,  92,  26, 182, 176, 116, 127,  14,  19, 152,
+         79,   7,  85, 199,  13,  91, 151, 121, 229, 169,  44, 217, 194, 248,
+        193, 119,  89,  68, 187, 209, 233,  17, 146,  56, 206, 251, 123, 133,
+         83, 173, 191,  53,  71, 158, 170, 236, 129,  38, 137, 197,  59, 115,
+        235, 228, 179, 107,  11, 145, 247, 230,  77, 205,  50,  21, 227,   3,
+        149,  31, 155,  39,  62,  75, 136,   6, 166,  81, 148,  88,  10,  99,
+        118, 203, 102, 105, 232,  16,  82,  37, 218, 157,  54, 112,  65, 168,
+         64,  52, 154,  66,  58, 214,  23, 250, 109, 125, 196,  40,  76, 188,
+        106, 130,  43,  96, 215,  70, 172, 208,  61, 213, 124,  84, 181, 131,
+         95, 167, 234, 239,  46,  25, 186, 202, 101,  72, 223,  29, 212,   5,
+        241, 180,  24,  45,  30,  12,  78, 117, 100,  49, 135,  35, 141, 175,
+         90, 178,  55, 165, 162, 226, 174, 207, 211, 114, 164, 216, 163, 143,
+        240, 132, 138,  67,  94, 113,  22, 111, 147,   4, 184, 140, 185,  15,
+        244, 195, 108,   9, 225,  87, 139, 245, 142,  51,  93,  63, 110, 220,
+        159, 249, 201, 153, 237, 160,  18,  57, 171, 222, 238, 219,   0, 177,
+        231, 189, 190, 144, 161, 246, 192, 156, 150,  33, 204, 221, 243, 198,
+        183, 126,  27,  34, 120,  69,  42,  47,  36,  28,  60,  41,  48, 210])
+[register()] sorted scores:tensor([102.8555, 102.8145, 102.8105, 102.7988, 102.7910, 102.7441, 102.7422,
+        102.7109, 102.6992, 102.6992, 102.6953, 102.6738, 102.6680, 102.6602,
+        102.6602, 102.6465, 102.6445, 102.6309, 102.6270, 102.6172, 102.5703,
+        102.5273, 102.5254, 102.5039, 102.5039, 102.4980, 102.4922, 102.4844,
+        102.4766, 102.4453, 102.3633, 102.3594, 102.3242, 102.2891, 102.2598,
+        102.1816, 102.1719, 102.1504, 102.1309, 102.0312, 101.9492, 101.9326,
+        101.9023, 101.8984, 101.8926, 101.8887, 101.8838, 101.8818, 101.8799,
+        101.8730, 101.8691, 101.8662, 101.8535, 101.8525, 101.8486, 101.8467,
+        101.8418, 101.8379, 101.8252, 101.8105, 101.8027, 101.8008, 101.7998,
+        101.7979, 101.7969, 101.7930, 101.7852, 101.7803, 101.7773, 101.7734,
+        101.7637, 101.7510, 101.7344, 101.7197, 101.7139, 101.7139, 101.7070,
+        101.7051, 101.7021, 101.7012, 101.6982, 101.6943, 101.6738, 101.6631,
+        101.6553, 101.6455, 101.6338, 101.6309, 101.6230, 101.6230, 101.6104,
+        101.6016, 101.5986, 101.5898, 101.5850, 101.5811, 101.5498, 101.5479,
+        101.5381, 101.5381, 101.5332, 101.5264, 101.5225, 101.5205, 101.5088,
+        101.5059, 101.5000, 101.4912, 101.4844, 101.4834, 101.4795, 101.4697,
+        101.4678, 101.4668, 101.4590, 101.4580, 101.4561, 101.4521, 101.4512,
+        101.4482, 101.4473, 101.4463, 101.4443, 101.4434, 101.4414, 101.4375,
+        101.4365, 101.4355, 101.4336, 101.4297, 101.4297, 101.4277, 101.4248,
+        101.4141, 101.4131, 101.4111, 101.4102, 101.4072, 101.4062, 101.4043,
+        101.3984, 101.3975, 101.3975, 101.3955, 101.3936, 101.3857, 101.3857,
+        101.3848, 101.3838, 101.3828, 101.3818, 101.3779, 101.3760, 101.3740,
+        101.3740, 101.3721, 101.3672, 101.3652, 101.3584, 101.3574, 101.3535,
+        101.3535, 101.3516, 101.3496, 101.3486, 101.3467, 101.3418, 101.3389,
+        101.3379, 101.3330, 101.3281, 101.3271, 101.3252, 101.3232, 101.3203,
+        101.3203, 101.3193, 101.3184, 101.3145, 101.3145, 101.3096, 101.3047,
+        101.3037, 101.3008, 101.3008, 101.2988, 101.2979, 101.2949, 101.2891,
+        101.2744, 101.2734, 101.2705, 101.2627, 101.2588, 101.2480, 101.2451,
+        101.2451, 101.2422, 101.2383, 101.2275, 101.2256, 101.2246, 101.2217,
+        101.2217, 101.2207, 101.2168, 101.2148, 101.2129, 101.2080, 101.2070,
+        101.2061, 101.2061, 101.2002, 101.1992, 101.1963, 101.1943, 101.1934,
+        101.1924, 101.1719, 101.1719, 101.1689, 101.1680, 101.1641, 101.1572,
+        101.1494, 101.1426, 101.1201, 101.1035, 101.0957, 101.0947, 101.0898,
+        101.0879, 101.0781, 101.0674, 101.0625, 101.0527, 101.0527, 101.0479,
+        101.0430, 101.0244, 101.0205, 100.9956, 100.9932, 100.9839, 100.9805,
+        100.9731, 100.9717, 100.9688, 100.9688, 100.9595, 100.9370, 100.9131])
+[register()] Welcome
+[register()] poses:(252, 4, 4)
+[register()] after viewpoint, add_errs min:-1.0
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] trans_normalizer:[0.019999999552965164, 0.019999999552965164, 0.05000000074505806], rot_normalizer:0.3490658503988659
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] warp done
+[make_crop_data_batch()] pose batch data done
+[predict()] forward start
+[predict()] forward done
+[predict()] ob_in_cams:(252, 4, 4)
+[predict()] self.cfg.use_normal:False
+[predict()] making cropped data
+[make_crop_data_batch()] Welcome make_crop_data_batch
+[make_crop_data_batch()] make tf_to_crops done
+[make_crop_data_batch()] render done
+[make_crop_data_batch()] pose batch data done
+[find_best_among_pairs()] pose_data.rgbAs.shape[0]: 252
+[predict()] forward done
+[register()] final, add_errs min:-1.0
+[register()] sort ids:tensor([  2, 223,   1,  73, 133, 199, 217,  43,  97, 127, 128, 216, 134,  74,
+         60,   7, 156, 157,  20,  37,  79,  91, 115, 116, 122, 175,  19, 121,
+        151,  13,  80,   8, 139, 120, 205, 145, 146, 114, 126,  14,  50,  62,
+        163, 229, 194,  86, 206, 247, 248,  36,  48,  49, 152, 170, 193, 200,
+        211,  61, 103, 169, 178, 179,  55,  58,  67, 237,  94, 230,  27, 226,
+        100, 106,  72,  85, 132, 142,   5,  33,  68,  88, 162, 224, 235, 141,
+        172, 187, 227, 232,  39, 138, 166, 176, 236,  25,  31,  45, 158, 165,
+        181, 213, 214, 241,  22,  56, 117, 167, 184, 188, 197, 218, 243, 251,
+         32,  78, 119,   4,  26,  44,  64, 104, 135, 136, 154, 182, 183, 202,
+         53,  54, 140, 160, 186, 210, 212, 221, 234, 242, 244,  10,  16,  17,
+         42,  52,  59,  66,  76, 118, 124, 137, 143, 148, 196, 208, 209, 220,
+        250,  38,  40,  69,  71,  82,  87, 125, 129, 130, 147, 159, 171, 185,
+        190, 207, 215, 231,   9,  41,  46,  47,  57,  92, 101, 102, 105, 123,
+        192, 219, 238, 249,   6,  11,  15,  29,  30,  35,  81,  89, 107, 108,
+        111, 113, 149, 150, 164, 173, 180, 189, 191, 240, 245,   0,  24,  28,
+         34,  63,  65,  70,  84,  90,  95, 109, 110, 161, 203, 233, 239, 246,
+         12,  21,  51,  75,  96, 112, 144, 153, 174, 177, 195, 204, 222, 225,
+         18,  77,  83,  93,  99, 168, 198, 201, 228,   3,  23, 155, 131,  98])
+[register()] sorted scores:tensor([64.5938, 64.5625, 64.5312, 64.5312, 64.5312, 64.5312, 64.5312, 64.5000,
+        64.5000, 64.5000, 64.5000, 64.5000, 64.4688, 64.4375, 64.3438, 64.3125,
+        64.2812, 64.2500, 64.2188, 64.2188, 64.1875, 64.1875, 64.1875, 64.1875,
+        64.1875, 64.1875, 64.1562, 64.1562, 64.1562, 64.1250, 64.1250, 63.9062,
+        63.8125, 63.7500, 63.3750, 63.2812, 63.2812, 63.2500, 63.2500, 63.1875,
+        63.1875, 63.1875, 63.1875, 63.1875, 63.1562, 63.1250, 63.1250, 63.1250,
+        63.1250, 63.0938, 63.0938, 63.0938, 63.0938, 63.0938, 63.0938, 63.0938,
+        63.0938, 63.0625, 63.0625, 63.0625, 63.0312, 63.0312, 63.0000, 63.0000,
+        63.0000, 63.0000, 62.9688, 62.9688, 62.9375, 62.9375, 62.9062, 62.9062,
+        62.8750, 62.8750, 62.8750, 62.8438, 62.8125, 62.8125, 62.7812, 62.7812,
+        62.7812, 62.7812, 62.7812, 62.7500, 62.7500, 62.7500, 62.7500, 62.7500,
+        62.7188, 62.7188, 62.7188, 62.7188, 62.7188, 62.6875, 62.6875, 62.6875,
+        62.6875, 62.6875, 62.6875, 62.6875, 62.6875, 62.6875, 62.6562, 62.6562,
+        62.6562, 62.6562, 62.6562, 62.6562, 62.6562, 62.6562, 62.6562, 62.6562,
+        62.6250, 62.6250, 62.6250, 62.5938, 62.5938, 62.5938, 62.5938, 62.5938,
+        62.5938, 62.5938, 62.5938, 62.5938, 62.5938, 62.5938, 62.5625, 62.5625,
+        62.5625, 62.5625, 62.5625, 62.5625, 62.5625, 62.5625, 62.5625, 62.5625,
+        62.5625, 62.5312, 62.5312, 62.5312, 62.5312, 62.5312, 62.5312, 62.5312,
+        62.5312, 62.5312, 62.5312, 62.5312, 62.5312, 62.5312, 62.5312, 62.5312,
+        62.5312, 62.5312, 62.5312, 62.5000, 62.5000, 62.5000, 62.5000, 62.5000,
+        62.5000, 62.5000, 62.5000, 62.5000, 62.5000, 62.5000, 62.5000, 62.5000,
+        62.5000, 62.5000, 62.5000, 62.5000, 62.4688, 62.4688, 62.4688, 62.4688,
+        62.4688, 62.4688, 62.4688, 62.4688, 62.4688, 62.4688, 62.4688, 62.4688,
+        62.4688, 62.4688, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375,
+        62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375,
+        62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4375, 62.4062,
+        62.4062, 62.4062, 62.4062, 62.4062, 62.4062, 62.4062, 62.4062, 62.4062,
+        62.4062, 62.4062, 62.4062, 62.4062, 62.4062, 62.4062, 62.4062, 62.4062,
+        62.3750, 62.3750, 62.3750, 62.3750, 62.3750, 62.3750, 62.3750, 62.3750,
+        62.3750, 62.3750, 62.3750, 62.3750, 62.3750, 62.3750, 62.3438, 62.3438,
+        62.3438, 62.3438, 62.3438, 62.3438, 62.3438, 62.3438, 62.3438, 62.3125,
+        62.3125, 62.2812, 62.2500, 62.1875])

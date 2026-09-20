@@ -1,0 +1,17 @@
+{
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple/sequence_metrics.csv": "4ae7b9830dd02daa26010b5e6a0aa25cd21fd1b137c6f5c1a2679565993c209c",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple/episode_metrics.csv": "5a103cf28090c0b195b1fa6459561aadeeb6f37afb9b51fbaccdd071098021e6",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple/recovery_events.csv": "6c6db0967903d8d92ea9ae5683d8c8bb671292495aa2fa4d70c2ecba922a49e6",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple/relocalization_events.csv": "a4770e471857a566e0e8e07310b8215bb539a9e06ab8574daa5b92c5fe68ffae",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple/calibration_metrics.csv": "11eca543a98600bc792c9f303f6ede2a929afb925732988482d096a6f490bac7",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/controls/sequence_metrics.csv": "a9e5a49540333df107b689c0ecc3a6ed5062a5559aaddd77b961cd1370579a08",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/controls/episode_metrics.csv": "2be9c6e7e465e40fb301463bb8cb55bc31352e173db835c06b5b817818ee8b7b",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/controls/recovery_events.csv": "bde7ead68db9206244d205efcf8a20ff80332dc8fe268c14ee4c6001f2675f00",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/controls/relocalization_events.csv": "02748d070ad95b24010239367c23558ea18b603e9fdcb37e4113fe33faf0b93d",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/controls/calibration_metrics.csv": "84d77883c157670feb47ea4c7270d85c9dd05fb4cbd88e729e7cfbbb6638ffe2",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/no_rollout/sequence_metrics.csv": "25d77c7538019b674104ba80a30e2a856f4de5d08bdbdde3d4db367daa00425a",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/no_rollout/episode_metrics.csv": "931b02f1e4b6259b79a0cccb03338a3486a333ad2e4b1cf3d4410993bbb1a56d",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/no_rollout/recovery_events.csv": "58cab8ce81d5106fdc56c58b7aba679c46035cc45ead9c5168b5aac0cdbac18e",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/no_rollout/relocalization_events.csv": "2f3b18f6f3b63223a8773fb267bc3555d93dadefba04e726e3222aedb7eb0ab8",
+  "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/05_ablations/no_rollout/calibration_metrics.csv": "6b022ad2ac2266ce170f9898a2bd5633de32297c870eb4fc4adef5ef10eeef38"
+}

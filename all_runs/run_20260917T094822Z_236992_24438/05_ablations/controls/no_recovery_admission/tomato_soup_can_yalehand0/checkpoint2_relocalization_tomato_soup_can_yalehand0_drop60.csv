@@ -1,0 +1,9 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+tomato_soup_can_yalehand0_drop60,13,1,1,1,0.334617838134563,,1,27278.866063803434,1,0,0.334617838134563,False,1
+tomato_soup_can_yalehand0_drop60,29,1,1,1,0.3453022868151147,,1,2445.3564435243607,1,0,0.3453022868151147,False,1
+tomato_soup_can_yalehand0_drop60,41,1,1,1,0.43711529543420424,,1,2449.4252745062113,1,0,0.43711529543420424,False,1
+tomato_soup_can_yalehand0_drop60,93,1,1,1,0.3190600828552697,,1,2449.789499863982,1,0,0.3190600828552697,False,1
+tomato_soup_can_yalehand0_drop60,96,1,1,1,0.35132178195458585,,1,2447.466683574021,1,0,0.35132178195458585,False,1
+tomato_soup_can_yalehand0_drop60,101,1,1,1,0.329178759938235,,1,2452.4038089439273,1,0,0.329178759938235,False,1
+tomato_soup_can_yalehand0_drop60,117,1,1,1,0.3105811352550913,,1,2464.7863917052746,1,0,0.3105811352550913,False,1
+tomato_soup_can_yalehand0_drop60,123,1,1,1,0.31789444339918266,,1,2494.0183218568563,1,0,0.31789444339918266,False,1

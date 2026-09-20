@@ -1,0 +1,13 @@
+{
+  "created_utc": "2026-09-18T11:39:28.532257+00:00",
+  "parent_release": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release",
+  "parent_freeze_sha256": "3fcb8c608c2e9a089cb824e6fcc14836bc073e0de972877179d84d67467a2683",
+  "no_rollout_release": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/04_q0_training/no_rollout_release",
+  "no_rollout_freeze_sha256": "0e5f124046dce9ee17c422e068509f8cb4871488655fd15b487d541d014789d9",
+  "existing_full_results": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/03_full_simple",
+  "reuse_simple_as_no_quality": true,
+  "variants": [
+    "no_recovery_admission"
+  ],
+  "evaluation_status": "post_test_diagnostic_not_untouched"
+}
