@@ -1,7 +1,7 @@
 """Audit and evaluate a frozen release. Python 3.8 compatible; no training calls.
 
-The shell is the user entry point. Five confirmed untouched sequences are the
-default test population. No inference is run by --check-only.
+The shell is the user entry point. Five post-development diagnostic sequences
+are the default evaluation population. No inference is run by --check-only.
 """
 import runtime_settings
 import argparse
@@ -33,7 +33,8 @@ TEST = {
 CONDITIONS = ("_clean", "_black10", "_black10_2", "_black10_3", "_black10_4",
               "_black10_5", "_occ40", "_occ60", "_drop60")
 DEFAULT_VARIANTS = ("full", "simple")
-VARIANTS = DEFAULT_VARIANTS + ("no_quality", "no_rollout", "no_recovery_admission")
+VARIANTS = DEFAULT_VARIANTS + ("no_quality", "no_rollout", "no_recovery_admission",
+                               "no_observer_reseed", "mode3_history_reset")
 
 
 def sha(path):
@@ -443,7 +444,8 @@ def main(argv=None):
         model_policy_training_match=("diagnostic_policy_override_no_refit" if args.b5_policy_revision != "frozen"
                                      else "release_policy"),
         evaluation_status=("post_test_diagnostic_not_untouched" if args.recovery_gate_revision != "frozen"
-                           or any(v in args.variants for v in ("no_quality", "no_rollout", "no_recovery_admission"))
+                           or any(v in args.variants for v in ("no_quality", "no_rollout", "no_recovery_admission",
+                                                                 "no_observer_reseed", "mode3_history_reset"))
                            or gate_config.get("status") == "development_unvalidated"
                            or policy_config.get("status") == "development_unvalidated" else "frozen_protocol"),
         reference_manifest_sha256=sha(release / "reference_manifest.csv"), test_sequences=TEST,
@@ -462,7 +464,9 @@ def main(argv=None):
         uncertainty="sequence/object clustered, never independent-frame CI; primary object bootstrap has only n=3",
         ablation_definitions={"no_quality": "simple alias: full trigger replay, observation fallback; conditional decision-quality ablation",
             "no_rollout": "q0 bootstrap, own calibration and endogenous triggers; measure changed call counts",
-            "no_recovery_admission": "remove BLACKOUT geometric admission only; MODE3 remains SE3-only"},
+            "no_recovery_admission": "remove BLACKOUT geometric admission only; MODE3 remains SE3-only",
+            "no_observer_reseed": "retain old observer stream after used registration; correction still changes output/prior",
+            "mode3_history_reset": "restart velocity history only after used MODE3 registration"},
         additional_ablations_pending=[],
         environment={k: os.environ.get(k) for k in ("B5_NUM_THREADS", "B5_IO_WORKERS", "PYOPENGL_PLATFORM") + runtime_settings.THREAD_KEYS})
     dump(output / "test_protocol.json", protocol)

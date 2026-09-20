@@ -511,7 +511,8 @@ def build_eval_renderer(mesh_file):
 
 def decision_inputs(variant, obs_error, prior_error, obs_risk, prior_risk):
     """Scores are diagnostic only for simple/no_quality; routing is explicit."""
-    if variant not in ("full", "simple", "no_quality", "no_rollout", "no_recovery_admission"):
+    if variant not in ("full", "simple", "no_quality", "no_rollout", "no_recovery_admission",
+                       "no_observer_reseed", "mode3_history_reset"):
         raise ValueError("Unsupported four-mode variant: " + variant)
     return obs_error, prior_error, obs_risk, prior_risk
 
@@ -557,7 +558,7 @@ def evaluate_episode(
 
     b1_errs, b2_errs, b3_errs, b4_errs, b5_errs, b6_errs = [], [], [], [], [], []
     b5_modes, matched_frames = [], []
-    T_history2, T_history3, T_history4, T_history5, T_history6 = [], [], [], [], []
+    T_history2, T_history3, T_history4, T_history5 = [], [], [], []
     revised_history = bool(getattr(b5_transition, "__globals__", {}).get("B5_POLICY_CONFIG"))
     if revised_history:
         from b5_revision import make_prior, advance_history
@@ -594,14 +595,13 @@ def evaluate_episode(
         perception.advance(i, rgb_path)
 
         if i < 2:
-            T_prior2 = T_prior3 = T_prior4 = T_prior5 = T_prior6 = T_obs
+            T_prior2 = T_prior3 = T_prior4 = T_prior5 = T_obs
         else:
             T_prior2 = compute_se3_prior(T_history2[-1], T_history2[-2])
             T_prior3 = compute_se3_prior(T_history3[-1], T_history3[-2])
             T_prior4 = compute_se3_prior(T_history4[-1], T_history4[-2])
             if not revised_history:
                 T_prior5 = compute_se3_prior(T_history5[-1], T_history5[-2])
-            T_prior6 = compute_se3_prior(T_history6[-1], T_history6[-2])
 
         T_obs = observer.observe(T_baseline_obs, rgb_path, row.depth_path)
 
@@ -695,12 +695,17 @@ def evaluate_episode(
             p_prior_risk=decision[3],
             p_risk_threshold=p_risk_threshold,
             prior_advantage_margin_cm=args.prior_advantage_margin_cm,
-            policy_variant=args.policy_variant,
+            policy_variant=("full" if args.policy_variant in ("no_observer_reseed", "mode3_history_reset")
+                            else args.policy_variant),
             scheduled_relocalization=None if schedule is None else schedule[frame_id],
         )
         transition_wall_ms = (time.perf_counter() - transition_start) * 1000.0
-        if b5_state.get("restart_observer"):
+        if b5_state.get("restart_observer") and args.policy_variant != "no_observer_reseed":
             observer.restart(T_final)
+        if (args.policy_variant == "mode3_history_reset"
+                and current_mode == "MODE_3_RELOCALIZE" and b5_state.get("relocalization_used")):
+            b5_state["reset_motion_history"] = True
+            b5_state["motion_history_restarted"] = True
         reloc = b5_state.get("relocalization_info") or {}
         raw_reloc = reloc.get("T_raw_recovery")
         from pose_safety import is_se3
@@ -895,12 +900,17 @@ def evaluate_episode(
             if recovery_event["recovery_trigger"] == "blackout_exit" and recovery_record is None:
                 recovery_record = recovery_event
 
-        # B6 oracle upper bound with independent recursive history.
-        err_obs = U.adi(T_baseline_obs, T_gt, open3d_model)
-        err_prior = U.adi(T_prior6, T_gt, open3d_model)
-        T_final6 = T_baseline_obs if err_obs < err_prior else T_prior6
-        T_history6.append(T_final6)
-        b6_errs.append(U.adi(T_final6, T_gt, open3d_model) * 100.0)
+        # B6: hindsight selection on the current B5-slot rollout, not a new rollout.
+        # Including the actual final output covers used fusion/registration poses
+        # and guarantees error_b6 <= error_b5 for finite errors. All errors are cm.
+        # GT selection never feeds the policy, observer, or motion history.
+        b6_candidates = (
+            ("observation", T_obs, E_obs_gt_cm),
+            ("prior", T_prior5, E_prior_gt_cm),
+            ("policy_output", T_final, b5_error_current),
+        )
+        b6_source, T_final6, b6_error_cm = min(b6_candidates, key=lambda c: c[2])
+        b6_errs.append(float(b6_error_cm))
 
         quality_records.append({
             "episode": last_name,
@@ -926,10 +936,13 @@ def evaluate_episode(
             "output_quality_unverified": int(bool(b5_state.get("output_quality_unverified"))),
             "both_candidates_bad": int(E_obs_gt_cm > args.risk_threshold and E_prior_gt_cm > args.risk_threshold),
             "local_candidate_oracle_cm": float(min(E_obs_gt_cm, E_prior_gt_cm)),
+            "b6_oracle_source": b6_source,
+            "b6_oracle_version": "b5_obs_prior_output_hindsight_v1",
             "is_blackout": int(b5_state.get("is_depth_blackout", False)),
             "recovery_attempted": int(recovery_info is not None),
             "observer_source": observer.source,
-            "observer_restart": int(bool(b5_state.get("restart_observer"))),
+            "observer_restart": int(bool(b5_state.get("restart_observer"))
+                                    and args.policy_variant != "no_observer_reseed"),
             "observer_wall_ms": observer.wall_ms,
             "sam2_frame_wall_ms": perception.wall_ms,
             "sam2_propagated_frames_total": 0,
@@ -1228,7 +1241,7 @@ def main(args):
         "B3: Hard Depth Threshold",
         "B4: Robust Huber Weighting",
         "B5: Proposed Shared Pose-Quality Policy",
-        "B6: Recursive Obs/Prior Oracle (diagnostic, not a global upper bound)",
+        "B6: Obs/Prior/Policy-Output Hindsight Oracle (same rollout)",
     ]
     baseline_names[4] = "B5 slot: " + getattr(args, "policy_variant", "full")
 
@@ -1430,7 +1443,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--frozen_test', action='store_true', help='No test label CSV; final model only; no fitting')
     parser.add_argument('--preflight_only', action='store_true', help='Load frozen features/artifacts only; no rendering or rollout')
-    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_quality', 'no_rollout', 'no_recovery_admission'], default='full')
+    parser.add_argument('--policy_variant', choices=['full', 'simple', 'no_quality', 'no_rollout',
+        'no_recovery_admission', 'no_observer_reseed', 'mode3_history_reset'], default='full')
     parser.add_argument('--csv_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/per_frame_label_threshold1.0.csv")
     parser.add_argument('--manifest_path', type=str, default="./final_training_releases/train_20260915T164912Z_d91a5dc2/reference_manifest.csv")
     parser.add_argument('--result_dir', nargs='+', type=str, default=[
