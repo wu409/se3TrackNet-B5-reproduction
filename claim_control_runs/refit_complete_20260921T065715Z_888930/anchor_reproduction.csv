@@ -1,0 +1,3 @@
+anchor,new_control,max_prediction_difference_cm,mean_prediction_difference_cm,note
+frozen_q0,fixed_obs_only,0.0,0.0,"Diagnostic, not assumed bitwise-identical; q0 cached rollout may differ from original q1 fit trajectory"
+frozen_q1,q0_policy_obs_prior_refit,0.03148116912637722,0.0034813708438734283,"Diagnostic, not assumed bitwise-identical; q0 cached rollout may differ from original q1 fit trajectory"

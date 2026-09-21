@@ -1,0 +1,5 @@
+model,candidates,fit_candidates,calibration_candidates,observation_candidates,prior_candidates
+fixed_obs_only,22770,15921,6849,22770,0
+fixed_obs_duplicated_count_control,45540,31842,13698,45540,0
+fixed_obs_prior,45540,31842,13698,22770,22770
+q0_policy_obs_prior_refit,45540,31842,13698,22770,22770

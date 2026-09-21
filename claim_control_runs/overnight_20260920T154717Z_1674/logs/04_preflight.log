@@ -1,0 +1,21 @@
+Verifying frozen model/source/component/input hashes...
+Auditing 5 test sequences x 9 conditions without inference...
+Decoding frozen RGB/depth/initial masks (no model inference)...
+Persistent perception import/API check passed: sam2
+Warp 1.17.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.2
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA GeForce RTX 4090 D" (24 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.17.0
+Persistent perception import/API check passed: foundationpose
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+Frozen feature implementation and model imports validated; no inference executed.
+Checks passed; no testing/training executed. Output: /root/autodl-tmp/se3TrackNet-B5-reproduction/claim_control_runs/overnight_20260920T154717Z_1674/04_preflight

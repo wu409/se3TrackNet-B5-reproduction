@@ -1,0 +1,8 @@
+{
+  "status": "development_fixed_policy_refit_attribution_complete",
+  "prior_exposure_control": "completed",
+  "backbone_retrained": false,
+  "independent_test": false,
+  "development_frames": 22770,
+  "completed_utc": "2026-09-21T07:06:57.070492+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "mode": "calibration",
+  "q0": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/04_q0_training/no_rollout_release",
+  "q1": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release",
+  "q0_label_sha256": "0f5a446c132e75a89c078a52685780324a19fc4c913ccbfc4a7a865540bd63f1",
+  "q1_label_sha256": "cf72845c8bb032c219ac7c0bd433792d496a21e383ff7c9d86d35c0c863f528f",
+  "status": "post_development_diagnostic_not_held_out",
+  "details": {
+    "development_calibration_route_disagreement": 0,
+    "q1_policy_diagnostic_route_disagreement": 6,
+    "raw_cut_cm": 1.0701424648139641,
+    "frozen_probability_cut": 0.24999999999999994
+  }
+}

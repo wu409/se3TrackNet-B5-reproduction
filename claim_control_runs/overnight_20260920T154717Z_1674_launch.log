@@ -1,0 +1,14 @@
+Starting 01_shared_source at 2026-09-20T15:47:17Z
+Finished 01_shared_source at 2026-09-20T15:47:21Z, exit 0
+Starting 02_refit at 2026-09-20T15:47:21Z
+Finished 02_refit at 2026-09-20T15:47:24Z, exit 0
+Starting 03_calibration at 2026-09-20T15:47:24Z
+Finished 03_calibration at 2026-09-20T15:47:45Z, exit 0
+Starting 04_preflight at 2026-09-20T15:47:45Z
+Finished 04_preflight at 2026-09-20T16:01:50Z, exit 0
+Starting 04_no_reseed at 2026-09-20T16:01:50Z
+Finished 04_no_reseed at 2026-09-20T23:12:55Z, exit 0
+Starting 05_preflight at 2026-09-20T23:12:55Z
+Finished 05_preflight at 2026-09-20T23:24:58Z, exit 0
+Starting 05_mode3_reset at 2026-09-20T23:24:58Z
+Finished 05_mode3_reset at 2026-09-21T06:37:53Z, exit 0

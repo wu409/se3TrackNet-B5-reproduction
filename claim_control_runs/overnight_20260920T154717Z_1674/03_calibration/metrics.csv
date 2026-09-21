@@ -1,0 +1,5 @@
+model,population,n,balanced_accuracy,high_risk_rate
+isotonic_frozen_threshold,development_calibration,13698,0.865964441053099,0.28471309680245294
+raw_development_tuned,development_calibration,13698,0.865964441053099,0.28471309680245294
+isotonic_frozen_threshold,q1_policy_diagnostic,45540,0.685006110627101,0.20415019762845849
+raw_development_tuned,q1_policy_diagnostic,45540,0.6850337945362597,0.20428194993412385

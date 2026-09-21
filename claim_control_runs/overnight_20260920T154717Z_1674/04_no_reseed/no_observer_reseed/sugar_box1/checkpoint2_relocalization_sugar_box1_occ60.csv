@@ -1,0 +1,5 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+sugar_box1_occ60,100,1,1,1,0.22519811173930754,,1,28376.613894477487,0,0,0.22519811173930754,False,1
+sugar_box1_occ60,103,1,1,1,0.3974171166948495,,1,2341.994473710656,0,0,0.3974171166948495,False,1
+sugar_box1_occ60,104,1,1,1,0.3509511576679875,,1,2339.351939037442,0,0,0.3509511576679875,False,1
+sugar_box1_occ60,108,1,1,1,0.24053442792169666,,1,2337.1384805068374,0,0,0.24053442792169666,False,1

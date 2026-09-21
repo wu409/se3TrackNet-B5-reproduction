@@ -1,0 +1,180 @@
+
+[Frozen shared pose-quality model]
+held-out base       : None
+train bases         : ['mustard_easy_00_02', 'mustard0', 'bleach0', 'bleach_hard_00_03_chaitanya']
+p_risk_threshold    : 0.24999999999999994
+risk threshold (cm) : 1.0
+advantage margin cm : 0.1
+
+=== Evaluating sugar_box1_clean ===
+[sugar_box1_clean] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_black10 ===
+[sugar_box1_black10] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10 frame=100
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.43219772879091517 0.0 0.995398773006135
+positive inliers / visible support / spatial bins: 649 652 16
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.7446007031642391
+coverage: 0.7604513977943063
+center_error_norm: 0.013728218895174523
+depth_residual_m: 0.0067363005818128485
+depth_support: 1161
+template_score_margin: 0.03125
+translation_jump_m: 0.003976447122455851
+rotation_jump_deg: 7.719889376152816
+=======================================
+
+
+=== Evaluating sugar_box1_black10_2 ===
+[sugar_box1_black10_2] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_2 frame=260
+  trigger = blackout_exit
+  raw = True
+  accepted = False
+  used = False
+  recovery_failure_reason = raw_recovery_rejected_by_pose_validity
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: none
+decision_category: geometric_conflict
+occlusion / conflict / inlier fractions: 0.7991169977924945 0.8791208791208791 1.0
+positive inliers / visible support / spatial bins: 1 1 1
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: ['current_depth_free_space_conflict']
+IoU: 0.0017857142857142857
+coverage: 0.004714016341923318
+center_error_norm: 0.322467345465795
+depth_residual_m: 0.0011778509902581336
+depth_support: 1
+template_score_margin: 0.046875
+translation_jump_m: 0.19671851998288098
+rotation_jump_deg: 136.29836178389905
+=======================================
+
+
+=== Evaluating sugar_box1_black10_3 ===
+[sugar_box1_black10_3] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_3 frame=340
+  trigger = blackout_exit
+  raw = True
+  accepted = True
+  used = True
+  recovery_failure_reason = None
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+gate_version: occlusion_aware_v1_development
+gate_status: development_unvalidated
+acceptance_path: normal
+decision_category: accepted
+occlusion / conflict / inlier fractions: 0.4929059379926432 0.0 1.0
+positive inliers / visible support / spatial bins: 898 898 15
+History jumps, legacy IoU/depth residual below are DIAGNOSTICS ONLY.
+rejection_reasons: []
+IoU: 0.8496785890885116
+coverage: 0.8606010016694491
+center_error_norm: 0.008107660158523313
+depth_residual_m: 0.008270609012603791
+depth_support: 1729
+template_score_margin: 0.015625
+translation_jump_m: 0.006261736206092697
+rotation_jump_deg: 3.8033344419665873
+=======================================
+
+
+=== Evaluating sugar_box1_black10_4 ===
+[sugar_box1_black10_4] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_4 frame=500
+  trigger = blackout_exit
+  raw = False
+  accepted = False
+  used = False
+  recovery_failure_reason = sam2_recovery_mask_failed
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+rejection_reasons: ['raw_recovery_not_generated']
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box1_black10_5 ===
+[sugar_box1_black10_5] manifest paths and SHA-256 values verified: 907 frames
+
+[Recovery] episode=sugar_box1_black10_5 frame=610
+  trigger = blackout_exit
+  raw = False
+  accepted = False
+  used = False
+  recovery_failure_reason = sam2_recovery_mask_failed
+  template2_match_reason = None
+  template2_candidate_count = None
+  foundationpose_error = None
+
+========== RECOVERY VALIDITY ==========
+rejection_reasons: ['raw_recovery_not_generated']
+IoU: None
+coverage: None
+center_error_norm: None
+depth_residual_m: None
+depth_support: None
+template_score_margin: None
+translation_jump_m: None
+rotation_jump_deg: None
+=======================================
+
+
+=== Evaluating sugar_box1_occ40 ===
+[sugar_box1_occ40] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_occ60 ===
+[sugar_box1_occ60] manifest paths and SHA-256 values verified: 907 frames
+
+=== Evaluating sugar_box1_drop60 ===
+[sugar_box1_drop60] manifest paths and SHA-256 values verified: 907 frames
+recovery decomposition: ./checkpoint2_recovery_decomposition_sugar_box1_threshold1.0.csv
+
+=== Shared pose-quality evaluation complete ===
+metrics          : ./checkpoint2_probability_calibration_metrics_threshold1.0.csv
+episode summary  : ./checkpoint2_full_metrics_episode_summary_sugar_box1_clean_threshold1.0.csv
+blackout intervals: ./checkpoint2_blackout_frame_intervals_threshold1.0.csv
+paired recovery  : ./checkpoint2_paired_recovery_B5_vs_B1_threshold1.0.csv
+Pairwise AUROC prior-worse = 0.9436
+Obs risk AUROC            = 0.7938
+Prior risk AUROC          = 0.7075

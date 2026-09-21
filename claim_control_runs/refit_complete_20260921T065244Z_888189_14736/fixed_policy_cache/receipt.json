@@ -1,0 +1,39 @@
+{
+  "status": "smoke_only",
+  "policy": "always_accept_frozen_precomputed_observation_no_reseed_v1",
+  "manifest_sha256": "70061b0e887927ee4732ca96882d876754bac4d60633c3f3ddfd168996b14e56",
+  "feature_source_sha256": "1a41a1208bdead50d1f5a9289af2cb974dff2adee18d490383fd9c0de1d051d0",
+  "prior_source_sha256": "c7e7d5b5207343419748f3b2b5ffed152ab150fc0e1762ff4209d48eb67345d3",
+  "full_freeze_sha256": "3fcb8c608c2e9a089cb824e6fcc14836bc073e0de972877179d84d67467a2683",
+  "samples_sha256": "1dc58731160d600e9f95c3b9c6b60ad4e68c7b66eafd96050e61cb28b32b4bf7",
+  "candidate_count": 8,
+  "frame_count": 4,
+  "train_bases": [
+    "mustard_easy_00_02",
+    "mustard0",
+    "bleach0",
+    "bleach_hard_00_03_chaitanya"
+  ],
+  "conditions": [
+    "_clean",
+    "_black10",
+    "_black10_2",
+    "_black10_3",
+    "_black10_4",
+    "_black10_5",
+    "_occ40",
+    "_occ60",
+    "_drop60"
+  ],
+  "cad_hashes": {
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/006_mustard_bottle.xml": "ede9686d1996025fc98a2fc1d2bffa114bbb03447ebf40af4a1ce0b1b44ac477",
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/dense_pts.npy": "1959932049373665c46cb0cb5e8fc0fb6a70b2d30af3e8aed58c9a7ebde854a0",
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/kpts_9.npy": "2de94247d817eda973a052ba61be8cef3adb52eb11d249fc40a689caff709798",
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/points.xyz": "162944dc72f0ef81f19f81834f949821792effcde2aaf72668feef04677b7098",
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.mtl": "8e14dad807874b2d257d814abda35fb6dfe244a5fc18c8b359b31d801b9fc6ee",
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/textured.obj": "a6f920a2bee9299ef9666166788cd67ffbd219571a301bfa2023cfcf6189586a",
+    "/root/autodl-tmp/se3TrackNet-B5-reproduction/datasets/YCB_Video_Models/CADmodels/006_mustard_bottle/texture_map.png": "5ab81c84e1b0a945c9f1a3f20fe765720ab607ca2841a1da3454b9cf443893b1"
+  },
+  "collector_sha256": "922f14b88bc43aba5781676e7bd579025c37dea2a1458a8a900be93581b91450",
+  "gt_use": "ADD-S labels only; never candidate generation"
+}

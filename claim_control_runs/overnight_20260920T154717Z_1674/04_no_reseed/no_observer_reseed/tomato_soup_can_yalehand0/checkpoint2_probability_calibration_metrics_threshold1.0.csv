@@ -1,0 +1,20 @@
+Metric,Value
+Shared error MAE_obs_cm,49.39807014581358
+Shared error MedianAE_obs_cm,23.549566962296936
+Shared error Spearman_obs,0.8548233428221202
+AUROC_obs_abs_risk,0.9027340633215986
+AUPRC_obs_abs_risk,0.9553195897738345
+Brier_obs_abs_risk,0.17919888922649982
+ECE_obs_abs_risk,0.2113751313265455
+Shared error MAE_prior_cm,1774.8377193708236
+Shared error MedianAE_prior_cm,1.065781825817224
+Shared error Spearman_prior,0.533169878446402
+AUROC_prior_abs_risk,0.8179919404318655
+AUPRC_prior_abs_risk,0.8000360050788782
+Brier_prior_abs_risk,0.4618196472230075
+ECE_prior_abs_risk,0.487942498317874
+Pairwise_AUROC_prior_worse,0.33946393740792846
+Pairwise_balanced_accuracy,0.520209012829728
+Pairwise_ordering_accuracy,0.6032667876588022
+p_risk_threshold_shared,0.24999999999999994
+prior_advantage_margin_cm,0.1

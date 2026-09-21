@@ -1,0 +1,13 @@
+{
+  "created_utc": "2026-09-21T06:52:49.100370+00:00",
+  "q0": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/04_q0_training/no_rollout_release",
+  "q1": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release",
+  "policy": "always_accept_frozen_precomputed_observation_no_reseed_v1",
+  "development_frames": 22770,
+  "development_episodes": 36,
+  "fixed_policy_cache": null,
+  "test_sequences_used": false,
+  "backbone_retrained": false,
+  "fitted_parts": "RobustScaler, HuberRegressor, isotonic and development risk threshold only",
+  "limitation": "Offline development attribution, not independent generalization or closed-loop tracking evidence"
+}

@@ -1,0 +1,7 @@
+episode,frame_id,relocalization_attempted,relocalization_generated,relocalization_used,relocalization_raw_error_cm,relocalization_failure_reason,relocalization_cache_hit,relocalization_wall_ms,observer_restart,motion_history_reset,error_b5_ours_cm,output_uncertain,output_quality_unverified
+sugar_box_yalehand0_clean,29,1,1,1,1.0275715863762735,,1,30062.008780427277,0,0,1.0275715863762735,False,1
+sugar_box_yalehand0_clean,31,1,1,1,1.0103830494942418,,1,2268.1718124076724,0,0,1.0103830494942418,False,1
+sugar_box_yalehand0_clean,34,1,1,1,0.3495037786680866,,1,2257.670570164919,0,0,0.3495037786680866,False,1
+sugar_box_yalehand0_clean,35,1,1,1,0.2996313963099985,,1,2260.4018300771713,0,0,0.2996313963099985,False,1
+sugar_box_yalehand0_clean,50,1,1,1,0.7626924389745601,,1,2253.3961087465286,0,0,0.7626924389745601,False,1
+sugar_box_yalehand0_clean,69,1,1,1,0.9170390415162507,,1,2250.6160037592053,0,0,0.9170390415162507,False,1

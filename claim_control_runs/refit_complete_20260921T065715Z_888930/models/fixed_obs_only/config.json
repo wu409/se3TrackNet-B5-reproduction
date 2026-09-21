@@ -1,0 +1,32 @@
+{
+  "name": "fixed_obs_only",
+  "feature_columns": [
+    "x1_norm",
+    "x2_inlier_error",
+    "x4_support_ratio",
+    "x5_geometry_inconsistency"
+  ],
+  "p_risk_threshold": 0.6,
+  "risk_threshold_cm": 1.0,
+  "train_fraction": 0.7,
+  "seed": 42,
+  "training_counts": {
+    "model": "fixed_obs_only",
+    "candidates": 22770,
+    "fit_candidates": 15921,
+    "calibration_candidates": 6849,
+    "observation_candidates": 22770,
+    "prior_candidates": 0
+  },
+  "fit_metrics": {
+    "train_samples": 15921,
+    "cal_samples": 6849,
+    "train_mae_cm": 6.377882593721318,
+    "cal_mae_cm": 10.437588131736726,
+    "cal_risk_auroc": 0.9958680729458207,
+    "p_risk_threshold": 0.6,
+    "threshold_balanced_accuracy": 0.9722733474686632
+  },
+  "training_population": "fixed_policy",
+  "status": "development_control_not_original_frozen_release"
+}

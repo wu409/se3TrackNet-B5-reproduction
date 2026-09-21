@@ -12,7 +12,7 @@ The online scripts accept `--check-only` and preserve its new preflight folder.
 | Script | Question | Output |
 |---|---|---|
 | `01_shared_vs_source_specific.sh` | One frozen shared q1 versus independently fitted obs/prior heads on identical q0/q1 candidate tables | `shared_source_*/metrics.csv` |
-| `02_rollout_refit_attribution.sh` | q0 versus q1 on the **same** q0-policy candidates, then on q1-policy candidates | `refit_*/metrics.csv`, `provenance.json` |
+| `02_rollout_refit_attribution.sh` | Collect genuine fixed-policy pairs; compare observation-only, count-matched duplicated observations, fixed-policy pairs and q0-policy pairs | `refit_complete_*/metrics.csv`, `models/`, `fixed_policy_cache/`, `COMPLETE.json` |
 | `03_calibrated_vs_raw_threshold.sh` | Frozen isotonic risk cutoff versus raw predicted-cm cutoff tuned on development calibration frames | `calibration_*/metrics.csv`, route disagreement in `provenance.json` |
 | `04_no_observer_reseed.sh` | Does registration's observer restart change subsequent observations and tracking? | `no_reseed_*/` standard per-frame/episode outputs |
 | `05_mode3_motion_history_reset.sh` | Does zero-velocity restart after *used* MODE3 change subsequent priors and tracking? | `mode3_reset_*/` standard per-frame/episode outputs |
@@ -28,19 +28,17 @@ bash claim_controls/04_no_observer_reseed.sh --check-only
 bash claim_controls/05_mode3_motion_history_reset.sh --check-only
 ```
 
-For the **prior examples versus policy-induced data** separation, the existing
-q1 was fitted on q0-policy rollout pairs. Thus those pairs simultaneously add
-priors *and* reflect q0 decisions. It is invalid to name q1 a "prior-only"
-control. If an independent observation-only/fixed-policy rollout cache is
-available, pass `FIXED_POLICY_SAMPLES=/absolute/path.csv` to script 02. Its
-schema is the paired long-form development table: `sequence`, `sequence_index`,
-`frame_id`, `D_obj_cm`, `hypothesis` (`obs` or `prior`), `target_E_cm`,
-`target_e_norm`, and four features `x1_norm`, `x2_inlier_error`,
-`x4_support_ratio`, `x5_geometry_inconsistency`. Generate it with the same
-frozen observer and candidate-feature implementation, on the same development
-episodes under a fixed observation-only policy; do **not** relabel q0-policy
-rows as fixed-policy. Without this cache, script 02 still runs q0/q1
-same-candidate comparisons and explicitly records the missing control.
+Script 02 was completed on 2026-09-21: it now automatically generates the
+missing observation-only-policy candidate cache and fits matched lightweight
+controls using the exact frozen feature/fitting implementation. It supports
+`--smoke` (four real development frames, no fitting) and `--check-only`.
+Reuse a verified cache via `FIXED_POLICY_CACHE=/prior/output/fixed_policy_cache`;
+bare unverified CSVs are rejected. The original limited q0/q1 diagnostic is
+still available with `REFIT_SAME_CANDIDATE_ONLY=1`. Previously completed output
+folders retain their original `NOT RUN` record. See
+[REFIT_COMPLETE_GUIDE.md](REFIT_COMPLETE_GUIDE.md) for comparisons, outputs and
+interpretation limits. The newly written collection pipeline has been tested;
+its scientific result exists only after a full run writes `COMPLETE.json`.
 
 All five evaluation sequences have informed development. Offline controls
 do not establish closed-loop tracking gains; compare the online interventions

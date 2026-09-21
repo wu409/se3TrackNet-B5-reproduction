@@ -1,0 +1,53 @@
+{
+  "status": "post_test_diagnostic_complete",
+  "recovery_gate_config": {
+    "version": "occlusion_aware_v1_development",
+    "status": "development_unvalidated",
+    "min_support": 50,
+    "min_inliers": 50,
+    "min_depth_m": 0.05,
+    "max_depth_m": 5.0,
+    "depth_tolerance_floor_m": 0.01,
+    "depth_tolerance_diameter_fraction": 0.05,
+    "max_conflict_fraction": 0.1,
+    "min_global_inlier_fraction": 0.1,
+    "min_mask_explained": 0.6,
+    "normal_min_cad_coverage": 0.3,
+    "normal_min_inlier_fraction": 0.6,
+    "normal_min_spatial_bins": 3,
+    "occluded_min_cad_coverage": 0.1,
+    "occluded_min_inlier_fraction": 0.8,
+    "occluded_min_spatial_bins": 4,
+    "min_occlusion_fraction": 0.1,
+    "spatial_grid_size": 4,
+    "rotation_tolerance": 0.001
+  },
+  "training_release": "/root/autodl-tmp/se3TrackNet-B5-reproduction/all_runs/run_20260917T094822Z_236992_24438/01_full_release",
+  "b5_policy_config": {
+    "version": "four_mode_relocalization_v2",
+    "status": "development_unvalidated",
+    "epsilon_cm": 0.01,
+    "mode4_min_alpha": 0.25,
+    "mode4_max_alpha": 0.75,
+    "mode2": "pure_prior_no_streak_limit",
+    "mode3": "both_risky_SE3_only_relocalization",
+    "mode3_history": "append_without_reset",
+    "mode3_failure": "prior_flagged_uncertain",
+    "mode3_budget": "every_eligible_frame_no_cooldown",
+    "history_reset": "accepted_blackout_recovery_only",
+    "restart_prediction": "one_step_zero_velocity",
+    "observation_restart": "accepted_blackout_or_mode3_then_tracker_own_predictions",
+    "history_update": "every_final_output",
+    "history_retained_poses": 2
+  },
+  "variants": [
+    "no_observer_reseed"
+  ],
+  "test_sequences": [
+    "cracker_box_reorient",
+    "cracker_box_yalehand0",
+    "sugar_box_yalehand0",
+    "sugar_box1",
+    "tomato_soup_can_yalehand0"
+  ]
+}

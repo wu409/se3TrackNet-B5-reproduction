@@ -1,0 +1,32 @@
+{
+  "name": "q0_policy_obs_prior_refit",
+  "feature_columns": [
+    "x1_norm",
+    "x2_inlier_error",
+    "x4_support_ratio",
+    "x5_geometry_inconsistency"
+  ],
+  "p_risk_threshold": 0.25999999999999995,
+  "risk_threshold_cm": 1.0,
+  "train_fraction": 0.7,
+  "seed": 42,
+  "training_counts": {
+    "model": "q0_policy_obs_prior_refit",
+    "candidates": 45540,
+    "fit_candidates": 31842,
+    "calibration_candidates": 13698,
+    "observation_candidates": 22770,
+    "prior_candidates": 22770
+  },
+  "fit_metrics": {
+    "train_samples": 31842,
+    "cal_samples": 13698,
+    "train_mae_cm": 1.7417476235766995,
+    "cal_mae_cm": 16.927580114793496,
+    "cal_risk_auroc": 0.9017625428677971,
+    "p_risk_threshold": 0.25999999999999995,
+    "threshold_balanced_accuracy": 0.865732645996378
+  },
+  "training_population": "cached_q0_policy",
+  "status": "development_control_not_original_frozen_release"
+}
